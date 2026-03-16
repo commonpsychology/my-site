@@ -1,4 +1,11 @@
 /* ============================================================
+   GOOGLE FONTS — Rounded, warm, professional
+   DM Serif Display  → headings (elegant, slightly editorial)
+   Nunito            → body (rounded, friendly, very readable)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+
+/* ============================================================
    CSS VARIABLES — Earthy + Green + Blue + White palette
    ============================================================ */
 :root {
@@ -7,6 +14,8 @@
   --earth-warm:    #a67c5b;
   --earth-light:   #d4b896;
   --earth-cream:   #f5ede0;
+  --black: #0B6623;
+
 
   --green-deep:    #2d4a3e;
   --green-mid:     #3d6b5a;
@@ -16,14 +25,12 @@
   --green-only:    #13a72e;
   --newcol: #b56a28;
 
-
   --blue-deep:     #1a3a4a;
   --blue-mid:      #2e6080;
   --blue-soft:     #5b9ab5;
   --blue-pale:     #b0d4e8;
   --blue-mist:     #e6f2f8;
 
-  /* Sky blue — used for all CTA buttons */
   --sky:           #00BFFF;
   --sky-dark:      #009FD4;
   --sky-light:     #E0F7FF;
@@ -34,8 +41,9 @@
   --text-mid:      #4a4038;
   --text-light:    #7a6e62;
 
-  --font-display:  'Times New Roman', Times, Georgia, serif;
-  --font-body:     'Times New Roman', Times, Georgia, serif;
+  /* ── FONTS UPDATED ── */
+  --font-display:  'DM Serif Display', Georgia, serif;
+  --font-body:     'Nunito', 'Segoe UI', sans-serif;
 
   --radius-sm:     6px;
   --radius-md:     12px;
@@ -60,6 +68,8 @@ body {
   color: var(--text-dark);
   line-height: 1.6;
   overflow-x: hidden;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
 }
 
 img { display: block; max-width: 100%; }
@@ -80,8 +90,8 @@ ul { list-style: none; }
   height: 72px;
   background: linear-gradient(
     to right,
-    #d4ece0           0%,
-    #dff0e8           20%,
+    #00BFFF           0%,
+    #00BFFF           2%,
     #e8f3ee           40%,
     #f0f8f4           60%,
     #f8fcfa           80%,
@@ -110,15 +120,16 @@ ul { list-style: none; }
 .navbar-logo .logo-text {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--green-only);
+  font-weight: 400;
+  color: var(--black);
   line-height: 1.1;
 }
 
 .navbar-logo .logo-sub {
+  font-family: var(--font-body);
   font-size: 0.65rem;
-  font-weight: 400;
-  color: var(--green-only);
+  font-weight: 600;
+  color: var(--black);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -126,14 +137,19 @@ ul { list-style: none; }
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.75rem;
+  /* true center regardless of logo/right widths */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .navbar-links a {
+  font-family: var(--font-body);
   font-size: 0.88rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-mid);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   transition: color 0.2s;
 }
 .navbar-links a:hover { color: var(--green-deep); }
@@ -155,14 +171,14 @@ ul { list-style: none; }
   border-radius: var(--radius-sm);
   font-family: var(--font-body);
   font-size: 0.88rem;
-  font-weight: 500;
+  font-weight: 700;
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.22s ease;
   white-space: nowrap;
+  letter-spacing: 0.01em;
 }
 
-/* ── Primary CTA → Sky Blue ── */
 .btn-primary {
   background: var(--sky);
   color: var(--white);
@@ -175,7 +191,6 @@ ul { list-style: none; }
   box-shadow: 0 4px 16px rgba(0,191,255,0.35);
 }
 
-/* ── Outline → Sky Blue ── */
 .btn-outline {
   background: transparent;
   color: var(--sky);
@@ -188,7 +203,6 @@ ul { list-style: none; }
   box-shadow: 0 4px 16px rgba(0,191,255,0.25);
 }
 
-/* ── White button (used on dark backgrounds) — unchanged ── */
 .btn-white {
   background: var(--white);
   color: var(--green-deep);
@@ -199,7 +213,6 @@ ul { list-style: none; }
   transform: translateY(-1px);
 }
 
-/* ── Earth button — unchanged ── */
 .btn-earth {
   background: var(--earth-warm);
   color: var(--white);
@@ -211,7 +224,6 @@ ul { list-style: none; }
   transform: translateY(-1px);
 }
 
-/* ── Sky alias classes (same as primary/outline, explicit names) ── */
 .btn-sky {
   background: var(--sky);
   color: var(--white);
@@ -292,8 +304,9 @@ ul { list-style: none; }
   background: var(--white);
   border: 1px solid var(--blue-pale);
   color: var(--blue-deep);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 0.35rem 0.9rem;
@@ -306,7 +319,7 @@ ul { list-style: none; }
 .hero h1 {
   font-family: var(--font-display);
   font-size: clamp(2.4rem, 4vw, 3.5rem);
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.18;
   color: var(--blue-deep);
   margin-bottom: 1.25rem;
@@ -318,11 +331,12 @@ ul { list-style: none; }
 }
 
 .hero-desc {
+  font-family: var(--font-body);
   font-size: 1.05rem;
   color: var(--text-mid);
   max-width: 480px;
   margin-bottom: 2.5rem;
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.75;
 }
 
@@ -343,15 +357,16 @@ ul { list-style: none; }
 .hero-stat-num {
   font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--blue-deep);
   line-height: 1;
 }
 
 .hero-stat-label {
+  font-family: var(--font-body);
   font-size: 0.78rem;
   color: var(--text-light);
-  font-weight: 400;
+  font-weight: 500;
   margin-top: 2px;
   letter-spacing: 0.02em;
 }
@@ -413,12 +428,14 @@ ul { list-style: none; }
 .hero-card-name {
   font-family: var(--font-display);
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--blue-deep);
 }
 
 .hero-card-role {
+  font-family: var(--font-body);
   font-size: 0.8rem;
+  font-weight: 600;
   color: var(--sky);
   margin-bottom: 0.75rem;
 }
@@ -429,7 +446,7 @@ ul { list-style: none; }
   gap: 6px;
   font-size: 0.78rem;
   color: var(--blue-soft);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .hero-card-avail .dot {
@@ -471,8 +488,8 @@ ul { list-style: none; }
 .fc-icon.blue   { background: var(--blue-mist); }
 .fc-icon.earth  { background: var(--earth-cream); }
 
-.fc-label { font-weight: 600; color: var(--text-dark); font-size: 0.8rem; }
-.fc-sub   { color: var(--text-light); font-size: 0.72rem; }
+.fc-label { font-family: var(--font-body); font-weight: 700; color: var(--text-dark); font-size: 0.8rem; }
+.fc-sub   { font-family: var(--font-body); color: var(--text-light); font-size: 0.72rem; }
 
 /* ============================================================
    SECTION COMMONS
@@ -482,8 +499,9 @@ ul { list-style: none; }
 
 .section-tag {
   display: inline-block;
+  font-family: var(--font-body);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--earth-warm);
@@ -493,7 +511,7 @@ ul { list-style: none; }
 .section-title {
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 3vw, 2.6rem);
-  font-weight: 700;
+  font-weight: 400;
   color: var(--blue-deep);
   line-height: 1.22;
   margin-bottom: 1rem;
@@ -502,11 +520,12 @@ ul { list-style: none; }
 .section-title em { font-style: italic; color: var(--sky); }
 
 .section-desc {
+  font-family: var(--font-body);
   font-size: 1rem;
   color: var(--text-light);
   max-width: 540px;
   line-height: 1.7;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .section-header {
@@ -572,12 +591,13 @@ ul { list-style: none; }
 .service-card h3 {
   font-family: var(--font-display);
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--blue-deep);
   margin-bottom: 0.6rem;
 }
 
 .service-card p {
+  font-family: var(--font-body);
   font-size: 0.88rem;
   color: var(--text-light);
   line-height: 1.65;
@@ -585,8 +605,9 @@ ul { list-style: none; }
 }
 
 .service-link {
+  font-family: var(--font-body);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--sky);
   display: flex;
   align-items: center;
@@ -638,8 +659,9 @@ ul { list-style: none; }
   top: 12px; right: 12px;
   background: var(--sky);
   color: var(--white);
+  font-family: var(--font-body);
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   padding: 3px 10px;
   border-radius: 100px;
   letter-spacing: 0.05em;
@@ -651,12 +673,14 @@ ul { list-style: none; }
 .therapist-name {
   font-family: var(--font-display);
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--blue-deep);
 }
 
 .therapist-role {
+  font-family: var(--font-body);
   font-size: 0.8rem;
+  font-weight: 600;
   color: var(--sky);
   margin-bottom: 0.75rem;
 }
@@ -669,8 +693,9 @@ ul { list-style: none; }
 }
 
 .tag {
+  font-family: var(--font-body);
   font-size: 0.72rem;
-  font-weight: 500;
+  font-weight: 600;
   padding: 3px 10px;
   border-radius: 100px;
   background: var(--sky-light);
@@ -696,15 +721,16 @@ ul { list-style: none; }
   display: flex;
   align-items: center;
   gap: 4px;
+  font-family: var(--font-body);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--earth-warm);
 }
 
 .therapist-fee {
   font-family: var(--font-display);
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--blue-deep);
 }
 
@@ -742,7 +768,9 @@ ul { list-style: none; }
   display: flex;
   align-items: center;
   gap: 12px;
+  font-family: var(--font-body);
   font-size: 0.9rem;
+  font-weight: 500;
   color: rgba(255,255,255,0.85);
 }
 
@@ -779,12 +807,13 @@ ul { list-style: none; }
 .assessment-card h4 {
   font-family: var(--font-display);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--white);
   margin-bottom: 0.4rem;
 }
 
 .assessment-card p {
+  font-family: var(--font-body);
   font-size: 0.78rem;
   color: rgba(255,255,255,0.6);
   line-height: 1.5;
@@ -792,8 +821,9 @@ ul { list-style: none; }
 }
 
 .assessment-tag {
+  font-family: var(--font-body);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--sky-light);
@@ -826,8 +856,9 @@ ul { list-style: none; }
 }
 
 .resource-type {
+  font-family: var(--font-body);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--blue-mid);
@@ -843,13 +874,14 @@ ul { list-style: none; }
 .resource-card h4 {
   font-family: var(--font-display);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--blue-deep);
   margin-bottom: 0.4rem;
   line-height: 1.3;
 }
 
 .resource-card p {
+  font-family: var(--font-body);
   font-size: 0.8rem;
   color: var(--text-light);
   line-height: 1.55;
@@ -860,6 +892,7 @@ ul { list-style: none; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-family: var(--font-body);
   font-size: 0.72rem;
   color: var(--text-light);
 }
@@ -867,10 +900,21 @@ ul { list-style: none; }
 .resource-free {
   background: var(--sky-light);
   color: var(--blue-deep);
-  font-weight: 700;
+  font-weight: 800;
   padding: 2px 8px;
   border-radius: 100px;
   font-size: 0.68rem;
+}
+
+/* ============================================================
+   RESOURCE CARDS — SVG illustrations
+   ============================================================ */
+.resource-illustration {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 0.75rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 /* ============================================================
@@ -901,6 +945,7 @@ ul { list-style: none; }
 }
 
 .testimonial-text {
+  font-family: var(--font-body);
   font-size: 0.9rem;
   color: var(--text-mid);
   line-height: 1.7;
@@ -919,6 +964,7 @@ ul { list-style: none; }
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.2rem;
+  overflow: hidden;
 }
 
 .av1 { background: var(--sky-light); }
@@ -926,12 +972,14 @@ ul { list-style: none; }
 .av3 { background: var(--blue-pale); }
 
 .testimonial-name {
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: 0.88rem;
   color: var(--blue-deep);
 }
 
 .testimonial-detail {
+  font-family: var(--font-body);
   font-size: 0.75rem;
   color: var(--text-light);
 }
@@ -967,8 +1015,9 @@ ul { list-style: none; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--font-body);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--earth-light);
@@ -978,12 +1027,13 @@ ul { list-style: none; }
 .crisis-title {
   font-family: var(--font-display);
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.2;
   margin-bottom: 0.75rem;
 }
 
 .crisis-desc {
+  font-family: var(--font-body);
   font-size: 0.9rem;
   color: rgba(255,255,255,0.6);
   line-height: 1.65;
@@ -1014,8 +1064,9 @@ ul { list-style: none; }
 .crisis-number-icon { font-size: 1.2rem; }
 
 .crisis-number-name {
+  font-family: var(--font-body);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--white);
 }
 
@@ -1026,12 +1077,20 @@ ul { list-style: none; }
 }
 
 /* ============================================================
-   FOOTER
+   FOOTER  — mirrors navbar gradient (blue-left → white-right)
    ============================================================ */
 .footer {
-  background: var(--earth-dark);
-  color: rgba(255,255,255,0.7);
-  border-top: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(
+    to right,
+    #00BFFF           0%,
+    #00BFFF           2%,
+    #e8f3ee           40%,
+    #f0f8f4           60%,
+    #f8fcfa           80%,
+    var(--white)      100%
+  );
+  color: var(--text-dark);
+  border-top: 1px solid var(--green-pale);
   padding: 4rem 6rem 2rem;
 }
 
@@ -1041,7 +1100,7 @@ ul { list-style: none; }
   gap: 3rem;
   margin-bottom: 3rem;
   padding-bottom: 3rem;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
 
 .footer-brand .logo-mark {
@@ -1049,22 +1108,24 @@ ul { list-style: none; }
   margin-bottom: 1rem;
 }
 
-.footer-brand .logo-text { color: var(--white) !important; }
-.footer-brand .logo-sub { color: var(--earth-light) !important; }
+.footer-brand .logo-text { color: var(--text-dark) !important; }
+.footer-brand .logo-sub  { color: var(--text-light) !important; }
 
 .footer-brand p {
+  font-family: var(--font-body);
   font-size: 0.85rem;
   line-height: 1.7;
   margin: 1rem 0;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-light);
 }
 
 .footer-col h5 {
+  font-family: var(--font-body);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--earth-light);
+  color: var(--text-mid);
   margin-bottom: 1.25rem;
 }
 
@@ -1075,35 +1136,42 @@ ul { list-style: none; }
 }
 
 .footer-col ul li a {
+  font-family: var(--font-body);
   font-size: 0.85rem;
-  color: rgba(255,255,255,0.55);
+  font-weight: 500;
+  color: var(--text-light);
   transition: color 0.2s;
 }
 
-.footer-col ul li a:hover { color: var(--white); }
+.footer-col ul li a:hover { color: var(--text-dark); }
 
 .footer-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-family: var(--font-body);
   font-size: 0.78rem;
-  color: rgba(255,255,255,0.35);
+  color: var(--text-light);
 }
 
-.footer-social { display: flex; gap: 0.75rem; }
+/* ── Social buttons ── */
+.footer-social { display: flex; gap: 0.75rem; align-items: center; }
 
 .social-btn {
-  width: 34px; height: 34px;
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.1);
+  width: 38px; height: 38px;
+  border-radius: var(--radius-md);
+  background: rgba(0,0,0,0.055);
+  border: 1px solid rgba(0,0,0,0.12);
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.22s;
+  text-decoration: none;
+  color: inherit;
 }
 
-.social-btn:hover { background: rgba(255,255,255,0.15); }
+.social-btn:hover { background: rgba(0,191,255,0.18); transform: translateY(-2px); }
+
+.social-btn svg { display: block; }
 
 /* ============================================================
    ANIMATIONS
@@ -1162,7 +1230,7 @@ ul { list-style: none; }
    ============================================================ */
 .navbar-links a.nav-active {
   color: var(--sky);
-  font-weight: 600;
+  font-weight: 700;
   position: relative;
 }
 .navbar-links a.nav-active::after {
@@ -1262,7 +1330,7 @@ ul { list-style: none; }
 }
 
 /* ============================================================
-   SERVICES FULL GRID (Services Page)
+   SERVICES FULL GRID
    ============================================================ */
 .services-grid-full {
   display: grid;
@@ -1283,7 +1351,7 @@ ul { list-style: none; }
 }
 
 /* ============================================================
-   DETAIL PAGE GRID (Therapist Detail)
+   DETAIL PAGE GRID
    ============================================================ */
 .detail-grid {
   display: grid;
@@ -1300,12 +1368,10 @@ ul { list-style: none; }
 }
 
 /* ============================================================
-   MOBILE — FOOTER CENTERED + RESPONSIVE PAGES
+   MOBILE — FOOTER & PAGES
    ============================================================ */
 @media (max-width: 800px) {
   .page-hero { padding: 3rem 1.5rem 2rem; }
-
-  /* Footer fully centered on mobile */
   .footer { padding: 3rem 1.5rem 1.5rem; text-align: center; }
   .footer-top { grid-template-columns: 1fr; gap: 2rem; }
   .footer-brand { display: flex; flex-direction: column; align-items: center; }
@@ -1314,40 +1380,18 @@ ul { list-style: none; }
   .footer-col { text-align: center; }
   .footer-col ul { align-items: center; }
   .footer-bottom { flex-direction: column; gap: 0.75rem; text-align: center; }
-
-  /* Slider */
   .slider-card { padding: 2rem 1.5rem; }
-
-  /* Services page */
   .services-grid-full { grid-template-columns: 1fr; }
-
-  /* Therapist detail */
   .detail-grid { grid-template-columns: 1fr; }
   .detail-sidebar { position: static; }
-
-  /* Assessment page */
   .resources-grid { grid-template-columns: 1fr 1fr; }
-
-  /* Courses & store grids */
   .page-wrapper .section [style*="grid-template-columns: repeat(3"] { grid-template-columns: 1fr !important; }
   .page-wrapper .section [style*="grid-template-columns: repeat(4"] { grid-template-columns: 1fr 1fr !important; }
-
-  /* Booking grid */
   .page-wrapper .section [style*="grid-template-columns: 1fr 340px"] { grid-template-columns: 1fr !important; }
-
-  /* Contact grid */
   .page-wrapper .section [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-
-  /* Blog featured */
   .page-wrapper [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-
-  /* Booking time grid */
   [style*="grid-template-columns: repeat(4,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
-
-  /* Assessment questions grid */
   .page-wrapper [style*="grid-template-columns: repeat(4, 1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
-
-  /* Navbar mobile */
   .navbar { padding: 0 1.25rem; }
   .navbar-links { display: none; }
 }
@@ -1367,8 +1411,7 @@ ul { list-style: none; }
   flex-direction: column;
   justify-content: center;
   gap: 5px;
-  width: 40px;
-  height: 40px;
+  width: 40px; height: 40px;
   background: none;
   border: none;
   cursor: pointer;
@@ -1381,8 +1424,7 @@ ul { list-style: none; }
 
 .ham-line {
   display: block;
-  width: 22px;
-  height: 2px;
+  width: 22px; height: 2px;
   background: var(--green-deep);
   border-radius: 2px;
   transition: all 0.25s ease;
@@ -1399,9 +1441,7 @@ ul { list-style: none; }
 .mobile-menu {
   display: none;
   position: fixed;
-  top: 72px;
-  left: 0;
-  right: 0;
+  top: 72px; left: 0; right: 0;
   z-index: 99;
   background: var(--white);
   border-bottom: 1px solid var(--earth-cream);
@@ -1431,8 +1471,9 @@ ul { list-style: none; }
 .mobile-links li a {
   display: block;
   padding: 0.75rem 0;
+  font-family: var(--font-body);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-mid);
   border-bottom: 1px solid var(--earth-cream);
   transition: color 0.2s;
@@ -1440,7 +1481,7 @@ ul { list-style: none; }
 
 .mobile-links li:last-child a { border-bottom: none; }
 .mobile-links li a:hover,
-.mobile-links li a.nav-active { color: var(--green-deep); font-weight: 600; }
+.mobile-links li a.nav-active { color: var(--green-deep); font-weight: 700; }
 
 .mobile-cta {
   display: flex;
@@ -1453,17 +1494,21 @@ ul { list-style: none; }
   position: fixed;
   inset: 0;
   z-index: 98;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0,0,0,0.3);
 }
 
-/* ============================================================
-   SHOW HAMBURGER ON MOBILE
-   ============================================================ */
-@media (max-width: 800px) {
+/* ── Tablet + mobile (≤900px): hide centre dropdowns + desktop CTA, show hamburger ── */
+@media (max-width: 900px) {
+  .navbar-links   { display: none !important; }
+  .navbar-cta     { display: none !important; }
   .hamburger      { display: flex; }
   .mobile-menu    { display: block; }
   .mobile-overlay { display: block; }
-  .navbar-cta     { display: none; }
+}
+
+/* ── Mobile (≤600px): tighten padding ── */
+@media (max-width: 600px) {
+  .navbar { padding: 0 1rem; }
 }
 
 /* ============================================================
@@ -1476,7 +1521,7 @@ ul { list-style: none; }
 }
 
 /* ============================================================
-   AVATAR PILL — therapist faces in header
+   AVATAR PILL
    ============================================================ */
 .avatar-pill {
   display: flex;
@@ -1500,17 +1545,15 @@ ul { list-style: none; }
 .avatar-pill-faces { display: flex; align-items: center; }
 
 .avatar-pill-face {
-  width: 28px;
-  height: 28px;
+  width: 28px; height: 28px;
   border-radius: 50%;
   border: 2px solid var(--white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   font-size: 0.9rem;
   margin-left: -6px;
   position: relative;
   transition: transform 0.2s;
+  overflow: hidden;
 }
 
 .avatar-pill-face:first-child { margin-left: 0; }
@@ -1523,18 +1566,19 @@ ul { list-style: none; }
 }
 
 .avatar-pill-count {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--green-deep);
   font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--green-deep);
 }
 
 .avatar-pill-label {
+  font-family: var(--font-body);
   font-size: 0.65rem;
   color: var(--text-light);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .mobile-avatar-pill {
@@ -1548,7 +1592,6 @@ ul { list-style: none; }
 }
 
 @media (max-width: 1050px) { .avatar-pill { display: none; } }
-@media (max-width: 800px)  { .navbar-right { display: none; } }
 
 /* ============================================================
    AUTH PAGES — LEFT PANEL
@@ -1565,3 +1608,150 @@ ul { list-style: none; }
 }
 
 @media (max-width: 900px) { .auth-panel-left { display: none; } }
+
+/* ─── Paste these rules into your global index.css ─────────────────────────
+   They fix the MyAccountPage cards/fields overflowing on mobile.
+   No component changes needed.
+──────────────────────────────────────────────────────────────────────────── */
+
+/* 1. Stop ANY element from being wider than the viewport */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 2. Clip horizontal overflow at the root so nothing bleeds out */
+html,
+body,
+#root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* 3. Account page root — constrain and clip */
+.account-root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* 4. All inputs, textareas, selects must stay inside their parent */
+input,
+textarea,
+select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 5. Cards must never exceed their container */
+.account-root > * {
+  max-width: 100%;
+}
+
+/* 6. Fix: stats grid — 2 cols on mobile, 4 on desktop */
+.account-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .account-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 7. Fix: field grid — always 1 col on mobile */
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.field-full {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 640px) {
+  .field-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0 1.25rem;
+  }
+}
+
+/* 8. Fix: plan mini grid — 1 col on mobile */
+.plan-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+@media (min-width: 480px) {
+  .plan-mini-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* 9. Fix: action buttons full width on mobile */
+.action-btn {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .action-btn {
+    width: auto;
+  }
+}
+
+/* 10. Fix: account layout padding on mobile */
+.account-layout {
+  padding-left: 1rem  !important;
+  padding-right: 1rem !important;
+}
+
+@media (min-width: 640px) {
+  .account-layout {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .account-layout {
+    padding-left: 3rem !important;
+    padding-right: 3rem !important;
+    display: grid !important;
+    grid-template-columns: 210px 1fr !important;
+    gap: 1.75rem !important;
+  }
+}
+
+/* 11. Hide desktop sidebar on mobile/tablet, show on desktop */
+.account-sidebar {
+  display: none !important;
+}
+
+@media (min-width: 1024px) {
+  .account-sidebar {
+    display: block !important;
+  }
+  /* Hide pill tabs and bottom bar on desktop */
+  .account-tab-pills {
+    display: none !important;
+  }
+  .account-bottom-tabs {
+    display: none !important;
+  }
+}
+
+/* 12. Hide bottom tab bar on tablet+ */
+@media (min-width: 640px) {
+  .account-bottom-tabs {
+    display: none !important;
+  }
+  /* Show pill tabs on tablet */
+  .account-tab-pills {
+    display: flex !important;
+  }
+}

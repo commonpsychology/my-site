@@ -1,4 +1,8 @@
+import { useRouter } from '../context/RouterContext'
+
 export default function Hero() {
+  const { navigate } = useRouter()
+
   return (
     <section className="hero">
       <div className="hero-content">
@@ -7,7 +11,7 @@ export default function Hero() {
         </div>
 
         <h1>
-          Healing Starts With <em>Understanding</em> Your Mind
+          We Are Here To <i>Help</i>
         </h1>
 
         <p className="hero-desc">
@@ -16,10 +20,16 @@ export default function Hero() {
         </p>
 
         <div className="hero-actions">
-          <button className="btn btn-primary btn-lg">
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={() => navigate('/book')}
+          >
             Book a Free Consultation →
           </button>
-          <button className="btn btn-outline btn-lg">
+          <button
+            className="btn btn-outline btn-lg"
+            onClick={() => navigate('/assessments')}
+          >
             Take an Assessment
           </button>
         </div>
@@ -65,7 +75,7 @@ export default function Hero() {
             </div>
           </div>
 
-          <div className="floating-card fc-1">
+          <div className="floating-card fc-1" style={{ cursor: 'pointer' }} onClick={() => navigate('/resources')}>
             <div className="fc-icon green">🧘</div>
             <div>
               <div className="fc-label">Mood Tracker</div>
@@ -73,8 +83,8 @@ export default function Hero() {
             </div>
           </div>
 
-          <div className="floating-card fc-2">
-            <div className="fc-label" style={{marginBottom: '4px'}}>📋 PHQ-9 Completed</div>
+          <div className="floating-card fc-2" style={{ cursor: 'pointer' }} onClick={() => navigate('/assessments')}>
+            <div className="fc-label" style={{ marginBottom: '4px' }}>📋 PHQ-9 Completed</div>
             <div className="fc-sub">Score: Mild — See recommendations →</div>
           </div>
         </div>

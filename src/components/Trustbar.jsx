@@ -1,0 +1,264 @@
+import { useState } from 'react'
+
+const TRUST_ITEMS = [
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M14 3L5 7v7c0 5.25 3.85 10.15 9 11.35C19.15 24.15 23 19.25 23 14V7l-9-4z"
+          fill="rgba(16,185,129,0.18)" stroke="#10b981" strokeWidth="1.6" strokeLinejoin="round"/>
+        <path d="M10 14l3 3 5-5" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    label: 'Licensed & Verified',
+    desc: 'NPC-certified therapists',
+    accent: '#10b981',
+    lightBg: 'rgba(16,185,129,0.06)',
+    num: '01',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="10" fill="rgba(56,189,248,0.14)" stroke="#38bdf8" strokeWidth="1.6"/>
+        <path d="M14 8v6l4 2" stroke="#0284c7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    label: '24 / 7 Support',
+    desc: 'Always here when you need us',
+    accent: '#0ea5e9',
+    lightBg: 'rgba(14,165,233,0.06)',
+    num: '02',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect x="4" y="6" width="20" height="16" rx="4" fill="rgba(45,212,191,0.14)" stroke="#2dd4bf" strokeWidth="1.6"/>
+        <path d="M9 13h10M9 17h6" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
+        <circle cx="9" cy="9.5" r="1.5" fill="#2dd4bf"/>
+      </svg>
+    ),
+    label: 'Ethical Practice',
+    desc: 'Confidentiality & consent',
+    accent: '#2dd4bf',
+    lightBg: 'rgba(45,212,191,0.06)',
+    num: '03',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="10" r="5" fill="rgba(16,185,129,0.14)" stroke="#10b981" strokeWidth="1.6"/>
+        <path d="M6 23c0-4.42 3.58-8 8-8s8 3.58 8 8" stroke="#10b981" strokeWidth="1.6" strokeLinecap="round"/>
+        <path d="M20 13l2 2 4-4" stroke="#38bdf8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    label: 'Personalised Care',
+    desc: 'Tailored to your unique needs',
+    accent: '#6ee7b7',
+    lightBg: 'rgba(110,231,183,0.07)',
+    num: '04',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M14 4C9.58 4 6 7.58 6 12c0 6 8 14 8 14s8-8 8-14c0-4.42-3.58-8-8-8z"
+          fill="rgba(14,165,233,0.14)" stroke="#0ea5e9" strokeWidth="1.6"/>
+        <circle cx="14" cy="12" r="3" fill="#0ea5e9"/>
+      </svg>
+    ),
+    label: 'Nepal-Based',
+    desc: 'Culturally sensitive care',
+    accent: '#38bdf8',
+    lightBg: 'rgba(56,189,248,0.06)',
+    num: '05',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect x="3" y="8" width="22" height="14" rx="3" fill="rgba(56,189,248,0.14)" stroke="#38bdf8" strokeWidth="1.6"/>
+        <path d="M8 15h12M8 19h7" stroke="#0284c7" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M8 6l4-2 4 2 4-2" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    label: 'Evidence-Based',
+    desc: 'Clinically validated methods',
+    accent: '#0284c7',
+    lightBg: 'rgba(2,132,199,0.06)',
+    num: '06',
+  },
+]
+
+// eslint-disable-next-line no-unused-vars
+function TrustCard({ item, index }) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        flex: '1 1 0',
+        minWidth: 0,
+        padding: '1.1rem 1rem 1rem',
+        borderRadius: '14px',
+        background: hovered ? item.lightBg : 'rgba(255,255,255,0.75)',
+        border: `1px solid ${hovered ? item.accent + '55' : 'rgba(186,230,253,0.55)'}`,
+        boxShadow: hovered
+          ? `0 8px 24px rgba(14,165,233,0.1), 0 2px 6px rgba(0,0,0,0.04)`
+          : '0 1px 4px rgba(0,0,0,0.04)',
+        transition: 'all 0.22s ease',
+        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+        cursor: 'default',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.55rem',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Faint number watermark */}
+      <div style={{
+        position: 'absolute',
+        top: 6, right: 10,
+        fontFamily: "'DM Mono', monospace",
+        fontSize: '0.6rem',
+        fontWeight: 700,
+        color: hovered ? item.accent : 'rgba(148,163,184,0.4)',
+        letterSpacing: '0.05em',
+        transition: 'color 0.2s',
+        userSelect: 'none',
+      }}>
+        {item.num}
+      </div>
+
+      {/* Bottom accent bar */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0, left: 0,
+        height: 2,
+        width: hovered ? '100%' : '0%',
+        background: `linear-gradient(90deg, ${item.accent}, transparent)`,
+        transition: 'width 0.3s ease',
+        borderRadius: '0 0 14px 14px',
+      }} />
+
+      {/* Icon */}
+      <div style={{
+        width: 44, height: 44,
+        borderRadius: '11px',
+        background: hovered ? item.lightBg : 'rgba(240,249,255,0.7)',
+        border: `1px solid ${hovered ? item.accent + '44' : 'rgba(186,230,253,0.5)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.22s',
+        flexShrink: 0,
+      }}>
+        {item.icon}
+      </div>
+
+      {/* Text */}
+      <div>
+        <div style={{
+          fontFamily: "'Outfit', sans-serif",
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          color: hovered ? '#0c4a6e' : '#1e3a5f',
+          lineHeight: 1.25,
+          marginBottom: '0.18rem',
+          transition: 'color 0.18s',
+        }}>
+          {item.label}
+        </div>
+        <div style={{
+          fontFamily: "'Outfit', sans-serif",
+          fontSize: '0.67rem',
+          color: hovered ? '#0369a1' : '#64748b',
+          lineHeight: 1.4,
+          transition: 'color 0.18s',
+        }}>
+          {item.desc}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function TrustBar() {
+  return (
+    <div style={{
+      padding: '12px 3px',
+      background: 'linear-gradient(135deg, #f0f9ff 0%, #f0fdf4 50%, #f0f9ff 100%)',
+      borderTop: '1px solid rgba(186,230,253,0.4)',
+      borderBottom: '1px solid rgba(186,230,253,0.4)',
+      boxSizing: 'border-box',
+    }}>
+
+      {/* Outer card shell */}
+      <div style={{
+        width: '100%',
+        borderRadius: '16px',
+        background: 'rgba(255,255,255,0.55)',
+        border: '1px solid rgba(186,230,253,0.6)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        boxShadow: '0 4px 20px rgba(14,165,233,0.06), 0 1px 3px rgba(0,0,0,0.03)',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+      }}>
+
+        {/* Top rainbow stripe */}
+        <div style={{
+          height: 3,
+          background: 'linear-gradient(90deg, #10b981 0%, #0ea5e9 35%, #2dd4bf 65%, #10b981 100%)',
+          backgroundSize: '200% 100%',
+        }} />
+
+        {/* Header row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0.7rem 1.1rem 0.5rem',
+          borderBottom: '1px solid rgba(186,230,253,0.35)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{
+              display: 'inline-block',
+              width: 7, height: 7, borderRadius: '50%',
+              background: '#10b981',
+              boxShadow: '0 0 0 3px rgba(16,185,129,0.18)',
+            }} />
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: '#0369a1',
+            }}>
+              Why clients trust us
+            </span>
+          </div>
+          <div style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: '0.58rem',
+            color: 'rgba(148,163,184,0.7)',
+            letterSpacing: '0.08em',
+          }}>
+            6 pillars of care
+          </div>
+        </div>
+
+        {/* Cards grid — 6 equal columns, no scroll */}
+        <div style={{
+          display: 'flex',
+          gap: '0.55rem',
+          padding: '0.65rem 0.75rem 0.75rem',
+          alignItems: 'stretch',
+        }}>
+          {TRUST_ITEMS.map((item, i) => (
+            <TrustCard key={i} item={item} index={i} />
+          ))}
+        </div>
+
+      </div>
+    </div>
+  )
+}
