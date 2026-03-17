@@ -4,6 +4,7 @@ import { useRouter } from '../context/RouterContext'
 export default function SignInPage() {
   const { navigate } = useRouter()
   const [form, setForm] = useState({ email: '', password: '' })
+  const [showStaffMenu, setShowStaffMenu] = useState(false)
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const inputStyle = {
@@ -21,24 +22,17 @@ export default function SignInPage() {
   }
 
   return (
-    /*
-     * Outer shell: fills viewport height, allows scroll if content overflows.
-     * flexbox with stretch so both panels fill full height on tall screens.
-     */
     <div style={{
       minHeight: '100vh',
       background: 'var(--green-mist)',
       display: 'flex',
       alignItems: 'stretch',
-      overflow: 'hidden',      /* clip outer; inner panels handle their own scroll */
+      overflow: 'hidden',
     }}>
 
-      {/* ══════════════════════════════
-          LEFT DECORATIVE PANEL
-          Hidden below 900 px via CSS class
-      ══════════════════════════════ */}
+      {/* ── LEFT decorative panel ── */}
       <div className="auth-panel-left" style={{
-        overflowY: 'auto',     /* scroll if viewport is very short */
+        overflowY: 'auto',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -89,17 +83,14 @@ export default function SignInPage() {
         </div>
       </div>
 
-      {/* ══════════════════════════════
-          RIGHT FORM PANEL
-          Scrolls independently so card is never cut off
-      ══════════════════════════════ */}
+      {/* ── RIGHT form panel ── */}
       <div style={{
         flex: 1,
-        overflowY: 'auto',         /* THIS is the key fix — panel scrolls, not window */
+        overflowY: 'auto',
         display: 'flex',
-        alignItems: 'flex-start',  /* align-start + padding = card never clips */
+        alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '3rem 1.5rem',    /* top/bottom padding ensures card isn't flush against edges */
+        padding: '3rem 1.5rem',
       }}>
         <div style={{
           background: 'var(--white)',
@@ -228,6 +219,7 @@ export default function SignInPage() {
             </button>
           </div>
 
+          {/* Register link */}
           <p style={{
             textAlign: 'center', fontSize: '0.82rem',
             color: 'var(--text-light)', marginTop: '1.5rem',
@@ -240,6 +232,125 @@ export default function SignInPage() {
               Create one →
             </span>
           </p>
+
+          {/* ── Staff portal divider ── */}
+          <div style={{
+            marginTop: '1.75rem',
+            paddingTop: '1.5rem',
+            borderTop: '1px dashed var(--earth-cream)',
+          }}>
+
+            {/* Collapsed trigger */}
+            {!showStaffMenu && (
+              <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-light)', margin: 0 }}>
+                Are you a staff member?{' '}
+                <span
+                  style={{ color: 'var(--sky)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
+                  onClick={() => setShowStaffMenu(true)}
+                >
+                  Staff login →
+                </span>
+              </p>
+            )}
+
+            {/* Expanded staff role picker */}
+            {showStaffMenu && (
+              <div style={{ animation: 'fadeIn 0.2s ease both' }}>
+                <p style={{
+                  textAlign: 'center', fontSize: '0.78rem',
+                  color: 'var(--text-light)', marginBottom: '0.85rem',
+                }}>
+                  Select your staff role to continue:
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+
+                  {/* Admin */}
+                  <button
+                    onClick={() => navigate('/staff')}
+                    style={{
+                      padding: '0.75rem 0.5rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1.5px solid var(--sky)',
+                      background: 'var(--sky-light)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: '0.35rem',
+                      transition: 'all 0.18s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'var(--sky)'
+                      e.currentTarget.style.color = 'white'
+                      e.currentTarget.querySelectorAll('span').forEach(s => s.style.color = 'white')
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'var(--sky-light)'
+                      e.currentTarget.style.color = ''
+                      e.currentTarget.querySelectorAll('span').forEach(s => s.style.color = '')
+                    }}
+                  >
+                    <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>🛡️</span>
+                    <span style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.8rem', fontWeight: 700,
+                      color: 'var(--sky-dark)',
+                    }}>Admin</span>
+                    <span style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.65rem', color: 'var(--text-light)',
+                    }}>Full portal access</span>
+                  </button>
+
+                  {/* Therapist */}
+                  <button
+                    onClick={() => navigate('/staff')}
+                    style={{
+                      padding: '0.75rem 0.5rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1.5px solid var(--green-soft)',
+                      background: 'var(--green-mist)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: '0.35rem',
+                      transition: 'all 0.18s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'var(--green-soft)'
+                      e.currentTarget.querySelectorAll('span').forEach(s => s.style.color = 'white')
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'var(--green-mist)'
+                      e.currentTarget.querySelectorAll('span').forEach(s => s.style.color = '')
+                    }}
+                  >
+                    <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>👩‍⚕️</span>
+                    <span style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.8rem', fontWeight: 700,
+                      color: 'var(--green-deep)',
+                    }}>Therapist</span>
+                    <span style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.65rem', color: 'var(--text-light)',
+                    }}>My clients & schedule</span>
+                  </button>
+
+                </div>
+
+                {/* Dismiss */}
+                <p style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+                  <span
+                    style={{ fontSize: '0.72rem', color: 'var(--text-light)', cursor: 'pointer' }}
+                    onClick={() => setShowStaffMenu(false)}
+                  >
+                    ← Back to client login
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     </div>

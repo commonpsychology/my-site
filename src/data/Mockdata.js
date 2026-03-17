@@ -1,0 +1,40 @@
+/* ── Shared mock data for staff dashboards ── */
+
+export const MOCK_CLIENTS = [
+  { id: 'c1', name: 'Priya Sharma',    email: 'priya.sharma@gmail.com',   phone: '9841234567', age: 30, gender: 'Female', district: 'Kathmandu', therapistId: 'therapist-1', registeredDate: '2025-01-15', totalSessions: 12, lastSession: '2025-06-10', nextSession: '2025-06-18', status: 'active',   tags: ['Anxiety', 'Stress'], notes: 'Making good progress with CBT techniques. Responding well to breathing exercises.' },
+  { id: 'c2', name: 'Ramesh Adhikari', email: 'ramesh.a@gmail.com',       phone: '9851234567', age: 45, gender: 'Male',   district: 'Lalitpur',   therapistId: 'therapist-2', registeredDate: '2025-02-08', totalSessions: 7,  lastSession: '2025-06-05', nextSession: '2025-06-20', status: 'active',   tags: ['Depression', 'Grief'], notes: 'Processing loss of family member. Medication referral pending with Dr. Rai.' },
+  { id: 'c3', name: 'Sita Gurung',     email: 'sita.g@yahoo.com',         phone: '9861234567', age: 27, gender: 'Female', district: 'Bhaktapur',  therapistId: 'therapist-1', registeredDate: '2025-03-20', totalSessions: 5,  lastSession: '2025-06-01', nextSession: '2025-06-25', status: 'active',   tags: ['Relationships', 'Self-esteem'], notes: 'Exploring attachment patterns. Assigned journaling homework.' },
+  { id: 'c4', name: 'Bikash Tamang',   email: 'bikash.t@gmail.com',       phone: '9871234567', age: 22, gender: 'Male',   district: 'Kathmandu',  therapistId: 'therapist-3', registeredDate: '2025-01-30', totalSessions: 9,  lastSession: '2025-05-28', nextSession: null,          status: 'paused',   tags: ['Anxiety', 'Academic'], notes: 'On study leave. Will resume August. Progress notes filed.' },
+  { id: 'c5', name: 'Mina Koirala',    email: 'mina.k@gmail.com',         phone: '9841111111', age: 38, gender: 'Female', district: 'Kathmandu',  therapistId: 'therapist-4', registeredDate: '2025-04-12', totalSessions: 3,  lastSession: '2025-06-08', nextSession: '2025-06-22', status: 'active',   tags: ['Mindfulness', 'Burnout'], notes: 'Corporate burnout case. Working on boundary-setting and mindfulness.' },
+  { id: 'c6', name: 'Suresh Bhandari', email: 'suresh.b@gmail.com',       phone: '9852222222', age: 55, gender: 'Male',   district: 'Lalitpur',   therapistId: 'therapist-2', registeredDate: '2025-05-01', totalSessions: 2,  lastSession: '2025-06-03', nextSession: '2025-06-19', status: 'active',   tags: ['Depression', 'Retirement'], notes: 'Adjusting to retirement. Social isolation concerns noted.' },
+  { id: 'c7', name: 'Nisha Shrestha',  email: 'nisha.s@gmail.com',        phone: '9863333333', age: 19, gender: 'Female', district: 'Kathmandu',  therapistId: 'therapist-3', registeredDate: '2025-02-14', totalSessions: 14, lastSession: '2025-06-12', nextSession: '2025-06-26', status: 'active',   tags: ['Trauma', 'PTSD'], notes: 'Trauma-focused CBT in progress. Significant improvement in sleep.' },
+  { id: 'c8', name: 'Dev Maharjan',    email: 'dev.m@gmail.com',          phone: '9874444444', age: 34, gender: 'Male',   district: 'Bhaktapur',  therapistId: 'therapist-1', registeredDate: '2025-03-05', totalSessions: 0,  lastSession: null,         nextSession: '2025-06-21', status: 'new',      tags: ['Couples', 'Communication'], notes: 'First session upcoming. Intake form completed.' },
+]
+
+export const MOCK_BOOKINGS = [
+  { id: 'b1',  clientId: 'c1', clientName: 'Priya Sharma',    therapistId: 'therapist-1', therapistName: 'Dr. Anita Shrestha', date: '2025-06-18', time: '10:00 AM', type: 'Online Video', status: 'upcoming',   fee: 2000, paid: true,  sessionNo: 13, notes: '' },
+  { id: 'b2',  clientId: 'c2', clientName: 'Ramesh Adhikari', therapistId: 'therapist-2', therapistName: 'Dr. Sunita Rai',     date: '2025-06-20', time: '2:00 PM',  type: 'In-Person',    status: 'upcoming',   fee: 2500, paid: false, sessionNo: 8,  notes: '' },
+  { id: 'b3',  clientId: 'c5', clientName: 'Mina Koirala',    therapistId: 'therapist-4', therapistName: 'Prabha Thapa',       date: '2025-06-22', time: '11:00 AM', type: 'Online Video', status: 'upcoming',   fee: 1800, paid: true,  sessionNo: 4,  notes: '' },
+  { id: 'b4',  clientId: 'c3', clientName: 'Sita Gurung',     therapistId: 'therapist-1', therapistName: 'Dr. Anita Shrestha', date: '2025-06-25', time: '3:00 PM',  type: 'In-Person',    status: 'upcoming',   fee: 2000, paid: false, sessionNo: 6,  notes: '' },
+  { id: 'b5',  clientId: 'c6', clientName: 'Suresh Bhandari', therapistId: 'therapist-2', therapistName: 'Dr. Sunita Rai',     date: '2025-06-19', time: '9:00 AM',  type: 'Phone Call',   status: 'upcoming',   fee: 1500, paid: true,  sessionNo: 3,  notes: '' },
+  { id: 'b6',  clientId: 'c7', clientName: 'Nisha Shrestha',  therapistId: 'therapist-3', therapistName: 'Rohan Karki',        date: '2025-06-26', time: '1:00 PM',  type: 'Online Video', status: 'upcoming',   fee: 2000, paid: true,  sessionNo: 15, notes: '' },
+  { id: 'b7',  clientId: 'c8', clientName: 'Dev Maharjan',    therapistId: 'therapist-1', therapistName: 'Dr. Anita Shrestha', date: '2025-06-21', time: '4:00 PM',  type: 'In-Person',    status: 'upcoming',   fee: 2000, paid: false, sessionNo: 1,  notes: 'First session' },
+  { id: 'b8',  clientId: 'c1', clientName: 'Priya Sharma',    therapistId: 'therapist-1', therapistName: 'Dr. Anita Shrestha', date: '2025-06-10', time: '10:00 AM', type: 'Online Video', status: 'completed',  fee: 2000, paid: true,  sessionNo: 12, notes: 'Covered CBT thought records. Strong session.' },
+  { id: 'b9',  clientId: 'c2', clientName: 'Ramesh Adhikari', therapistId: 'therapist-2', therapistName: 'Dr. Sunita Rai',     date: '2025-06-05', time: '2:00 PM',  type: 'In-Person',    status: 'completed',  fee: 2500, paid: true,  sessionNo: 7,  notes: 'Explored grief stages. Showed vulnerability — positive sign.' },
+  { id: 'b10', clientId: 'c7', clientName: 'Nisha Shrestha',  therapistId: 'therapist-3', therapistName: 'Rohan Karki',        date: '2025-06-12', time: '1:00 PM',  type: 'Online Video', status: 'completed',  fee: 2000, paid: true,  sessionNo: 14, notes: 'Sleep diary reviewed — 6/7 nights improved.' },
+  { id: 'b11', clientId: 'c4', clientName: 'Bikash Tamang',   therapistId: 'therapist-3', therapistName: 'Rohan Karki',        date: '2025-05-28', time: '11:00 AM', type: 'In-Person',    status: 'completed',  fee: 2000, paid: true,  sessionNo: 9,  notes: 'Pre-study-leave session. Good closure.' },
+  { id: 'b12', clientId: 'c3', clientName: 'Sita Gurung',     therapistId: 'therapist-1', therapistName: 'Dr. Anita Shrestha', date: '2025-06-01', time: '3:00 PM',  type: 'Online Video', status: 'cancelled',  fee: 2000, paid: false, sessionNo: 5,  notes: 'Client cancelled 2hrs before. Rescheduled.' },
+]
+
+export const THERAPISTS = [
+  { id: 'therapist-1', name: 'Dr. Anita Shrestha',  role: 'Clinical Psychologist & Director', email: 'anita@pujasamargi.com.np',  phone: '9841000001', avatar: 'AS', speciality: 'CBT, Anxiety, Couples', activeClients: 3, totalSessions: 156, rating: 4.9, joinDate: '2020-01-10' },
+  { id: 'therapist-2', name: 'Dr. Sunita Rai',       role: 'Consultant Psychiatrist',          email: 'sunita@pujasamargi.com.np', phone: '9841000002', avatar: 'SR', speciality: 'Depression, Psychiatry', activeClients: 2, totalSessions: 210, rating: 4.8, joinDate: '2020-03-15' },
+  { id: 'therapist-3', name: 'Rohan Karki',           role: 'CBT & Child Psychologist',         email: 'rohan@pujasamargi.com.np',  phone: '9841000003', avatar: 'RK', speciality: 'CBT, Trauma, Youth',    activeClients: 2, totalSessions: 98,  rating: 4.9, joinDate: '2021-06-01' },
+  { id: 'therapist-4', name: 'Prabha Thapa',          role: 'Mindfulness & Wellness Coach',     email: 'prabha@pujasamargi.com.np', phone: '9841000004', avatar: 'PT', speciality: 'Mindfulness, Burnout',  activeClients: 1, totalSessions: 74,  rating: 4.7, joinDate: '2021-09-20' },
+]
+
+export const REVENUE = [
+  { month: 'Jan', amount: 24500 }, { month: 'Feb', amount: 31200 },
+  { month: 'Mar', amount: 28400 }, { month: 'Apr', amount: 35600 },
+  { month: 'May', amount: 41200 }, { month: 'Jun', amount: 38800 },
+]

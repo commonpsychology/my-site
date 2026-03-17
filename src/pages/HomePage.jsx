@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import Hero from '../components/Hero'
+import HeroEmotional from '../components/HeroEmotional'
 import TrustBar from '../components/Trustbar'
 import Services from '../components/Services'
 import Therapists from '../components/Therapists'
@@ -31,7 +31,7 @@ export default function HomePage() {
   return (
     <>
       {showPoll && <PollPopup onClose={() => setShowPoll(false)} />}
-      <Hero />
+      <HeroEmotional />
       <TrustBar />
       <Services />
       <Therapists />

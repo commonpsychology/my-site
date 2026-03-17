@@ -23,8 +23,8 @@ const CSS = `
     box-sizing: border-box;
   }
   .account-hero {
-    background: linear-gradient(135deg, ${SKY_D} 0%, ${SKY} 55%, #22d3ee 100%);
-    padding: 2rem 1rem 4.5rem;
+    background: linear-gradient(135deg, ${SKY_D} 0%, ${SKY} 55%, #22d3ee 100%) !important;
+    padding: calc(72px + 1.5rem) 1rem 4.5rem;
     position: relative;
     overflow: hidden;
   }
@@ -35,6 +35,20 @@ const CSS = `
     flex-wrap: wrap;
     position: relative;
   }
+  .account-hero-inner h1 {
+    color: #ffffff !important;
+  }
+  .account-hero-inner p {
+    color: rgba(255,255,255,0.75) !important;
+  }
+  .account-hero-inner button {
+    color: #ffffff !important;
+    border-color: rgba(255,255,255,0.35) !important;
+    background: rgba(255,255,255,0.12) !important;
+  }
+  .account-hero-avatar {
+    color: #ffffff !important;
+  }
   .account-stats {
     max-width: 1100px;
     margin: -2rem auto 0;
@@ -44,8 +58,8 @@ const CSS = `
   }
   .account-stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.6rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
   }
   .account-layout {
     max-width: 1100px;
@@ -159,10 +173,14 @@ const CSS = `
   /* ── Tablet 640px+ ── */
   @media (min-width: 640px) {
     .account-hero {
-      padding: 2.5rem 2rem 4.5rem;
+      padding: calc(72px + 1.5rem) 2rem 4.5rem;
+      background: linear-gradient(135deg, ${SKY_D} 0%, ${SKY} 55%, #22d3ee 100%) !important;
     }
     .account-stats {
       padding: 0 2rem;
+    }
+    .account-stats-grid {
+      grid-template-columns: repeat(4, 1fr);
     }
     .account-layout {
       padding: 0 2rem 3rem;
@@ -181,7 +199,8 @@ const CSS = `
   /* ── Desktop 1024px+ ── */
   @media (min-width: 1024px) {
     .account-hero {
-      padding: 3rem 3rem 5rem;
+      padding: calc(72px + 2rem) 3rem 5rem;
+      background: linear-gradient(135deg, ${SKY_D} 0%, ${SKY} 55%, #22d3ee 100%) !important;
     }
     .account-stats {
       padding: 0 3rem;
@@ -204,6 +223,9 @@ const CSS = `
     }
     .account-tab-pills {
       display: none;
+    }
+    .account-bottom-tabs {
+      display: none !important;
     }
   }
 `
@@ -343,7 +365,12 @@ export default function MyAccountPage() {
     therapistMessage: true, promotions: false,
   })
 
-  useEffect(() => { injectCSS() }, [])
+  useEffect(() => {
+    // Remove old injected style so it re-injects with latest CSS
+    const old = document.getElementById('account-page-css')
+    if (old) old.remove()
+    injectCSS()
+  }, [])
 
   const up = k => v => setProfile(p => ({ ...p, [k]: v }))
 
@@ -381,9 +408,14 @@ export default function MyAccountPage() {
 
       {/* ── Hero ── */}
       <div className="account-hero">
-        <div style={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
+        <div style={{
+          position: 'absolute', top: -60, right: -60,
+          width: 220, height: 220, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.07)', pointerEvents: 'none',
+        }} />
         <div className="account-hero-inner">
-          <div style={{
+          {/* Avatar */}
+          <div className="account-hero-avatar" style={{
             width: 64, height: 64, borderRadius: '50%', flexShrink: 0,
             background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)',
             border: '3px solid rgba(255,255,255,0.5)',
@@ -391,18 +423,32 @@ export default function MyAccountPage() {
             fontFamily: 'var(--font-display)', fontSize: '1.4rem',
             color: WHITE, fontWeight: 800,
           }}>PS</div>
+
+          {/* Name + email */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.1rem, 4vw, 1.6rem)', color: WHITE, margin: 0, lineHeight: 1.2 }}>
+            <h1 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(1.1rem, 4vw, 1.6rem)',
+              color: WHITE,
+              margin: 0, lineHeight: 1.2,
+            }}>
               {profile.name}
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', margin: '0.25rem 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{
+              color: 'rgba(255,255,255,0.75)',
+              fontSize: '0.82rem', margin: '0.25rem 0 0',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
               {profile.email}
             </p>
           </div>
+
+          {/* Log Out button */}
           <button onClick={() => navigate('/signin')} style={{
             padding: '0.45rem 1rem', borderRadius: 9,
             border: '1.5px solid rgba(255,255,255,0.35)',
-            background: 'rgba(255,255,255,0.12)', color: WHITE,
+            background: 'rgba(255,255,255,0.12)',
+            color: WHITE,
             fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
             flexShrink: 0, fontFamily: 'inherit',
           }}>🚪 Log Out</button>
