@@ -1,512 +1,415 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from '../context/RouterContext'
 
-/* ── Palette ── */
 const C = {
-  skyBright:  '#00BFFF',
-  skyMid:     '#009FD4',
-  skyDeep:    '#007BA8',
-  skyFaint:   '#E0F7FF',
-  skyFainter: '#F0FBFF',
-  skyGhost:   '#F8FEFF',
-  white:      '#ffffff',
-  mint:       '#e8f3ee',
-  textDark:   '#1a3a4a',
-  textMid:    '#2e6080',
-  textLight:  '#7a9aaa',
-  border:     '#b0d4e8',
-  borderFaint:'#daeef8',
+  skyBright:'#00BFFF', skyMid:'#009FD4', skyDeep:'#007BA8',
+  skyFaint:'#E0F7FF', skyFainter:'#F0FBFF', skyGhost:'#F8FEFF',
+  white:'#ffffff', mint:'#e8f3ee',
+  textDark:'#1a3a4a', textMid:'#2e6080', textLight:'#7a9aaa',
+  border:'#b0d4e8', borderFaint:'#daeef8',
 }
+const heroGrad    = `linear-gradient(135deg,#007BA8 0%,#009FD4 45%,#00BFFF 85%,#22d3ee 100%)`
+const btnGrad     = `linear-gradient(135deg,#007BA8 0%,#00BFFF 100%)`
+const sectionGrad = `linear-gradient(135deg,${C.skyFainter} 0%,${C.mint} 60%,${C.skyFaint} 100%)`
 
-const heroGrad    = `linear-gradient(135deg, ${C.skyDeep} 0%, ${C.skyMid} 40%, ${C.skyBright} 80%, #22d3ee 100%)`
-const sectionGrad = `linear-gradient(135deg, ${C.skyFainter} 0%, ${C.mint} 60%, ${C.skyFaint} 100%)`
-const btnGrad     = `linear-gradient(135deg, ${C.skyDeep} 0%, ${C.skyBright} 100%)`
+const QR_IMAGE = '/images/payment-qr.png'
+const ESEWA_ID = '9849350088'
+const KHALTI_ID = '9849350088'
 
-/* ── Workshop data with placeholder image gradients ── */
-const CATEGORIES = ['All', 'Upcoming', 'Stress & Anxiety', 'Relationships', 'Mindfulness', 'Trauma', 'Youth & Parenting', 'Professional']
-
-const WORKSHOPS = [
-  {
-    id: 1,
-    title: 'Stress-Free Living: A Weekend Immersion',
-    category: 'Stress & Anxiety',
-    type: 'Live Workshop',
-    date: 'Jul 19–20, 2025',
-    time: '9:00 AM – 5:00 PM',
-    venue: 'Puja Samargi Center, Baneshwor',
-    seats: 12,
-    seatsLeft: 4,
-    price: 'NPR 3,500',
-    instructor: 'Dr. Anita Shrestha',
-    duration: '2 Days',
-    upcoming: true,
-    img: 'linear-gradient(135deg, #007BA8 0%, #00BFFF 60%, #22d3ee 100%)',
-    emoji: '🧘',
-    desc: 'A transformative two-day immersion into evidence-based stress management. Learn breathwork, CBT tools, and somatic techniques in a supportive group environment.',
-    tags: ['CBT', 'Breathwork', 'Group'],
-  },
-  {
-    id: 2,
-    title: 'Mindful Parenting: Raising Emotionally Resilient Children',
-    category: 'Youth & Parenting',
-    type: 'Live Workshop',
-    date: 'Aug 2, 2025',
-    time: '10:00 AM – 2:00 PM',
-    venue: 'Online (Zoom)',
-    seats: 20,
-    seatsLeft: 11,
-    price: 'NPR 1,800',
-    instructor: 'Rohan Karki',
-    duration: '4 Hours',
-    upcoming: true,
-    img: 'linear-gradient(135deg, #2d4a3e 0%, #3d6b5a 60%, #6a9e88 100%)',
-    emoji: '👨‍👩‍👧',
-    desc: 'Practical tools for parents to model emotional regulation, manage meltdowns with compassion, and nurture secure attachment with children of all ages.',
-    tags: ['Parenting', 'Attachment', 'Online'],
-  },
-  {
-    id: 3,
-    title: 'Introduction to Mindfulness-Based Stress Reduction (MBSR)',
-    category: 'Mindfulness',
-    type: 'Online Course',
-    date: 'Aug 10 – Sep 7, 2025',
-    time: 'Self-Paced',
-    venue: 'Online Portal',
-    seats: 50,
-    seatsLeft: 23,
-    price: 'NPR 2,200',
-    instructor: 'Prabha Thapa',
-    duration: '4 Weeks',
-    upcoming: true,
-    img: 'linear-gradient(135deg, #0f4c6b 0%, #009FD4 60%, #22d3ee 100%)',
-    emoji: '🌿',
-    desc: 'The globally-validated 8-week MBSR programme, compressed into 4 weeks with daily guided meditations, body scans, and mindful movement videos.',
-    tags: ['MBSR', 'Self-Paced', 'Meditation'],
-  },
-  {
-    id: 4,
-    title: 'Communication & Conflict: Couples Workshop',
-    category: 'Relationships',
-    type: 'Live Workshop',
-    date: 'Aug 23, 2025',
-    time: '11:00 AM – 4:00 PM',
-    venue: 'Puja Samargi Center, Baneshwor',
-    seats: 8,
-    seatsLeft: 2,
-    price: 'NPR 5,000',
-    instructor: 'Dr. Anita Shrestha',
-    duration: '5 Hours',
-    upcoming: true,
-    img: 'linear-gradient(135deg, #b56a28 0%, #d4a574 60%, #f5ede0 100%)',
-    emoji: '💑',
-    desc: 'For couples who want to fight better, listen deeper, and reconnect. Based on Gottman Method principles, this half-day session is practical and immediately applicable.',
-    tags: ['Gottman', 'Couples', 'Communication'],
-  },
-  {
-    id: 5,
-    title: 'Trauma-Informed Yoga: Movement for Healing',
-    category: 'Trauma',
-    type: 'Recurring Class',
-    date: 'Every Saturday',
-    time: '7:30 AM – 9:00 AM',
-    venue: 'Puja Samargi Center, Baneshwor',
-    seats: 15,
-    seatsLeft: 7,
-    price: 'NPR 600/session',
-    instructor: 'Prabha Thapa',
-    duration: '90 Min',
-    upcoming: false,
-    img: 'linear-gradient(135deg, #1a3a4a 0%, #2e6080 60%, #5b9ab5 100%)',
-    emoji: '🕊️',
-    desc: 'A gentle, trauma-sensitive yoga class designed for survivors and those experiencing chronic stress. No prior yoga experience required. Mats provided.',
-    tags: ['Yoga', 'Somatic', 'Recurring'],
-  },
-  {
-    id: 6,
-    title: 'Burnout to Balance: A Guide for Mental Health Professionals',
-    category: 'Professional',
-    type: 'CPD Workshop',
-    date: 'Sep 6, 2025',
-    time: '9:00 AM – 1:00 PM',
-    venue: 'Online (Zoom)',
-    seats: 30,
-    seatsLeft: 14,
-    price: 'NPR 2,800',
-    instructor: 'Dr. Sunita Rai',
-    duration: '4 Hours',
-    upcoming: true,
-    img: 'linear-gradient(135deg, #006b8f 0%, #00BFFF 80%, #a0e9ff 100%)',
-    emoji: '⚕️',
-    desc: 'A CPD-certified session for counsellors, social workers, and healthcare staff. Covers vicarious trauma, supervision models, and sustainable self-care frameworks.',
-    tags: ['CPD', 'Professionals', 'Burnout'],
-  },
-  {
-    id: 7,
-    title: 'Teen Minds: Emotional Intelligence for Adolescents',
-    category: 'Youth & Parenting',
-    type: 'School Programme',
-    date: 'Sep 13–14, 2025',
-    time: '10:00 AM – 12:00 PM',
-    venue: 'Partner Schools, Kathmandu',
-    seats: 40,
-    seatsLeft: 18,
-    price: 'NPR 800',
-    instructor: 'Rohan Karki',
-    duration: '2 × 2 Hours',
-    upcoming: true,
-    img: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 60%, #7dd3fc 100%)',
-    emoji: '🧠',
-    desc: 'Interactive sessions for students aged 13–18 on understanding emotions, peer pressure, social media anxiety, and building resilience tools they will actually use.',
-    tags: ['Teens', 'Schools', 'EQ'],
-  },
-  {
-    id: 8,
-    title: 'Grief & Loss: Finding Your Way Through',
-    category: 'Trauma',
-    type: 'Support Group',
-    date: 'Every 2nd Sunday',
-    time: '3:00 PM – 5:00 PM',
-    venue: 'Puja Samargi Center, Baneshwor',
-    seats: 10,
-    seatsLeft: 5,
-    price: 'NPR 400/session',
-    instructor: 'Dr. Sunita Rai',
-    duration: '2 Hours',
-    upcoming: false,
-    img: 'linear-gradient(135deg, #2c3e50 0%, #4a6fa5 60%, #b0d4e8 100%)',
-    emoji: '🕯️',
-    desc: 'A facilitated support group for those navigating bereavement, loss of relationship, or major life transitions. A safe, confidential circle with clinical oversight.',
-    tags: ['Grief', 'Group', 'Support'],
-  },
+const METHODS = [
+  { id:'qr',     label:'QR Code',         emoji:'📷', color:C.skyBright, faint:C.skyFaint },
+  { id:'esewa',  label:'eSewa',            emoji:'🟢', color:'#22c55e',   faint:'#d1fae5'  },
+  { id:'khalti', label:'Khalti',           emoji:'🟣', color:'#a855f7',   faint:'#f0e6ff'  },
+  { id:'cod',    label:'Cash on Arrival',  emoji:'💵', color:'#f97316',   faint:'#fff7ed'  },
 ]
 
-/* ══════════════════════════════════════
-   WORKSHOP CARD with floating label + bevel hover
-══════════════════════════════════════ */
-function WorkshopCard({ ws, onBook }) {
-  const [hovered, setHovered] = useState(false)
-  const pct = Math.round((ws.seatsLeft / ws.seats) * 100)
-  const urgent = ws.seatsLeft <= 3
+const WORKSHOPS = [
+  { id:1, emoji:'🧠', title:'Understanding Anxiety — A CBT Workshop', facilitator:'Dr. Anita Shrestha', date:'Sat, 21 Jun 2025', time:'10:00 AM – 1:00 PM', mode:'Online (Zoom)', seats:20, booked:16, price:'NPR 800', num:800, free:false, tags:['Anxiety','CBT','Beginners'], color:'var(--blue-mist)' },
+  { id:2, emoji:'🌿', title:'Mindfulness & Meditation — Foundations', facilitator:'Ms. Priya Tamang', date:'Sun, 22 Jun 2025', time:'9:00 AM – 11:30 AM', mode:'In-Person, Kathmandu', seats:15, booked:9, price:'FREE', num:0, free:true, tags:['Mindfulness','Meditation'], color:'var(--green-mist)' },
+  { id:3, emoji:'💼', title:'Burnout Recovery — Workplace Wellbeing', facilitator:'Mr. Roshan Karki', date:'Sat, 28 Jun 2025', time:'2:00 PM – 5:00 PM', mode:'Online (Zoom)', seats:25, booked:18, price:'NPR 1,200', num:1200, free:false, tags:['Burnout','Workplace','Stress'], color:'var(--earth-cream)' },
+  { id:4, emoji:'👨‍👩‍👧', title:'Parenting Teenagers — Staying Connected', facilitator:'Dr. Anita Shrestha', date:'Fri, 4 Jul 2025', time:'6:00 PM – 8:30 PM', mode:'Online (Zoom)', seats:30, booked:12, price:'NPR 600', num:600, free:false, tags:['Parenting','Adolescents','Family'], color:'var(--sky-light)' },
+  { id:5, emoji:'😴', title:'Better Sleep — Science & Strategies', facilitator:'Ms. Priya Tamang', date:'Sat, 5 Jul 2025', time:'10:00 AM – 12:00 PM', mode:'In-Person, Kathmandu', seats:20, booked:20, price:'NPR 500', num:500, free:false, tags:['Sleep','Insomnia','Health'], color:'var(--green-mist)', full:true },
+  { id:6, emoji:'💙', title:'Grief & Loss — Finding Your Way Through', facilitator:'Mr. Roshan Karki', date:'Sun, 13 Jul 2025', time:'3:00 PM – 5:30 PM', mode:'Online (Zoom)', seats:20, booked:7, price:'FREE', num:0, free:true, tags:['Grief','Loss','Healing'], color:'var(--blue-mist)' },
+]
 
+function genRef() {
+  return `PS-WS-${new Date().getFullYear()}-${String(Math.floor(Math.random()*90000)+10000)}`
+}
+
+function CopyBtn({ text, id, copied, onCopy }) {
+  const active = copied === id
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        borderRadius: 20,
-        background: C.white,
-        position: 'relative',
-        overflow: 'visible',
-        cursor: 'pointer',
-        /* bevel / lifted shadow on hover */
-        boxShadow: hovered
-          ? `0 2px 0 0 ${C.skyDeep},
-             0 4px 0 0 ${C.skyMid}cc,
-             0 8px 0 0 ${C.skyBright}66,
-             0 20px 48px rgba(0,191,255,0.22),
-             inset 0 1px 0 rgba(255,255,255,0.9)`
-          : `0 2px 12px rgba(0,191,255,0.07), inset 0 1px 0 rgba(255,255,255,0.8)`,
-        border: `1.5px solid ${hovered ? C.skyBright : C.borderFaint}`,
-        transform: hovered ? 'translateY(-6px) scale(1.012)' : 'translateY(0) scale(1)',
-        transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-      }}
-    >
-      {/* ── Image area ── */}
-      <div style={{
-        height: 180, borderRadius: '18px 18px 0 0',
-        background: ws.img,
-        position: 'relative', overflow: 'hidden',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {/* shimmer overlay on hover */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: hovered ? 'rgba(255,255,255,0.08)' : 'transparent',
-          transition: 'background 0.3s',
-        }} />
+    <button onClick={() => { navigator.clipboard.writeText(text).catch(()=>{}); onCopy(id) }}
+      style={{ padding:'0.3rem 0.85rem', borderRadius:8, border:`1.5px solid ${active?'#22c55e':C.border}`, background:active?'#d1fae5':C.white, color:active?'#065f46':C.textMid, fontFamily:'var(--font-body)', fontSize:'0.74rem', fontWeight:700, cursor:'pointer', transition:'all 0.18s', whiteSpace:'nowrap' }}>
+      {active ? '✓ Copied' : '⎘ Copy'}
+    </button>
+  )
+}
 
-        {/* big emoji */}
-        <span style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))', position: 'relative' }}>
-          {ws.emoji}
-        </span>
-
-        {/* type badge top-left */}
-        <div style={{
-          position: 'absolute', top: 12, left: 12,
-          background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.3)',
-          borderRadius: 100, padding: '3px 10px',
-          fontSize: '0.68rem', fontWeight: 700, color: 'white',
-          letterSpacing: '0.06em', fontFamily: 'var(--font-body)',
-        }}>{ws.type}</div>
-
-        {/* upcoming badge top-right */}
-        {ws.upcoming && (
-          <div style={{
-            position: 'absolute', top: 12, right: 12,
-            background: btnGrad,
-            borderRadius: 100, padding: '3px 10px',
-            fontSize: '0.65rem', fontWeight: 800, color: 'white',
-            letterSpacing: '0.06em', fontFamily: 'var(--font-body)',
-            boxShadow: '0 2px 8px rgba(0,191,255,0.4)',
-          }}>UPCOMING</div>
-        )}
-      </div>
-
-      {/* ── Floating label ── */}
-      <div style={{
-        position: 'absolute',
-        bottom: 'calc(100% - 210px)',
-        left: '50%', transform: 'translateX(-50%)',
-        zIndex: 10,
-        background: hovered ? btnGrad : C.white,
-        border: `1.5px solid ${hovered ? C.skyBright : C.border}`,
-        borderRadius: 100,
-        padding: '5px 16px',
-        boxShadow: hovered
-          ? `0 4px 20px rgba(0,191,255,0.35), 0 1px 0 rgba(255,255,255,0.4) inset`
-          : `0 4px 16px rgba(0,0,0,0.12)`,
-        transition: 'all 0.3s ease',
-        whiteSpace: 'nowrap',
-        pointerEvents: 'none',
-      }}>
-        <span style={{
-          fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 800,
-          color: hovered ? 'white' : C.textMid,
-          letterSpacing: '0.05em',
-          transition: 'color 0.3s',
-        }}>{ws.category}</span>
-      </div>
-
-      {/* ── Card body ── */}
-      <div style={{ padding: '1.5rem 1.4rem 1.4rem' }}>
-        <h3 style={{
-          fontFamily: 'var(--font-display)', fontSize: '1rem',
-          color: C.textDark, lineHeight: 1.35, marginBottom: '0.6rem',
-        }}>{ws.title}</h3>
-
-        <p style={{
-          fontFamily: 'var(--font-body)', fontSize: '0.8rem',
-          color: C.textLight, lineHeight: 1.6, marginBottom: '1rem',
-        }}>{ws.desc}</p>
-
-        {/* Meta rows */}
-        {[
-          { icon: '📅', val: ws.date },
-          { icon: '🕐', val: ws.time },
-          { icon: '📍', val: ws.venue },
-          { icon: '👩‍⚕️', val: ws.instructor },
-        ].map((m, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            marginBottom: '0.3rem',
-          }}>
-            <span style={{ fontSize: '0.8rem', width: 18, flexShrink: 0 }}>{m.icon}</span>
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: C.textMid }}>{m.val}</span>
-          </div>
-        ))}
-
-        {/* Tags */}
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', margin: '0.85rem 0' }}>
-          {ws.tags.map(t => (
-            <span key={t} style={{
-              fontSize: '0.65rem', fontWeight: 700, padding: '2px 9px',
-              borderRadius: 100,
-              background: hovered ? C.skyFaint : C.skyFainter,
-              color: C.skyMid, border: `1px solid ${C.borderFaint}`,
-              transition: 'background 0.3s',
-            }}>#{t}</span>
-          ))}
-        </div>
-
-        {/* Seats bar */}
-        <div style={{ marginBottom: '1rem' }}>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between',
-            fontFamily: 'var(--font-body)', fontSize: '0.7rem',
-            color: urgent ? '#c62828' : C.textLight, marginBottom: '0.3rem',
-          }}>
-            <span>{urgent ? '🔥 Only ' + ws.seatsLeft + ' seats left!' : ws.seatsLeft + ' seats available'}</span>
-            <span>{ws.duration}</span>
-          </div>
-          <div style={{ height: 4, borderRadius: 4, background: C.skyFaint, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 4,
-              width: `${100 - pct}%`,
-              background: urgent ? 'linear-gradient(90deg,#e53e3e,#f97316)' : btnGrad,
-              transition: 'width 0.6s ease',
-            }} />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: '0.75rem',
-        }}>
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: C.textDark, fontWeight: 700 }}>{ws.price}</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.68rem', color: C.textLight }}>per person</div>
-          </div>
-          <button
-            onClick={() => onBook(ws)}
-            style={{
-              padding: '0.55rem 1.2rem', borderRadius: 10, border: 'none',
-              background: hovered ? btnGrad : C.skyFaint,
-              color: hovered ? 'white' : C.skyMid,
-              fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.3s ease',
-              boxShadow: hovered ? '0 4px 16px rgba(0,191,255,0.35)' : 'none',
-            }}>
-            Register →
-          </button>
-        </div>
-      </div>
+function FInput({ label, required, type='text', placeholder, value, onChange }) {
+  const [f, setF] = useState(false)
+  return (
+    <div>
+      <label style={{ display:'block', fontFamily:'var(--font-body)', fontSize:'0.66rem', fontWeight:800, color:C.textLight, textTransform:'uppercase', letterSpacing:'0.09em', marginBottom:'0.4rem' }}>
+        {label}{required && <span style={{ color:C.skyBright, marginLeft:2 }}>*</span>}
+      </label>
+      <input type={type} placeholder={placeholder} value={value} onChange={onChange}
+        onFocus={()=>setF(true)} onBlur={()=>setF(false)}
+        style={{ width:'100%', padding:'0.75rem 1rem', border:`1.5px solid ${f?C.skyBright:C.borderFaint}`, borderRadius:10, fontFamily:'var(--font-body)', fontSize:'0.9rem', color:C.textDark, background:f?C.skyGhost:C.white, outline:'none', boxSizing:'border-box', boxShadow:f?`0 0 0 3px rgba(0,191,255,0.1)`:'none', transition:'all 0.2s' }} />
     </div>
   )
 }
 
-/* ══════════════════════════════════════
-   PAGE
-══════════════════════════════════════ */
 export default function WorkshopsPage() {
-  const { navigate } = useRouter()
-  const [activeCategory, setActiveCategory] = useState('All')
-  const [selected, setSelected] = useState(null)
+  const { navigate }          = useRouter()
+  const [screen, setScreen]   = useState('list')   // 'list' | 'register' | 'payment' | 'done'
+  const [workshop, setWS]     = useState(null)
+  const [method, setMethod]   = useState('qr')
+  const [copied, setCopied]   = useState('')
+  const [saving, setSaving]   = useState(false)
+  const [ref]                 = useState(genRef)
+  const [registered, setReg]  = useState([])
+  const confirmed             = useRef(false)
+  const payRef                = useRef(null)
 
-  const filtered = WORKSHOPS.filter(w => {
-    if (activeCategory === 'All') return true
-    if (activeCategory === 'Upcoming') return w.upcoming
-    return w.category === activeCategory
-  })
+  const [form, setForm] = useState({ name:'', email:'', phone:'', notes:'' })
+  const upForm = (k,v) => setForm(f=>({...f,[k]:v}))
+  const sel    = METHODS.find(m=>m.id===method)
+  const formOK = form.name.trim() && form.email.includes('@') && form.phone.trim()
 
-  return (
-    <div className="page-wrapper" style={{ background: C.skyGhost }}>
+  function copy(text, id) {
+    navigator.clipboard.writeText(text).catch(()=>{})
+    setCopied(id)
+    setTimeout(()=>setCopied(''), 2200)
+  }
 
-      {/* ── Hero ── */}
-      <div style={{ background: heroGrad, padding: '5rem 4rem 4rem', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -60, right: -80, width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -40, left: '50%', width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 700, position: 'relative' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 100, padding: '0.3rem 1rem', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' }}>🎓 Workshops & Events</span>
-          </div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'white', marginBottom: '1rem', lineHeight: 1.2 }}>
-            Learn, Heal &<br />Grow Together
-          </h1>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.75, maxWidth: 520, marginBottom: '2rem' }}>
-            Expert-led workshops, immersive courses, and support groups — designed to give you practical tools for a healthier mind. All levels welcome.
-          </p>
-          {/* Quick stats */}
-          <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap' }}>
-            {[
-              { icon: '🎓', val: '24+', label: 'Workshops / yr' },
-              { icon: '👥', val: '800+', label: 'Participants' },
-              { icon: '🌐', val: 'Online & In-Person', label: 'Formats available' },
-            ].map((s, i) => (
-              <div key={i}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'white', fontWeight: 700 }}>{s.icon} {s.val}</div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', fontWeight: 600, marginTop: 2 }}>{s.label}</div>
-              </div>
-            ))}
+  function openRegister(ws) {
+    setWS(ws)
+    setForm({ name:'', email:'', phone:'', notes:'' })
+    setScreen('register')
+    window.scrollTo({ top:0, behavior:'smooth' })
+  }
+
+  function handleFreeRegister() {
+    setReg(prev=>[...prev,workshop.id])
+    setScreen('done')
+    window.scrollTo({ top:0, behavior:'smooth' })
+  }
+
+  function handleProceedPay() {
+    setScreen('payment')
+    setTimeout(()=>payRef.current?.scrollIntoView({ behavior:'smooth', block:'start' }),80)
+  }
+
+  async function handleConfirm() {
+    if (confirmed.current || saving) return
+    setSaving(true)
+    await new Promise(r=>setTimeout(r,900))
+    confirmed.current = true
+    setReg(prev=>[...prev,workshop.id])
+    setSaving(false)
+    setScreen('done')
+    window.scrollTo({ top:0, behavior:'smooth' })
+  }
+
+  /* ── SUCCESS ── */
+  if (screen === 'done') return (
+    <div className="page-wrapper" style={{ background:C.skyGhost }}>
+      <div style={{ maxWidth:520, margin:'0 auto', padding:'5rem 2rem' }}>
+        <div style={{ background:C.white, borderRadius:24, border:`1.5px solid ${C.borderFaint}`, boxShadow:`0 8px 40px rgba(0,191,255,0.12)`, overflow:'hidden' }}>
+          <div style={{ height:4, background:btnGrad }} />
+          <div style={{ padding:'3rem 2.5rem', textAlign:'center' }}>
+            <div style={{ width:76, height:76, borderRadius:'50%', background:heroGrad, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.75rem', fontSize:'2rem', boxShadow:`0 8px 28px rgba(0,191,255,0.35)` }}>✓</div>
+            <div style={{ display:'inline-block', background:sectionGrad, border:`1px solid ${C.borderFaint}`, borderRadius:100, padding:'0.28rem 1rem', marginBottom:'0.9rem' }}>
+              <span style={{ fontFamily:'var(--font-body)', fontSize:'0.65rem', fontWeight:800, color:C.skyDeep, letterSpacing:'0.1em', textTransform:'uppercase' }}>
+                {workshop?.free ? '🎓 Registered Free' : '💳 Payment Submitted'}
+              </span>
+            </div>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'1.9rem', color:C.textDark, marginBottom:'0.75rem' }}>
+              {workshop?.free ? "You're Registered!" : 'Thank You!'}
+            </h2>
+            <p style={{ fontFamily:'var(--font-body)', fontSize:'0.9rem', color:C.textMid, lineHeight:1.78, marginBottom:'1.5rem' }}>
+              {workshop?.free
+                ? `Your spot is confirmed for "${workshop?.title}". A Zoom link / directions will be emailed to ${form.email}.`
+                : `We'll verify your payment and send confirmation to ${form.email} within 24 hours.`}
+            </p>
+            <div style={{ background:sectionGrad, borderRadius:14, padding:'1rem 1.5rem', border:`1px solid ${C.borderFaint}`, marginBottom:'1rem' }}>
+              <div style={{ fontFamily:'var(--font-body)', fontSize:'0.62rem', fontWeight:800, color:C.textLight, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'0.3rem' }}>Registration Reference</div>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:'1.2rem', color:C.skyDeep, fontWeight:700 }}>{ref}</div>
+            </div>
+            <div style={{ background:C.white, border:`1px solid ${C.borderFaint}`, borderRadius:12, padding:'0.9rem', marginBottom:'1.75rem', textAlign:'left' }}>
+              {[['Workshop',workshop?.title],['Date',workshop?.date],['Time',workshop?.time],['Mode',workshop?.mode],['Facilitator',workshop?.facilitator]].map(([k,v])=>(
+                <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'0.35rem 0', borderBottom:`1px solid ${C.borderFaint}`, fontFamily:'var(--font-body)', fontSize:'0.78rem' }}>
+                  <span style={{ color:C.textLight, fontWeight:700 }}>{k}</span>
+                  <span style={{ color:C.textDark, fontWeight:600, textAlign:'right', maxWidth:'60%' }}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', gap:'0.75rem', justifyContent:'center', flexWrap:'wrap' }}>
+              <button onClick={()=>navigate('/')} style={{ padding:'0.7rem 1.75rem', borderRadius:12, border:'none', background:btnGrad, color:'white', fontFamily:'var(--font-body)', fontWeight:700, fontSize:'0.9rem', cursor:'pointer' }}>🏠 Back to Home</button>
+              <button onClick={()=>{ setScreen('list'); confirmed.current=false }} style={{ padding:'0.7rem 1.4rem', borderRadius:12, border:`1.5px solid ${C.border}`, background:C.white, color:C.textMid, fontFamily:'var(--font-body)', fontWeight:600, fontSize:'0.9rem', cursor:'pointer' }}>Browse More Workshops</button>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  )
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 4rem 5rem' }}>
-
-        {/* ── Category filter ── */}
-        <div style={{
-          background: sectionGrad, borderRadius: 16, padding: '1.25rem 1.5rem',
-          border: `1px solid ${C.borderFaint}`, marginBottom: '2.5rem',
-          display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center',
-        }}>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', fontWeight: 700, color: C.textLight, marginRight: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Filter:</span>
-          {CATEGORIES.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)}
-              style={{
-                padding: '0.4rem 1rem', borderRadius: 100,
-                border: `1.5px solid ${activeCategory === cat ? C.skyBright : C.border}`,
-                background: activeCategory === cat ? btnGrad : C.white,
-                color: activeCategory === cat ? 'white' : C.textMid,
-                fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600,
-                cursor: 'pointer', transition: 'all 0.2s',
-                boxShadow: activeCategory === cat ? '0 4px 14px rgba(0,191,255,0.3)' : 'none',
-              }}>{cat}</button>
-          ))}
-        </div>
-
-        {/* ── Grid ── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: '2rem',
-          paddingTop: '0.5rem', /* space for floating labels */
-        }}>
-          {filtered.map(ws => (
-            <WorkshopCard key={ws.id} ws={ws} onBook={setSelected} />
-          ))}
-        </div>
-
-        {/* ── CTA strip ── */}
-        <div style={{
-          marginTop: '4rem', padding: '3rem',
-          background: heroGrad, borderRadius: 20,
-          display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap',
-          boxShadow: '0 16px 48px rgba(0,191,255,0.2)',
-          position: 'relative', overflow: 'hidden',
-        }}>
-          <div style={{ position: 'absolute', top: -30, right: -30, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-          <div style={{ flex: 1, minWidth: 240, position: 'relative' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'white', marginBottom: '0.5rem' }}>Want a Custom Workshop?</h3>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.88rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.65 }}>
-              We design bespoke mental health workshops for organisations, schools, and corporates. Get in touch to discuss your needs.
-            </p>
+  /* ── REGISTER FORM ── */
+  if (screen === 'register') return (
+    <div className="page-wrapper" style={{ background:C.skyGhost }}>
+      <div style={{ background:heroGrad, padding:'4rem 3rem 3rem', position:'relative', overflow:'hidden' }}>
+        <div style={{ maxWidth:760, margin:'0 auto' }}>
+          <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(255,255,255,0.15)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:100, padding:'0.28rem 0.9rem', marginBottom:'0.85rem' }}>
+            <span style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:700, letterSpacing:'0.1em', color:'rgba(255,255,255,0.9)', textTransform:'uppercase' }}>📋 Workshop Registration</span>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', position: 'relative' }}>
-            <button onClick={() => navigate('/contact')} style={{ padding: '0.65rem 1.5rem', borderRadius: 10, border: 'none', background: C.white, color: C.skyDeep, fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer' }}>
-              Enquire Now →
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(1.5rem,3vw,2rem)', color:'white', marginBottom:'0.4rem' }}>{workshop?.title}</h2>
+          <p style={{ fontFamily:'var(--font-body)', fontSize:'0.88rem', color:'rgba(255,255,255,0.78)' }}>
+            {workshop?.date} · {workshop?.time} · {workshop?.mode} · {workshop?.price}
+          </p>
+          <button onClick={()=>setScreen('list')} style={{ marginTop:'1rem', fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'rgba(255,255,255,0.7)', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:100, padding:'0.32rem 1rem', cursor:'pointer' }}>
+            ← Back to Workshops
+          </button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:640, margin:'2.5rem auto', padding:'0 2rem 5rem' }}>
+        <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.borderFaint}`, overflow:'hidden', boxShadow:`0 4px 24px rgba(0,191,255,0.07)` }}>
+
+          {/* Workshop detail card */}
+          <div style={{ padding:'1.1rem 1.5rem', background:sectionGrad, borderBottom:`1px solid ${C.borderFaint}` }}>
+            <span style={{ fontFamily:'var(--font-display)', fontSize:'0.92rem', color:C.textDark }}>Workshop Details</span>
+          </div>
+          <div style={{ padding:'1rem 1.5rem 0.5rem' }}>
+            {[['Facilitator',workshop?.facilitator],['Date',workshop?.date],['Time',workshop?.time],['Mode',workshop?.mode],['Seats Left',`${workshop?.seats-(workshop?.booked||0)} remaining`],['Fee',workshop?.price]].map(([k,v])=>(
+              <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'0.4rem 0', borderBottom:`1px solid ${C.borderFaint}`, fontFamily:'var(--font-body)', fontSize:'0.82rem' }}>
+                <span style={{ color:C.textLight, fontWeight:700 }}>{k}</span>
+                <span style={{ color:C.textDark, fontWeight:600 }}>{v}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Your details */}
+          <div style={{ padding:'0.9rem 1.5rem', background:sectionGrad, borderBottom:`1px solid ${C.borderFaint}`, borderTop:`1px solid ${C.borderFaint}`, marginTop:'0.5rem' }}>
+            <span style={{ fontFamily:'var(--font-display)', fontSize:'0.92rem', color:C.textDark }}>Your Details</span>
+          </div>
+          <div style={{ padding:'1.25rem 1.5rem', display:'flex', flexDirection:'column', gap:'0.9rem' }}>
+            <FInput label="Full Name"        required placeholder="Priya Sharma"   value={form.name}  onChange={e=>upForm('name',e.target.value)} />
+            <FInput label="Email"            required type="email" placeholder="you@email.com" value={form.email} onChange={e=>upForm('email',e.target.value)} />
+            <FInput label="Phone/WhatsApp"   required type="tel" placeholder="98XXXXXXXX" value={form.phone} onChange={e=>upForm('phone',e.target.value)} />
+            <div>
+              <label style={{ display:'block', fontFamily:'var(--font-body)', fontSize:'0.66rem', fontWeight:800, color:C.textLight, textTransform:'uppercase', letterSpacing:'0.09em', marginBottom:'0.4rem' }}>Notes (optional)</label>
+              <textarea value={form.notes} onChange={e=>upForm('notes',e.target.value)} placeholder="Any accessibility requirements or questions for the facilitator…" rows={2}
+                style={{ width:'100%', padding:'0.75rem 1rem', border:`1.5px solid ${C.borderFaint}`, borderRadius:10, fontFamily:'var(--font-body)', fontSize:'0.88rem', color:C.textDark, background:C.white, outline:'none', resize:'vertical', boxSizing:'border-box', transition:'border-color 0.2s' }}
+                onFocus={e=>e.target.style.borderColor=C.skyBright}
+                onBlur={e=>e.target.style.borderColor=C.borderFaint} />
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div style={{ padding:'1.1rem 1.5rem', borderTop:`1px solid ${C.borderFaint}`, display:'flex', gap:'0.75rem' }}>
+            <button onClick={()=>setScreen('list')} style={{ padding:'0.75rem 1.2rem', borderRadius:12, border:`1.5px solid ${C.border}`, background:C.white, color:C.textMid, fontFamily:'var(--font-body)', fontWeight:600, fontSize:'0.88rem', cursor:'pointer' }}>← Back</button>
+            <button onClick={() => { if(!formOK) return; workshop.free ? handleFreeRegister() : handleProceedPay() }} disabled={!formOK}
+              style={{ flex:1, padding:'0.88rem', borderRadius:12, border:'none', background:formOK?btnGrad:C.borderFaint, color:formOK?'white':C.textLight, fontFamily:'var(--font-body)', fontWeight:700, fontSize:'0.92rem', cursor:formOK?'pointer':'not-allowed', boxShadow:formOK?'0 6px 22px rgba(0,191,255,0.35)':'none', transition:'all 0.2s' }}>
+              {!formOK ? 'Fill in your details' : workshop?.free ? '🎓 Register Free →' : `💳 Proceed to Payment — ${workshop?.price} →`}
             </button>
           </div>
         </div>
       </div>
+    </div>
+  )
 
-      {/* ── Booking modal ── */}
-      {selected && (
-        <div onClick={() => setSelected(null)} style={{
-          position: 'fixed', inset: 0, zIndex: 500,
-          background: 'rgba(26,58,74,0.55)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: C.white, borderRadius: 24, padding: '2.5rem',
-            maxWidth: 480, width: '100%',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.2)',
-            border: `1.5px solid ${C.skyBright}`,
-          }}>
-            <div style={{ height: 6, background: btnGrad, borderRadius: 3, marginBottom: '1.5rem' }} />
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{selected.emoji}</div>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: C.textDark, marginBottom: '0.5rem' }}>{selected.title}</h3>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: C.textMid, lineHeight: 1.65, marginBottom: '1.5rem' }}>{selected.desc}</p>
-            <div style={{ background: sectionGrad, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem', border: `1px solid ${C.borderFaint}` }}>
-              {[
-                ['Date', selected.date], ['Time', selected.time],
-                ['Venue', selected.venue], ['Instructor', selected.instructor],
-                ['Duration', selected.duration], ['Price', selected.price],
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', borderBottom: `1px solid ${C.borderFaint}` }}>
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: C.textLight, fontWeight: 700 }}>{k}</span>
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: C.textDark, fontWeight: 600 }}>{v}</span>
-                </div>
+  /* ── PAYMENT ── */
+  if (screen === 'payment') return (
+    <div className="page-wrapper" style={{ background:C.skyGhost }} ref={payRef}>
+      <div style={{ background:heroGrad, padding:'3rem 3rem 3.5rem', position:'relative', overflow:'hidden' }}>
+        <div style={{ maxWidth:920, margin:'0 auto' }}>
+          <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(255,255,255,0.15)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:100, padding:'0.28rem 0.9rem', marginBottom:'0.85rem' }}>
+            <span style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:700, letterSpacing:'0.1em', color:'rgba(255,255,255,0.9)', textTransform:'uppercase' }}>💳 Workshop Payment</span>
+          </div>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(1.5rem,3vw,2rem)', color:'white', marginBottom:'0.4rem' }}>{workshop?.title}</h2>
+          <p style={{ fontFamily:'var(--font-body)', fontSize:'0.88rem', color:'rgba(255,255,255,0.78)' }}>{workshop?.date} · {workshop?.price}</p>
+          <button onClick={()=>setScreen('register')} style={{ marginTop:'1rem', fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'rgba(255,255,255,0.7)', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:100, padding:'0.32rem 1rem', cursor:'pointer' }}>← Back to form</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:920, margin:'0 auto', padding:'2.5rem 2rem 5rem', display:'grid', gridTemplateColumns:'1fr 300px', gap:'1.75rem', alignItems:'start' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
+
+          {/* Method selector */}
+          <div>
+            <div style={{ fontFamily:'var(--font-body)', fontSize:'0.66rem', fontWeight:800, color:C.textLight, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'0.75rem' }}>Choose Payment Method</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'0.65rem' }}>
+              {METHODS.map(m=>(
+                <button key={m.id} onClick={()=>setMethod(m.id)} style={{ padding:'0.85rem 0.5rem', borderRadius:14, border:`1.5px solid ${method===m.id?m.color:C.borderFaint}`, background:method===m.id?m.faint:C.white, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:'0.35rem', boxShadow:method===m.id?`0 4px 14px ${m.color}33`:'none', transform:method===m.id?'translateY(-2px)':'none', transition:'all 0.2s ease', fontFamily:'inherit' }}>
+                  <span style={{ fontSize:'1.4rem' }}>{m.emoji}</span>
+                  <span style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:method===m.id?800:600, color:method===m.id?m.color:C.textMid, textAlign:'center', lineHeight:1.2 }}>{m.label}</span>
+                </button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={() => setSelected(null)} style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.white, color: C.textMid, fontFamily: 'var(--font-body)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => { navigate('/book'); setSelected(null) }} style={{ flex: 2, padding: '0.7rem', borderRadius: 10, border: 'none', background: btnGrad, color: 'white', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,191,255,0.35)' }}>Confirm Registration →</button>
+          </div>
+
+          {/* Payment instructions */}
+          <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.borderFaint}`, overflow:'hidden', boxShadow:`0 4px 24px rgba(0,191,255,0.07)` }}>
+            <div style={{ padding:'0.9rem 1.5rem', background:sectionGrad, borderBottom:`1px solid ${C.borderFaint}`, display:'flex', alignItems:'center', gap:'0.5rem' }}>
+              <span>{sel.emoji}</span>
+              <span style={{ fontFamily:'var(--font-display)', fontSize:'0.92rem', color:C.textDark }}>Pay via {sel.label}</span>
+            </div>
+            <div style={{ padding:'1.75rem 2rem', textAlign:'center' }}>
+              {method==='qr' && (
+                <>
+                  <div style={{ width:'min(180px,80%)', aspectRatio:'1', margin:'0 auto 1.1rem', borderRadius:16, border:`2px solid ${C.borderFaint}`, background:C.white, padding:8, overflow:'hidden', boxShadow:`0 4px 20px rgba(0,191,255,0.1)` }}>
+                    <img src={QR_IMAGE} alt="QR" style={{ width:'100%', height:'100%', objectFit:'contain' }}
+                      onError={e=>{ e.target.parentElement.innerHTML=`<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:#7a9aaa;text-align:center;gap:8px"><span style="font-size:2rem">📷</span><span>Add QR to /public/images/payment-qr.png</span></div>` }} />
+                  </div>
+                  <p style={{ fontFamily:'var(--font-body)', fontSize:'0.85rem', color:C.textMid, lineHeight:1.78, maxWidth:360, margin:'0 auto' }}>
+                    Open any bank app → Scan QR → Amount <strong style={{ color:C.skyDeep }}>{workshop?.price}</strong> → Remarks: <strong style={{ color:C.skyDeep }}>{ref}</strong>
+                  </p>
+                </>
+              )}
+              {(method==='esewa'||method==='khalti') && (
+                <>
+                  <div style={{ fontSize:'3rem', marginBottom:'0.65rem' }}>{sel.emoji}</div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'0.65rem', marginBottom:'0.9rem', flexWrap:'wrap' }}>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:'1.3rem', color:C.textDark, fontWeight:700, padding:'0.5rem 1.2rem', background:sectionGrad, borderRadius:12, border:`1px solid ${C.borderFaint}` }}>{method==='esewa'?ESEWA_ID:KHALTI_ID}</div>
+                    <CopyBtn text={method==='esewa'?ESEWA_ID:KHALTI_ID} id={method} copied={copied} onCopy={copy} />
+                  </div>
+                  <p style={{ fontFamily:'var(--font-body)', fontSize:'0.82rem', color:C.textMid, lineHeight:1.78, maxWidth:360, margin:'0 auto 0.9rem' }}>
+                    Amount: <strong style={{ color:C.skyDeep }}>{workshop?.price}</strong> · Remarks: <strong style={{ color:C.skyDeep }}>{ref}</strong>
+                  </p>
+                  <a href={method==='esewa'?'https://esewa.com.np':'https://khalti.com'} target="_blank" rel="noopener noreferrer"
+                    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'0.48rem 1.2rem', borderRadius:100, border:`1.5px solid ${sel.color}`, color:sel.color, background:sel.faint, fontFamily:'var(--font-body)', fontSize:'0.82rem', fontWeight:700, textDecoration:'none' }}>
+                    {sel.emoji} Open {sel.label} App →
+                  </a>
+                </>
+              )}
+              {method==='cod' && (
+                <>
+                  <div style={{ fontSize:'3rem', marginBottom:'0.65rem' }}>💵</div>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1.1rem', color:C.textDark, marginBottom:'0.65rem' }}>Pay on Arrival</h3>
+                  <p style={{ fontFamily:'var(--font-body)', fontSize:'0.88rem', color:C.textMid, lineHeight:1.8, maxWidth:340, margin:'0 auto' }}>
+                    Your spot is reserved now. Please bring exactly <strong style={{ color:C.skyDeep }}>{workshop?.price}</strong> on the day. Our team will call {form.phone} to confirm.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
+
+        {/* Right: sticky confirm */}
+        <div style={{ position:'sticky', top:'5.5rem' }}>
+          <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.borderFaint}`, overflow:'hidden', boxShadow:`0 6px 32px rgba(0,191,255,0.1)` }}>
+            <div style={{ background:heroGrad, padding:'1.5rem', textAlign:'center', position:'relative', overflow:'hidden' }}>
+              <div style={{ position:'absolute', top:-25, right:-25, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.07)', pointerEvents:'none' }} />
+              <div style={{ fontFamily:'var(--font-body)', fontSize:'0.62rem', fontWeight:700, color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'0.3rem' }}>Workshop Fee</div>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:'2.2rem', color:'white', fontWeight:800, lineHeight:1 }}>{workshop?.price}</div>
+              <div style={{ fontFamily:'var(--font-body)', fontSize:'0.7rem', color:'rgba(255,255,255,0.65)', marginTop:'0.3rem' }}>{workshop?.date}</div>
+            </div>
+            <div style={{ padding:'1.1rem' }}>
+              <div style={{ background:sectionGrad, borderRadius:10, padding:'0.65rem 0.85rem', marginBottom:'0.9rem', border:`1px solid ${C.borderFaint}`, display:'flex', justifyContent:'space-between', alignItems:'center', gap:'0.5rem', flexWrap:'wrap' }}>
+                <div>
+                  <div style={{ fontFamily:'var(--font-body)', fontSize:'0.56rem', fontWeight:800, color:C.textLight, textTransform:'uppercase', letterSpacing:'0.09em', marginBottom:'0.1rem' }}>Reference</div>
+                  <div style={{ fontFamily:'var(--font-display)', fontSize:'0.78rem', color:C.skyDeep, fontWeight:700 }}>{ref}</div>
+                </div>
+                <CopyBtn text={ref} id="ref" copied={copied} onCopy={copy} />
+              </div>
+              {[['Method',sel.label],['Name',form.name||'—'],['Phone',form.phone||'—']].map(([k,v])=>(
+                <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'0.38rem 0', borderBottom:`1px solid ${C.borderFaint}`, fontFamily:'var(--font-body)', fontSize:'0.76rem' }}>
+                  <span style={{ color:C.textLight, fontWeight:700 }}>{k}</span>
+                  <span style={{ color:C.textDark, fontWeight:600 }}>{v}</span>
+                </div>
+              ))}
+              <button onClick={handleConfirm} disabled={saving}
+                style={{ width:'100%', marginTop:'1rem', padding:'0.88rem 1rem', borderRadius:12, border:'none', background:saving?C.borderFaint:btnGrad, color:saving?C.textLight:'white', fontFamily:'var(--font-body)', fontWeight:700, fontSize:'0.9rem', cursor:saving?'not-allowed':'pointer', boxShadow:saving?'none':'0 6px 22px rgba(0,191,255,0.35)', transition:'all 0.2s' }}>
+                {saving?'⏳ Confirming…':method==='cod'?'✓ Reserve — Pay on Arrival':`✓ I've Paid — Confirm Registration`}
+              </button>
+              <p style={{ fontFamily:'var(--font-body)', fontSize:'0.64rem', color:C.textLight, textAlign:'center', marginTop:'0.75rem', lineHeight:1.55 }}>
+                🔒 Secure · Confirmation sent to email
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  /* ── WORKSHOP LIST ── */
+  return (
+    <div className="page-wrapper">
+      <div className="page-hero" style={{ background:'var(--sky-light)' }}>
+        <span className="section-tag">Workshops & Events</span>
+        <h1 className="section-title">Join a Live <em>Workshop</em></h1>
+        <p className="section-desc">Interactive sessions led by our therapists — online and in-person across Nepal.</p>
+        {registered.length > 0 && (
+          <div style={{ marginTop:'1.25rem', display:'inline-flex', alignItems:'center', gap:8, background:btnGrad, borderRadius:100, padding:'6px 18px', fontFamily:'var(--font-body)', fontSize:'0.8rem', fontWeight:700, color:'white', boxShadow:`0 4px 16px rgba(0,191,255,0.3)` }}>
+            ✓ {registered.length} workshop{registered.length>1?'s':''} registered
+          </div>
+        )}
+      </div>
+
+      <div className="section" style={{ background:'var(--white)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'1.5rem' }}>
+          {WORKSHOPS.map((ws) => {
+            const isReg   = registered.includes(ws.id)
+            const pct     = Math.round((ws.booked/ws.seats)*100)
+            const urgent  = pct >= 80
+            return (
+              <div key={ws.id}
+                style={{ background:isReg?C.skyFainter:'var(--off-white)', borderRadius:'var(--radius-lg)', overflow:'hidden', border:`1.5px solid ${isReg?C.skyBright:ws.full?'#f97316':'var(--earth-cream)'}`, boxShadow:isReg?`0 4px 20px rgba(0,191,255,0.12)`:'var(--shadow-soft)', transition:'all 0.25s', opacity:ws.full&&!isReg?0.75:1 }}
+                onMouseEnter={e=>!ws.full&&(e.currentTarget.style.transform='translateY(-4px)')}
+                onMouseLeave={e=>(e.currentTarget.style.transform='translateY(0)')}>
+
+                {/* Image / header */}
+                <div style={{ background:isReg?`linear-gradient(135deg,${C.skyFaint},${C.skyFainter})`:ws.color, padding:'1.75rem', fontSize:'2.5rem', textAlign:'center', position:'relative' }}>
+                  {ws.emoji}
+                  {isReg && <div style={{ position:'absolute', top:10, right:10, background:btnGrad, borderRadius:100, padding:'3px 10px', fontFamily:'var(--font-body)', fontSize:'0.62rem', fontWeight:800, color:'white' }}>✓ REGISTERED</div>}
+                  {ws.full && !isReg && <div style={{ position:'absolute', top:10, right:10, background:'#f97316', borderRadius:100, padding:'3px 10px', fontFamily:'var(--font-body)', fontSize:'0.62rem', fontWeight:800, color:'white' }}>FULL</div>}
+                </div>
+
+                <div style={{ padding:'1.4rem' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem', flexWrap:'wrap', gap:'0.3rem' }}>
+                    <span style={{ fontSize:'0.68rem', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--blue-mid)' }}>{ws.mode}</span>
+                    <span style={{ fontFamily:'var(--font-display)', fontSize:'0.95rem', color: ws.free?'var(--green-deep)':'var(--green-deep)' }}>{ws.free?'FREE':ws.price}</span>
+                  </div>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1rem', color:'var(--blue-deep)', marginBottom:'0.4rem', lineHeight:1.3 }}>{ws.title}</h3>
+                  <p style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'var(--text-light)', marginBottom:'0.6rem' }}>👤 {ws.facilitator}</p>
+                  <div style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'var(--text-mid)', marginBottom:'0.6rem' }}>
+                    📅 {ws.date} · {ws.time}
+                  </div>
+                  <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:'0.85rem' }}>
+                    {ws.tags.map((t,j)=><span key={j} className="tag" style={{ fontSize:'0.65rem' }}>{t}</span>)}
+                  </div>
+
+                  {/* Seat bar */}
+                  <div style={{ marginBottom:'1rem' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'var(--font-body)', fontSize:'0.7rem', color: urgent?'#e53e3e':'var(--text-light)', marginBottom:'0.3rem', fontWeight: urgent?700:400 }}>
+                      <span>{urgent?'⚠ Almost full!':'Seats available'}</span>
+                      <span>{ws.seats-ws.booked} of {ws.seats} left</span>
+                    </div>
+                    <div style={{ height:5, background:'var(--earth-cream)', borderRadius:100, overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:`${pct}%`, background: pct>=90?'linear-gradient(90deg,#e53e3e,#f97316)':pct>=70?'linear-gradient(90deg,#f97316,#ffd54f)':btnGrad, borderRadius:100, transition:'width 0.3s' }} />
+                    </div>
+                  </div>
+
+                  {isReg ? (
+                    <button className="btn btn-outline" style={{ width:'100%', justifyContent:'center' }} onClick={()=>navigate('/portal')}>
+                      ✓ Registered — View Details
+                    </button>
+                  ) : ws.full ? (
+                    <button disabled style={{ width:'100%', padding:'0.6rem', borderRadius:12, border:`1.5px solid var(--earth-cream)`, background:'var(--earth-cream)', color:'var(--text-light)', fontFamily:'var(--font-body)', fontWeight:600, fontSize:'0.82rem', cursor:'not-allowed' }}>
+                      Workshop Full
+                    </button>
+                  ) : (
+                    <button className="btn btn-primary" style={{ width:'100%', justifyContent:'center' }} onClick={()=>openRegister(ws)}>
+                      {ws.free ? 'Register Free →' : 'Register Now →'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }

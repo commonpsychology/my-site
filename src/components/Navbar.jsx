@@ -41,18 +41,27 @@ const NAV = [
     label: 'Our Works',
     path: '/our-works',
     children: [
-      { label: 'Workshops',    path: '/workshops',   icon: '🎓', desc: 'Live & recorded sessions' },
-      { label: 'Social Work',  path: '/social-work', icon: '🤝', desc: 'Community outreach programs' },
-      { label: 'Gallery',      path: '/gallery',     icon: '🖼️', desc: 'Photos & event memories' },
-     
+      { label: 'Workshops',        path: '/workshops',   icon: '🎓', desc: 'Live & recorded sessions' },
+      { label: 'Social Work',      path: '/social-work', icon: '🤝', desc: 'Community outreach programs' },
+      { label: 'Gallery',          path: '/gallery',     icon: '🖼️', desc: 'Photos & event memories' },
     ],
   },
   {
     label: 'About',
     path: '/about',
     children: [
-      { label: 'Contact',          path: '/contact',     icon: '📞', desc: 'Get in touch' },
-      { label: 'Payment & Ethics', path: '/payment',     icon: '🔒', desc: 'Billing & legal info' },
+      { label: 'Contact',          path: '/contact',      icon: '📞', desc: 'Get in touch' },
+      { label: 'Payment & Ethics', path: '/payment-info', icon: '🔒', desc: 'Billing & legal info' },
+      { label: 'Our Values',       path: '/our-values',   icon: '🌱', desc: 'What we stand for' },
+    ],
+  },
+
+  {
+    label: 'Ashram',
+    path: '/ashram',
+    children: [
+      { label: 'Ashram',          path: '/ashram',      icon: '🏠', desc: 'Place to connect' },
+      
     ],
   },
 ]
@@ -112,7 +121,6 @@ function AvatarDropdown({ onNavigate }) {
           }
         }}
       >
-        {/* Person icon SVG */}
         <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
           <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
         </svg>
@@ -411,11 +419,13 @@ export default function Navbar() {
         {/* LEFT: Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           <div className="navbar-logo" onClick={() => go('/')} style={{ cursor: 'pointer' }}>
-            <div className="logo-mark">
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C8.5 2 5.5 4.5 5 8c-.3 2 .5 4 2 5.5L12 22l5-8.5c1.5-1.5 2.3-3.5 2-5.5C18.5 4.5 15.5 2 12 2zm0 9a3 3 0 110-6 3 3 0 010 6z"/>
-              </svg>
-            </div>
+           <div className="logo-mark" style={{ overflow: 'hidden', background: 'transparent', border: 'none' }}>
+  <img
+    src="/header.png"
+    alt="Puja Samargi"
+    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+  />
+</div>
             <div>
               <div className="logo-text">Puja Samargi</div>
               <div className="logo-sub">Mental Wellness Center</div>
@@ -448,13 +458,13 @@ export default function Navbar() {
             🌐 {lang}
           </button>
 
-          {/* Desktop: Sign In (shown when not logged in) + Book Session + Avatar */}
+          {/* Desktop: Sign In + Book Session + Avatar */}
           <div className="navbar-cta">
             <button className="btn btn-outline" onClick={() => go('/signin')}>Sign In</button>
             <button className="btn btn-primary" onClick={() => go('/book')}>Book Session</button>
           </div>
 
-          {/* Avatar dropdown — shown after Book Session */}
+          {/* Avatar dropdown */}
           <AvatarDropdown onNavigate={go} />
 
           {/* Hamburger */}

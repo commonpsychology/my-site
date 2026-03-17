@@ -12,6 +12,8 @@ export const therapistsData = [
     fee: 'NPR 2,000',
     available: true,
     exp: '8 yrs',
+     specialties: ['Anxiety', 'Depression', 'Trauma'],   // shown as tags on the card
+    serviceTypes: ['Individual Therapy', 'Mindfulness & Stress'],
     bio: 'Dr. Anita specializes in Cognitive Behavioral Therapy and trauma-informed care. She has helped hundreds of clients through anxiety, depression, and PTSD recovery.',
   },
   {
@@ -27,6 +29,8 @@ export const therapistsData = [
     fee: 'NPR 1,800',
     available: true,
     exp: '6 yrs',
+     specialties: ['Gottman Method', 'Communication', 'Conflict'],
+    serviceTypes: ['Couples Counseling', 'Family Therapy'],
     bio: 'Roshan uses an integrative approach combining mindfulness, narrative therapy, and solution-focused techniques for relationship and trauma work.',
   },
   {
@@ -42,6 +46,8 @@ export const therapistsData = [
     fee: 'NPR 1,500',
     available: false,
     exp: '5 yrs',
+     specialties: ['Gottman Method', 'Communication', 'Conflict'],
+    serviceTypes: ['Couples Counseling', 'Family Therapy'],
     bio: 'Priya works with children aged 5–18 and their families, using play therapy and family systems approaches to support healthy development.',
   },
   {
@@ -57,6 +63,8 @@ export const therapistsData = [
     fee: 'NPR 3,000',
     available: true,
     exp: '12 yrs',
+     specialties: ['Play Therapy', 'Behavioral', 'ADHD'],
+    serviceTypes: ['Child Psychology'],
     bio: 'Dr. Suresh is a board-certified psychiatrist offering medication management alongside psychotherapy.',
   },
   {
@@ -72,6 +80,8 @@ export const therapistsData = [
     fee: 'NPR 1,600',
     available: true,
     exp: '4 yrs',
+     specialties: ['Play Therapy', 'Behavioral', 'ADHD'],
+    serviceTypes: ['Child Psychology'],
     bio: 'Deepa uses creative arts as a therapeutic medium, particularly effective for trauma and non-verbal processing.',
   },
   {
@@ -87,6 +97,8 @@ export const therapistsData = [
     fee: 'NPR 1,700',
     available: false,
     exp: '7 yrs',
+     specialties: ['Play Therapy', 'Behavioral', 'ADHD'],
+    serviceTypes: ['Child Psychology'],
     bio: 'Bikash specializes in substance use disorders and behavioral addictions, using motivational interviewing.',
   },
 ]

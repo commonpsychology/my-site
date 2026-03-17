@@ -19,6 +19,12 @@ import PaymentEthicsPage   from './pages/PaymentEthicsPage'
 import SignInPage          from './pages/SignInPage'
 import RegisterPage        from './pages/RegisterPage'
 import StorePage           from './pages/StorePage'
+import MessagesPage from './pages/MessagesPage'
+import PrivacyPage from './pages/PrivacyPage'
+import OurPlacePage from './pages/OurplacePage'
+import PaymentInfoPage from './pages/PaymentInfoPage'
+import UpdatePasswordPage from './pages/UpdataPasswordPage'
+import UpgradePage from './pages/UpgradePage'
 import ClientPortalPage    from './pages/ClientsPortalPage'
 import CommunityPage       from './pages/CommunityPage'
 import AIToolsPage         from './pages/AitoolsPage'
@@ -35,6 +41,7 @@ import PaymentPage         from './pages/Paymentpage'
 import StaffLoginPage      from './pages/StaffloginPage'
 import AdminDashboard      from './pages/AdmindashboardPage'
 import TherapistDashboard  from './pages/TherapistdashboardPage'
+
 
 const ROUTES = {
   '/':                   HomePage,
@@ -62,12 +69,18 @@ const ROUTES = {
   '/disorders':          DisordersPage,
   '/psychological-view': PsychologicalViewPage,
   '/workshops':          WorkshopsPage,
+  '/privacy':            PrivacyPage,
   '/social-work':        SocialWorkPage,
+  '/update-password': UpdatePasswordPage,
+  '/pay':    PaymentInfoPage,
+  '/upgrade':         UpgradePage,
   '/gallery':            GalleryPage,
   '/volunteer':          VolunteerPage,
   '/staff':              StaffLoginPage,
   '/staff/admin':        AdminDashboard,
+  '/our-values':         MessagesPage,
   '/staff/therapist':    TherapistDashboard,
+  '/ashram':             OurPlacePage,
 }
 
 const NO_SHELL_PAGES = new Set([
