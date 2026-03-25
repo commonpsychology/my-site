@@ -12,6 +12,9 @@ import Testimonials from '../components/Testimonials'
 import PsychologicalEye from '../components/PsychologicalEye'
 import Crisis from '../components/Crisis'
 import PollPopup from '../components/Pollpopup'
+import DailyReturnHook from '../components/DailyReturnHook'
+import DonateButton from '../components/DonateButton'
+
 
 export default function HomePage() {
   const [showPoll, setShowPoll] = useState(false)
@@ -30,6 +33,7 @@ export default function HomePage() {
 
   return (
     <>
+     <DonateButton />
       {showPoll && <PollPopup onClose={() => setShowPoll(false)} />}
       <HeroEmotional />
       <TrustBar />
@@ -42,6 +46,7 @@ export default function HomePage() {
       <FAQ />
       <Testimonials />
       <Crisis />
+      <DailyReturnHook visible={!showPoll} /> 
       <PsychologicalEye />
       
     </>

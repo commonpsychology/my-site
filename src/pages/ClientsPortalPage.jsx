@@ -138,11 +138,14 @@ function MessagingPanel() {
                 boxShadow: `0 4px 14px ${info.color}44`
               }}>{info.emoji}</div>
               <div>
-                <div style={{ fontFamily:'var(--font-display)', fontSize:'1.1rem',
-                  color:'var(--blue-deep)', fontWeight:700 }}>{info.label}</div>
-                <div style={{ fontSize:'0.75rem', color:'var(--text-light)', marginTop:2 }}>
-                  {info.instructions}
-                </div>
+                <div>
+  <div style={{ fontFamily:'var(--font-display)', fontSize:'1rem',
+    color:'var(--blue-deep)', fontWeight:700,
+    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+    minWidth: 0, maxWidth: '100%' }}>
+    {info.label}
+  </div>
+</div>
               </div>
             </div>
 

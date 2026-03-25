@@ -222,6 +222,29 @@ export const notifications = {
   delete:      (id)        => del(`/notifications/${id}`),
 }
 
+
+export const community = {
+  // Groups
+  groups:           ()           => get('/community/groups'),
+  group:            (id)         => get(`/community/groups/${id}`),
+  myGroups:         ()           => get('/community/my-groups'),
+  checkMembership:  (id)         => get(`/community/groups/${id}/membership`),
+  joinGroup:        (id, body)   => post(`/community/groups/${id}/join`, body),
+  leaveGroup:       (id)         => del(`/community/groups/${id}/leave`),
+ 
+  // Sessions
+  sessions:             ()       => get('/community/sessions'),
+  myReservations:       ()       => get('/community/my-reservations'),
+  reserveSession:   (id, body)   => post(`/community/sessions/${id}/reserve`, body),
+  cancelReservation:(id)         => del(`/community/sessions/${id}/cancel-reservation`),
+ 
+  // Posts
+  posts:            (params={})  => { const q = new URLSearchParams(params).toString(); return get(`/community/posts${q ? `?${q}` : ''}`) },
+  createPost:       (body)       => post('/community/posts', body),
+  likePost:         (id, body)   => post(`/community/posts/${id}/like`, body),
+  deletePost:       (id)         => del(`/community/posts/${id}`),
+}
+
 // =============================================================================
 // ADMIN — all endpoints require admin/staff role JWT
 // =============================================================================
@@ -265,6 +288,8 @@ export const admin = {
   deleteProduct: (id)       => del(`/admin/products/${id}`),
 
   notify: (body) => post('/admin/notifications', body),
+
+    registerStaff: (body) => post('/admin/register-staff', body),
 }
 
 // =============================================================================

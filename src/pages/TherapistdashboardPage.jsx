@@ -680,3 +680,9 @@ export default function TherapistDashboard() {
     </div>
   )
 }
+
+export const therapistPortal = {
+  appointments:    (params={})   => { const q = new URLSearchParams(params).toString(); return get(`/therapist-portal/appointments${q ? `?${q}` : ''}`) },
+  getNote:         (apptId)      => get(`/therapist-portal/appointments/${apptId}/notes`),
+  saveNote:        (apptId, content) => put(`/therapist-portal/appointments/${apptId}/notes`, { content }),
+}
