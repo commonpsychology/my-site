@@ -1,6 +1,5 @@
 import { useRouter } from '../context/RouterContext'
-import { therapistsData } from '../data/therapists'
-
+import { SHARED_THERAPISTS as therapistsData } from '../data/sharedTherapists'
 /* ── SVG Avatars ── */
 function AvatarAnita() {
   return (

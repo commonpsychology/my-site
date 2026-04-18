@@ -1,5 +1,6 @@
 // src/services/api.js
 // Central API client — never call fetch() directly in components.
+import { playlists as playlistsApi } from '../services/playlistsApi'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -167,20 +168,20 @@ export const appointments = {
 // STORE
 // =============================================================================
 export const store = {
-  categories:         ()                              => get('/categories'),
-  products:           (params = {})                   => { const q = new URLSearchParams(params).toString(); return get(`/products${q ? `?${q}` : ''}`) },
-  product:            (id)                            => get(`/products/${id}`),
-  getCart:            ()                              => get('/cart'),
-  addToCart:          (productId, variantId, quantity) => post('/cart', { productId, variantId, quantity }),
-  updateCart:         (productId, qty)                => patch(`/cart/${productId}`, { quantity: qty }),
-  removeFromCart:     (productId)                     => del(`/cart/${productId}`),
-  clearCart:          ()                              => del('/cart'),
-  getWishlist:        ()                              => get('/wishlist'),
-  addToWishlist:      (productId)                     => post('/wishlist', { productId }),
-  removeFromWishlist: (productId)                     => del(`/wishlist/${productId}`),
-  orders:             (params = {})                   => { const q = new URLSearchParams(params).toString(); return get(`/orders${q ? `?${q}` : ''}`) },
-  order:              (id)                            => get(`/orders/${id}`),
-  createOrder:        (body)                          => post('/orders', body),
+  categories:         ()                               => get('/store/categories'),
+  products:           (params = {})                    => { const q = new URLSearchParams(params).toString(); return get(`/store/products${q ? `?${q}` : ''}`) },
+  product:            (id)                             => get(`/store/products/${id}`),
+  getCart:            ()                               => get('/store/cart'),
+  addToCart:          (productId, variantId, quantity)  => post('/store/cart', { productId, variantId, quantity }),
+  updateCart:         (productId, qty)                 => patch(`/store/cart/${productId}`, { quantity: qty }),
+  removeFromCart:     (productId)                      => del(`/store/cart/${productId}`),
+  clearCart:          ()                               => del('/store/cart'),
+  getWishlist:        ()                               => get('/store/wishlist'),
+  addToWishlist:      (productId)                      => post('/store/wishlist', { productId }),
+  removeFromWishlist: (productId)                      => del(`/store/wishlist/${productId}`),
+  orders:             (params = {})                    => { const q = new URLSearchParams(params).toString(); return get(`/store/orders${q ? `?${q}` : ''}`) },
+  order:              (id)                             => get(`/store/orders/${id}`),
+  createOrder:        (body)                           => post('/store/orders', body),
 }
 
 // =============================================================================
@@ -201,15 +202,15 @@ export const wellness = {
   assessment:       (id)        => get(`/assessments/${id}`),
   submitAssessment: (id, ans)   => post(`/assessments/${id}/submit`, { answers: ans }),
   myResults:        ()          => get('/assessments/results/me'),
-  getMoodLogs:      (params={}) => { const q = new URLSearchParams(params).toString(); return get(`/mood${q ? `?${q}` : ''}`) },
-  addMoodLog:       (body)      => post('/mood', body),
-  getJournal:       (params={}) => { const q = new URLSearchParams(params).toString(); return get(`/journal${q ? `?${q}` : ''}`) },
-  createEntry:      (body)      => post('/journal', body),
-  updateEntry:      (id, body)  => put(`/journal/${id}`, body),
-  deleteEntry:      (id)        => del(`/journal/${id}`),
-  getHabits:        ()          => get('/habits'),
-  createHabit:      (body)      => post('/habits', body),
-  logHabit:         (id, notes) => post(`/habits/${id}/log`, { notes }),
+  getMoodLogs:  (params={}) => { const q = new URLSearchParams(params).toString(); return get(`/wellness/mood${q ? `?${q}` : ''}`) },
+addMoodLog:   (body)      => post('/wellness/mood', body),
+getJournal:   (params={}) => { const q = new URLSearchParams(params).toString(); return get(`/wellness/journal${q ? `?${q}` : ''}`) },
+createEntry:  (body)      => post('/wellness/journal', body),
+updateEntry:  (id, body)  => put(`/wellness/journal/${id}`, body),
+deleteEntry:  (id)        => del(`/wellness/journal/${id}`),
+getHabits:    ()          => get('/wellness/habits'),
+createHabit:  (body)      => post('/wellness/habits', body),
+logHabit:     (id, notes) => post(`/wellness/habits/${id}/log`, { notes }),
 }
 
 // =============================================================================
@@ -222,27 +223,37 @@ export const notifications = {
   delete:      (id)        => del(`/notifications/${id}`),
 }
 
+// REPLACE the `community` export in src/services/api.js with this:
 
 export const community = {
   // Groups
-  groups:           ()           => get('/community/groups'),
-  group:            (id)         => get(`/community/groups/${id}`),
-  myGroups:         ()           => get('/community/my-groups'),
-  checkMembership:  (id)         => get(`/community/groups/${id}/membership`),
-  joinGroup:        (id, body)   => post(`/community/groups/${id}/join`, body),
-  leaveGroup:       (id)         => del(`/community/groups/${id}/leave`),
- 
+  groups:          ()         => get('/community/groups'),
+  group:           (id)       => get(`/community/groups/${id}`),
+  myGroups:        ()         => get('/community/my-groups'),
+  checkMembership: (id)       => get(`/community/groups/${id}/membership`),
+
+  // joinGroup now accepts full body including payment fields
+  joinGroup:       (id, body) => post(`/community/groups/${id}/join`, body),
+  leaveGroup:      (id)       => del(`/community/groups/${id}/leave`),
+
+  // Link a payment record to a membership (called after /payments POST)
+  linkMembershipPayment: (membershipId, paymentId) =>
+    patch(`/community/memberships/${membershipId}/link-payment`, { payment_id: paymentId }),
+
+  // My memberships with payment status
+  myMemberships: () => get('/community/my-memberships'),
+
   // Sessions
-  sessions:             ()       => get('/community/sessions'),
-  myReservations:       ()       => get('/community/my-reservations'),
-  reserveSession:   (id, body)   => post(`/community/sessions/${id}/reserve`, body),
-  cancelReservation:(id)         => del(`/community/sessions/${id}/cancel-reservation`),
- 
+  sessions:         ()         => get('/community/sessions'),
+  myReservations:   ()         => get('/community/my-reservations'),
+  reserveSession:   (id, body) => post(`/community/sessions/${id}/reserve`, body),
+  cancelReservation:(id)       => del(`/community/sessions/${id}/cancel-reservation`),
+
   // Posts
-  posts:            (params={})  => { const q = new URLSearchParams(params).toString(); return get(`/community/posts${q ? `?${q}` : ''}`) },
-  createPost:       (body)       => post('/community/posts', body),
-  likePost:         (id, body)   => post(`/community/posts/${id}/like`, body),
-  deletePost:       (id)         => del(`/community/posts/${id}`),
+  posts:      (params={}) => { const q = new URLSearchParams(params).toString(); return get(`/community/posts${q ? `?${q}` : ''}`) },
+  createPost: (body)      => post('/community/posts', body),
+  likePost:   (id, body)  => post(`/community/posts/${id}/like`, body),
+  deletePost: (id)        => del(`/community/posts/${id}`),
 }
 
 // =============================================================================
@@ -315,7 +326,7 @@ export const content = {
   leaveGroup:      (id)        => del(`/content/community-groups/${id}/leave`),
   groupPosts:      (id)        => get(`/content/community-groups/${id}/posts`),
   resources:       (cat)       => { const q = cat && cat !== 'All' ? `?category=${encodeURIComponent(cat)}` : ''; return get(`/content/resources${q}`) },
-  courses:         ()          => get('/content/courses'),
+courses: () => get('/courses'),
   enrollCourse:    (id, body)  => post(`/content/courses/${id}/enroll`, body),
   bookPlace:       (body)      => post('/content/place-bookings', body),
 }

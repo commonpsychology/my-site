@@ -23,32 +23,48 @@ const HABITS = [
   { icon: "🤲", label: "Name one emotion you feel", time: "1 min", color: "#f0fdf4", accent: "#166534" },
 ]
 
-// ── Streak tracker using localStorage ───────────────────────
+// ── Streak tracker using window-level state (avoids localStorage issues) ──
+// We keep a module-level variable so it survives re-renders/remounts in same session
+let _sessionStreak = null
+
 function useStreak() {
   const [streak, setStreak] = useState(0)
   const [checked, setChecked] = useState(false)
 
   useEffect(() => {
+    // If already computed this session, reuse
+    if (_sessionStreak !== null) {
+      setStreak(_sessionStreak)
+      setChecked(true)
+      return
+    }
+
     try {
       const last = localStorage.getItem('ps_last_visit')
       const s    = parseInt(localStorage.getItem('ps_streak') || '0')
       const today = new Date().toDateString()
       const yesterday = new Date(Date.now() - 86400000).toDateString()
 
+      let newStreak
       if (last === today) {
-        setStreak(s)
+        newStreak = s
         setChecked(true)
       } else if (last === yesterday) {
-        const newS = s + 1
-        localStorage.setItem('ps_streak', newS)
+        newStreak = s + 1
+        localStorage.setItem('ps_streak', newStreak)
         localStorage.setItem('ps_last_visit', today)
-        setStreak(newS)
       } else {
+        newStreak = 1
         localStorage.setItem('ps_streak', '1')
         localStorage.setItem('ps_last_visit', today)
-        setStreak(1)
       }
-    } catch {}
+
+      _sessionStreak = newStreak
+      setStreak(newStreak)
+    } catch {
+      _sessionStreak = 1
+      setStreak(1)
+    }
   }, [])
 
   function checkIn() {
@@ -77,24 +93,34 @@ const MOOD_MESSAGES = [
 
 export default function DailyReturnHook({ visible = true }) {
   const { streak, checked, checkIn } = useStreak()
-  const [selectedMood, setSelectedMood] = useState(null)
-  const [completedHabit, setCompletedHabit] = useState(null)
-  const [affirmIdx] = useState(() => new Date().getDate() % AFFIRMATIONS.length)
-  const [habitIdx] = useState(() => new Date().getDate() % HABITS.length)
-  const [hasAnimated, setHasAnimated] = useState(false)
+  const [selectedMood, setSelectedMood]       = useState(null)
+  const [completedHabit, setCompletedHabit]   = useState(null)
+  const [affirmIdx]  = useState(() => new Date().getDate() % AFFIRMATIONS.length)
+  const [habitIdx]   = useState(() => new Date().getDate() % HABITS.length)
+  const [hasAnimated, setHasAnimated]         = useState(false)
   const ref = useRef(null)
 
-  // Intersection observer for scroll-in animation
+  // FIX: Check if already in viewport on mount, then fall back to IntersectionObserver
   useEffect(() => {
     const el = ref.current
     if (!el) return
+
+    // Immediately visible? Animate right away.
+    const rect = el.getBoundingClientRect()
+    if (rect.top < window.innerHeight) {
+      // Small delay so CSS transition has time to attach
+      const raf = requestAnimationFrame(() => setHasAnimated(true))
+      return () => cancelAnimationFrame(raf)
+    }
+
+    // Otherwise watch for scroll-in
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setHasAnimated(true) },
-      { threshold: 0.15 }
+      { threshold: 0.10 }
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [])
+  }, []) // runs once on mount — no dependency on `visible` so remounts don't break it
 
   function handleMood(mood) {
     setSelectedMood(mood)

@@ -216,15 +216,17 @@ export default function GalleryPage() {
   const [lightbox, setLightbox]         = useState(null)
   const [showSubmit, setShowSubmit]     = useState(false)
 
-  const { getGalleryItems, getGalleryCategories, loading } = useImages()
+const { getGalleryItems, getGalleryCategories, loading, gallery } = useImages()
 
   const filters  = getGalleryCategories()
 
   // ✅ Fix: useMemo ensures filtered recomputes when activeFilter changes
-  const filtered = useMemo(
-    () => getGalleryItems(activeFilter),
-    [activeFilter, getGalleryItems]
-  )
+ // Replace the useMemo filtered block with:
+const allItems   = getGalleryItems('All')
+const filtered   = useMemo(
+  () => activeFilter === 'All' ? allItems : allItems.filter(i => i.category === activeFilter),
+  [activeFilter, allItems]
+)
 
   const openLightbox  = useCallback(item => setLightbox(item), [])
   const closeLightbox = useCallback(() => setLightbox(null), [])

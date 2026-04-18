@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const refreshTimer          = useRef(null)
 
+  // ── Token Refresh ────────────────────────────────────────────
   const doRefresh = useCallback(async () => {
     const refreshToken = ls.raw('refreshToken')
     if (!refreshToken) return false
@@ -38,15 +39,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const scheduleRefresh = useCallback(() => {
-    clearTimeout(refreshTimer.current)
-    refreshTimer.current = setTimeout(async () => {
-      const ok = await doRefresh()
-      if (ok) scheduleRefresh()
-      else    clearUser()
-    }, 13 * 60 * 1000)
-  }, [doRefresh])
-
   const clearUser = useCallback(() => {
     ls.del('accessToken')
     ls.del('refreshToken')
@@ -55,6 +47,16 @@ export function AuthProvider({ children }) {
     clearTimeout(refreshTimer.current)
   }, [])
 
+  const scheduleRefresh = useCallback(() => {
+    clearTimeout(refreshTimer.current)
+    refreshTimer.current = setTimeout(async () => {
+      const ok = await doRefresh()
+      if (ok) scheduleRefresh()
+      else clearUser()
+    }, 13 * 60 * 1000)
+  }, [doRefresh, clearUser])
+
+  // ── Sync across tabs ─────────────────────────────────────────
   useEffect(() => {
     const handleStorage = (e) => {
       if (e.key !== 'accessToken') return
@@ -70,6 +72,7 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
+  // ── Init auth ────────────────────────────────────────────────
   useEffect(() => {
     async function init() {
       const token  = ls.raw('accessToken')
@@ -120,36 +123,49 @@ export function AuthProvider({ children }) {
 
     init()
     return () => clearTimeout(refreshTimer.current)
+  }, [doRefresh, scheduleRefresh, clearUser])
+
+  // ── LoginRaw (NO state update) ───────────────────────────────
+  const loginRaw = useCallback(async (email, password) => {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Login failed')
+    }
+
+    return data
   }, [])
 
-  // ── Login ────────────────────────────────────────────────────
+  // ── Login (WITH state update) ────────────────────────────────
   const login = useCallback(async (email, password) => {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, password }),
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'Login failed')
+    const data = await loginRaw(email, password)
 
     ls.setRaw('accessToken',  data.accessToken)
     ls.setRaw('refreshToken', data.refreshToken)
     ls.set('user', data.user)
+
     setUser(data.user)
     scheduleRefresh()
-    return data
-  }, [scheduleRefresh])
 
-  // ── Register — FIX: accepts phone and forwards it to backend ─
+    return data
+  }, [loginRaw, scheduleRefresh])
+
+  // ── Register ────────────────────────────────────────────────
   const register = useCallback(async (name, email, password, metadata = {}) => {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
+      body: JSON.stringify({
         name,
         email,
         password,
-        phone: metadata.phone || null,   // ← phone now sent to backend
+        phone: metadata.phone || null,
       }),
     })
     const data = await res.json()
@@ -157,7 +173,7 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  // ── Logout ───────────────────────────────────────────────────
+  // ── Logout ─────────────────────────────────────────────────
   const logout = useCallback(async () => {
     const refreshToken = ls.raw('refreshToken')
     try {
@@ -165,14 +181,14 @@ export function AuthProvider({ children }) {
         await fetch(`${API_BASE}/auth/logout`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ refreshToken }),
+          body: JSON.stringify({ refreshToken }),
         })
       }
     } catch {}
     clearUser()
   }, [clearUser])
 
-  // ── Refresh user profile from server ─────────────────────────
+  // ── Refresh user ────────────────────────────────────────────
   const refreshUser = useCallback(async () => {
     const token = ls.raw('accessToken')
     if (!token) return
@@ -189,24 +205,37 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, register }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        loginRaw,   // ✅ FIXED: now available
+        logout,
+        refreshUser,
+        register
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
 }
 
+// ── Hook ─────────────────────────────────────────────────────
 export const useAuth = () => useContext(AuthContext)
 
+// ── Auth Guard ───────────────────────────────────────────────
 export function useAuthGuard() {
   const { user, loading } = useAuth()
   const { navigate }      = useRouter()
 
   useEffect(() => {
     if (loading) return
-    if (!user)   return
+    if (!user) return
+
     const role = user.role
     if (role === 'admin' || role === 'staff') navigate('/staff/admin')
-    else if (role === 'therapist')            navigate('/staff/therapist')
-    else                                      navigate('/portal')
-  }, [user, loading])
+    else if (role === 'therapist') navigate('/staff/therapist')
+    else navigate('/portal')
+  }, [user, loading, navigate])
 }

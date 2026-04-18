@@ -1,25 +1,254 @@
-// AdmindashboardPage.jsx — COMPLETE FIXED
-// Fixes:
-//   1. galsubPage → galSubPage (was crashing with ReferenceError)
-//   2. Volunteer + gallery_submissions JSX moved inside return() statement
-//   3. All JSX sections now properly inside the adm-content div
+// AdminDashboardPage.jsx — FIXED
+// Fixes applied:
+//  1. CourseEnrollmentsSection moved OUTSIDE AdminDashboardPage (was nested inside → invalid hooks)
+//  2. Courses tab JSX block properly closed before Assessments tab starts
+//  3. Removed duplicate `{tab === 'courses' && ...}` guard inside already-open courses block
+//  4. CourseContentSection rendered cleanly without wrapping other tabs
+//  5. All subsequent tabs (assessments, community, room_bookings, etc.) are now at the correct nesting level
 
-import { useState, useEffect } from 'react'
-import { useRouter }           from '../context/RouterContext'
-import { useAuth }             from '../context/AuthContext'
-import { admin as adminApi }   from '../services/api'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter }   from '../context/RouterContext'
+import { useAuth }     from '../context/AuthContext'
+import { admin as adminApi } from '../services/api'
 import ReviewsModeration from '../components/ReviewsModeration'
+import CourseContentSection from './CourseContentSection'
+const LIMIT = 10 // or 20 or whatever you want
+  
+
+const fmt  = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+const fmtT = d => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+
+// ─── CSS ─────────────────────────────────────────────────────────────────────
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --font-ui: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --sidebar-bg: #0d1117;
+  --sidebar-border: #1e2730;
+  --sidebar-hover: #161d27;
+  --sidebar-active-bg: #1a2840;
+  --sidebar-active-border: #3b82f6;
+  --sidebar-text: #8b98a8;
+  --sidebar-text-active: #e2e8f0;
+  --sidebar-group: #4a5568;
+  --topbar-bg: #0d1117;
+  --topbar-border: #1e2730;
+  --bg: #f1f4f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e2e8f0;
+  --border-2: #edf2f7;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-label: #64748b;
+  --blue: #3b82f6;
+  --blue-lt: #eff6ff;
+  --blue-dk: #1d4ed8;
+  --green: #10b981;
+  --green-lt: #ecfdf5;
+  --green-dk: #065f46;
+  --amber: #f59e0b;
+  --amber-lt: #fffbeb;
+  --red: #ef4444;
+  --red-lt: #fef2f2;
+  --purple: #8b5cf6;
+  --purple-lt: #f5f3ff;
+  --teal: #14b8a6;
+  --teal-lt: #f0fdfa;
+  --rose: #f43f5e;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.05);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,.12);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,.18);
+  --topbar-h: 54px;
+  --sidebar-w: 234px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-ui); }
+
+.adm { min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; font-family: var(--font-ui); color: var(--text-primary); }
+.adm-bar { height: var(--topbar-h); background: var(--topbar-bg); border-bottom: 1px solid var(--topbar-border); padding: 0 1.25rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 300; }
+.adm-body { display: flex; flex: 1; min-height: 0; }
+.adm-side { width: var(--sidebar-w); flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border); position: sticky; top: var(--topbar-h); height: calc(100vh - var(--topbar-h)); overflow-y: auto; padding: .75rem 0; scrollbar-width: thin; scrollbar-color: #2d3748 transparent; }
+.adm-side::-webkit-scrollbar { width: 3px; }
+.adm-side::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+.adm-content { flex: 1; padding: 1.5rem; overflow-x: hidden; min-width: 0; max-width: 100%; }
+
+.side-group-label { padding: .9rem 1.1rem .3rem; font-size: .62rem; font-weight: 700; color: var(--sidebar-group); text-transform: uppercase; letter-spacing: .1em; }
+.side-btn { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .48rem 1.1rem; border: none; background: transparent; font-family: var(--font-ui); font-size: .78rem; font-weight: 500; cursor: pointer; text-align: left; color: var(--sidebar-text); transition: all .13s; position: relative; border-radius: 0; }
+.side-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-text-active); }
+.side-btn.active { background: var(--sidebar-active-bg); color: var(--sidebar-text-active); font-weight: 600; border-right: 2px solid var(--sidebar-active-border); }
+.side-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: .82rem; flex-shrink: 0; }
+.side-divider { height: 1px; background: var(--sidebar-border); margin: .6rem 1.1rem; }
+.side-btn.side-accent { color: #60a5fa; font-weight: 600; }
+.side-btn.side-accent:hover { background: rgba(59,130,246,.12); }
+
+.brand { display: flex; align-items: center; gap: .7rem; }
+.brand-logo { height: 26px; object-fit: contain; }
+.brand-name { font-size: .85rem; font-weight: 700; color: #e2e8f0; letter-spacing: -.01em; }
+.brand-sub { font-size: .58rem; color: #4a5568; text-transform: uppercase; letter-spacing: .1em; }
+.topbar-right { display: flex; align-items: center; gap: .65rem; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: .66rem; font-weight: 800; color: white; }
+.topbar-name { font-size: .78rem; color: #94a3b8; }
+.logout-btn { padding: .28rem .7rem; border-radius: var(--radius-sm); border: 1px solid #2d3748; background: transparent; color: #94a3b8; font-size: .72rem; cursor: pointer; font-family: var(--font-ui); transition: all .13s; }
+.logout-btn:hover { border-color: #4a5568; color: #e2e8f0; }
+
+.sec-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: .75rem; }
+.sec-title { font-size: 1.15rem; font-weight: 700; color: var(--text-primary); letter-spacing: -.02em; }
+.sec-sub { font-size: .73rem; color: var(--text-muted); margin-top: .2rem; }
+.sec-count { font-size: .78rem; font-weight: 400; color: var(--text-muted); margin-left: .35rem; }
+.sec-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+.btn { padding: .38rem .85rem; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: .76rem; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; transition: all .13s; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; line-height: 1.4; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; pointer-events: none; }
+.btn-primary { background: var(--blue); color: white; border-color: var(--blue); }
+.btn-primary:hover { background: var(--blue-dk); border-color: var(--blue-dk); }
+.btn-success { background: var(--green); color: white; border-color: var(--green); }
+.btn-success:hover { filter: brightness(1.08); }
+.btn-ghost { background: var(--surface); color: var(--text-secondary); border-color: var(--border); }
+.btn-ghost:hover { border-color: #94a3b8; color: var(--text-primary); }
+.btn-danger { background: var(--red-lt); color: var(--red); border-color: #fecaca; }
+.btn-danger:hover { background: var(--red); color: white; border-color: var(--red); }
+.btn-warn { background: var(--amber-lt); color: #92400e; border-color: #fde68a; }
+.btn-warn:hover { background: var(--amber); color: white; }
+.btn-sm { padding: .22rem .58rem; font-size: .7rem; border-radius: 5px; }
+.btn-xs { padding: .15rem .42rem; font-size: .65rem; border-radius: 4px; }
+.btn-icon { padding: .32rem .42rem; }
+
+.inp { padding: .38rem .75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: .78rem; color: var(--text-primary); background: var(--surface); outline: none; font-family: var(--font-ui); transition: border .13s, box-shadow .13s; }
+.inp:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+select.inp { cursor: pointer; }
+textarea.inp { resize: vertical; line-height: 1.65; }
+
+.tbl-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-xs); }
+.tbl-scroll { overflow-x: auto; }
+table.tbl { width: 100%; border-collapse: collapse; min-width: 480px; }
+table.tbl th { padding: .6rem .9rem; text-align: left; font-size: .62rem; font-weight: 700; color: var(--text-label); text-transform: uppercase; letter-spacing: .08em; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.tbl td { padding: .65rem .9rem; font-size: .79rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-2); vertical-align: middle; }
+table.tbl tr:last-child td { border-bottom: none; }
+table.tbl tr:hover td { background: #fafbfd; }
+.tbl-empty { text-align: center; padding: 3rem; color: var(--text-muted); font-size: .82rem; }
+.tbl-loading { text-align: center; padding: 2.5rem; color: var(--text-muted); font-size: .82rem; }
+
+.pager { display: flex; justify-content: center; align-items: center; gap: .4rem; padding: .75rem 1rem; border-top: 1px solid var(--border); }
+.pg-btn { padding: .26rem .65rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font-size: .73rem; color: var(--text-secondary); font-family: var(--font-ui); transition: all .12s; }
+.pg-btn:disabled { background: var(--surface-2); cursor: not-allowed; color: var(--text-muted); }
+.pg-btn:not(:disabled):hover { border-color: var(--blue); color: var(--blue); }
+.pg-info { font-size: .72rem; color: var(--text-muted); padding: 0 .5rem; }
+
+.filters { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .85rem; margin-bottom: 1.5rem; }
+.stat-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 1.1rem 1.2rem; cursor: pointer; transition: all .15s; position: relative; overflow: hidden; }
+.stat-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,.3)); pointer-events: none; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #cbd5e1; }
+.stat-icon { font-size: 1.25rem; margin-bottom: .5rem; }
+.stat-val { font-size: 1.55rem; font-weight: 800; color: var(--text-primary); letter-spacing: -.03em; line-height: 1; margin-bottom: .3rem; }
+.stat-label { font-size: .67rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+
+.badge { display: inline-flex; align-items: center; padding: .18rem .52rem; border-radius: 100px; font-size: .63rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.badge-green  { background: var(--green-lt); color: #065f46; }
+.badge-blue   { background: var(--blue-lt); color: #1e40af; }
+.badge-amber  { background: var(--amber-lt); color: #92400e; }
+.badge-red    { background: var(--red-lt); color: #991b1b; }
+.badge-purple { background: var(--purple-lt); color: #5b21b6; }
+.badge-teal   { background: var(--teal-lt); color: #0f766e; }
+.badge-gray   { background: #f1f5f9; color: #475569; }
+
+.overlay { position: fixed; inset: 0; background: rgba(2,6,23,.6); backdrop-filter: blur(6px); z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem; animation: fadeIn .15s; }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+.modal { background: var(--surface); border-radius: var(--radius-xl); width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1px solid var(--border); animation: slideUp .18s; }
+.modal-lg { max-width: 820px; }
+@keyframes slideUp { from { transform: translateY(10px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+.modal-head { padding: 1.15rem 1.4rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal-head-title { font-size: .95rem; font-weight: 700; color: var(--text-primary); }
+.modal-body { padding: 1.35rem 1.4rem; display: flex; flex-direction: column; gap: .9rem; }
+.modal-foot { padding: .9rem 1.4rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: .5rem; }
+
+.field { display: flex; flex-direction: column; gap: .3rem; }
+.field label { font-size: .67rem; font-weight: 700; color: var(--text-label); text-transform: uppercase; letter-spacing: .08em; }
+.field .inp { width: 100%; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+.field-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; }
+.field-hint { font-size: .66rem; color: var(--text-muted); margin-top: .15rem; }
+
+.toggle { width: 34px; height: 18px; background: #d1d5db; border-radius: 100px; position: relative; cursor: pointer; border: none; transition: background .18s; flex-shrink: 0; }
+.toggle.on { background: var(--green); }
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: transform .18s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.toggle.on::after { transform: translateX(16px); }
+
+.alert { padding: .6rem .9rem; border-radius: var(--radius-sm); font-size: .78rem; font-weight: 600; }
+.alert-success { background: var(--green-lt); border: 1px solid #a7f3d0; color: var(--green-dk); }
+.alert-error { background: var(--red-lt); border: 1px solid #fecaca; color: #991b1b; }
+.alert-warn { background: var(--amber-lt); border: 1px solid #fde68a; color: #92400e; }
+.alert-info { background: var(--blue-lt); border: 1px solid #bfdbfe; color: #1e40af; }
+
+.confirm-dialog { max-width: 380px; }
+.confirm-msg { font-size: .85rem; color: var(--text-secondary); line-height: 1.6; }
+
+.detail-row td { background: var(--surface-2) !important; border-bottom: 1px solid var(--border) !important; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; padding: .85rem 1rem; }
+.detail-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: .85rem; }
+.detail-card-title { font-size: .6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .5rem; }
+.detail-row-item { display: flex; justify-content: space-between; padding: .22rem 0; border-bottom: 1px solid var(--border-2); font-size: .75rem; }
+.detail-row-item:last-child { border-bottom: none; }
+.detail-row-key { color: var(--text-muted); font-weight: 600; }
+.detail-row-val { color: var(--text-secondary); max-width: 55%; text-align: right; word-break: break-all; }
+
+.sub-tabbar { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; padding: .65rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); }
+.sub-tab { padding: .38rem .85rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; background: transparent; color: var(--text-muted); font-family: var(--font-ui); transition: all .12s; }
+.sub-tab:hover { background: var(--surface-2); color: var(--text-secondary); }
+.sub-tab.active { background: var(--blue-lt); color: var(--blue-dk); border-color: #bfdbfe; }
+
+.pay-badge { display: inline-flex; align-items: center; padding: .19rem .55rem; border-radius: 100px; font-size: .63rem; font-weight: 800; white-space: nowrap; }
+
+.adm-tabbar { display: none; background: var(--topbar-bg); border-bottom: 1px solid var(--topbar-border); overflow-x: auto; scrollbar-width: none; }
+.adm-tabbar::-webkit-scrollbar { display: none; }
+.mob-tab { flex-shrink: 0; padding: .6rem .8rem; border: none; background: transparent; font-family: var(--font-ui); font-size: .73rem; color: var(--sidebar-text); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; font-weight: 500; }
+.mob-tab.active { color: #60a5fa; border-bottom-color: #3b82f6; font-weight: 700; }
+
+.mono { font-family: var(--font-mono); }
+.chip { display: inline-block; padding: .12rem .45rem; border-radius: 4px; font-size: .68rem; font-weight: 600; background: var(--blue-lt); color: var(--blue-dk); }
+.empty-state { text-align: center; padding: 3.5rem 2rem; color: var(--text-muted); }
+.empty-icon { font-size: 2.5rem; margin-bottom: .75rem; opacity: .5; }
+.empty-text { font-size: .82rem; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
+.section-inner { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 1.25rem; margin-bottom: 1rem; }
+
+@media (max-width: 900px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .adm-side { width: 200px; }
+}
+@media (max-width: 680px) {
+  .adm-side { display: none; }
+  .adm-tabbar { display: flex; }
+  .adm-content { padding: 1rem; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: .65rem; }
+  .field-row { grid-template-columns: 1fr; }
+  .field-row3 { grid-template-columns: 1fr 1fr; }
+  :root { --sidebar-w: 200px; }
+}
+`
+
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-const LIMIT    = 20
-
-const token    = () => localStorage.getItem('accessToken')
+const getToken = () => localStorage.getItem('accessToken')
 const apiFetch = async (path, opts = {}) => {
   const res = await fetch(`${API_BASE}${path}`, {
     ...opts,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token()}`,
+      Authorization: `Bearer ${getToken()}`,
       ...(opts.headers || {}),
     },
   })
@@ -28,200 +257,543 @@ const apiFetch = async (path, opts = {}) => {
   return data
 }
 
-const fmt  = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
-const fmtT = d => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-:root {
-  --font-display:'Instrument Serif',Georgia,serif;
-  --font-body:'DM Sans',system-ui,sans-serif;
-  --teal:#007BA8;--teal-lt:#e0f7ff;--teal-dk:#005580;
-  --green:#1a7a4a;--green-lt:#e8f8f0;
-  --amber:#8a5a1a;--amber-lt:#fff5e6;
-  --purple:#5a1a8a;--purple-lt:#f0e8ff;
-  --red:#c0392b;--red-lt:#fff0f0;
-  --slate:#1a3a4a;--slate-md:#2e6080;--slate-lt:#7a9aaa;
-  --border:#e2e8f0;--bg:#f0f4f8;--white:#ffffff;
-  --radius:12px;--radius-sm:8px;
-  --shadow-sm:0 1px 4px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.1);
+// ── JSON array field helpers ──────────────────────────────────
+// Converts array ↔ newline-separated string for textarea editing
+const arrToText = arr => (Array.isArray(arr) ? arr : []).join('\n')
+const textToArr = txt => txt.split('\n').map(s => s.trim()).filter(Boolean)
+
+// ── Gradient presets ─────────────────────────────────────────
+const GRADIENT_PRESETS = [
+  { label: 'Sky Blue',   val: 'linear-gradient(135deg, #007BA8 0%, #00BFFF 60%, #a0e9ff 100%)' },
+  { label: 'Deep Blue',  val: 'linear-gradient(135deg, #0f4c6b 0%, #009FD4 60%, #22d3ee 100%)' },
+  { label: 'Warm Earth', val: 'linear-gradient(135deg, #b56a28 0%, #d4a574 60%, #f5ede0 100%)' },
+  { label: 'Dark Navy',  val: 'linear-gradient(135deg, #1a3a4a 0%, #2e6080 60%, #5b9ab5 100%)' },
+  { label: 'Forest',     val: 'linear-gradient(135deg, #2d4a3e 0%, #3d6b5a 60%, #6a9e88 100%)' },
+  { label: 'Ocean',      val: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 60%, #7dd3fc 100%)' },
+  { label: 'Purple',     val: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 60%, #c4b5fd 100%)' },
+  { label: 'Rose',       val: 'linear-gradient(135deg, #881337 0%, #e11d48 60%, #fda4af 100%)' },
+]
+
+const EMPTY_FORM = {
+  title: '', region: '', type: '', status: 'Active', since: '', beneficiaries: '',
+  emoji: '🤝', img_gradient: GRADIENT_PRESETS[0].val,
+  short_desc: '', full_desc: '',
+  tags_text: '', partners_text: '', outcomes_text: '',
+  sort_order: 0, is_active: true,
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-.adm{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;font-family:var(--font-body);}
-.adm-bar{background:linear-gradient(135deg,#1a3a4a 0%,#2e6080 100%);padding:.75rem clamp(1rem,3vw,1.75rem);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18);min-height:56px;}
-.adm-body{display:flex;flex:1;min-height:0;}
-.adm-side{width:220px;flex-shrink:0;background:var(--white);border-right:1px solid var(--border);position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;padding:.5rem 0;scrollbar-width:thin;}
-.adm-side::-webkit-scrollbar{width:4px;}
-.adm-side::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px;}
-.side-group{padding:.35rem .9rem .1rem;font-size:.62rem;font-weight:800;color:var(--slate-lt);text-transform:uppercase;letter-spacing:.1em;margin-top:.5rem;}
-.side-btn{display:flex;align-items:center;gap:.55rem;width:100%;padding:.55rem 1.1rem;border:none;background:transparent;font-family:var(--font-body);font-size:.82rem;cursor:pointer;text-align:left;color:var(--slate-md);transition:all .14s;position:relative;}
-.side-btn:hover{background:var(--bg);}
-.side-btn.active{background:var(--green-lt);color:var(--green);font-weight:700;}
-.side-btn.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:var(--green);border-radius:0 2px 2px 0;}
-.side-btn.highlight{color:var(--teal);background:var(--teal-lt);font-weight:700;border-left:3px solid var(--teal);}
-.side-divider{height:1px;background:var(--border);margin:.5rem 1rem;}
-.adm-content{flex:1;padding:clamp(1rem,3vw,1.75rem);overflow-x:hidden;min-width:0;}
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
-.stat-card{background:var(--white);border-radius:var(--radius);padding:1.2rem;border:1px solid var(--border);cursor:pointer;transition:all .18s;}
-.stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
-.tbl-wrap{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);overflow:auto;}
-table.tbl{width:100%;border-collapse:collapse;min-width:500px;}
-table.tbl th{padding:.55rem .9rem;text-align:left;font-size:.66rem;font-weight:800;color:var(--slate-lt);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap;}
-table.tbl td{padding:.6rem .9rem;font-size:.82rem;color:var(--slate-md);border-bottom:1px solid var(--border);vertical-align:middle;}
-table.tbl tr:last-child td{border-bottom:none;}
-table.tbl tr:hover td{background:#f8fafc;}
-.tbl-empty{text-align:center;padding:2.5rem;color:var(--slate-lt);font-size:.85rem;}
-.pager{display:flex;justify-content:center;align-items:center;gap:.5rem;padding:.75rem;border-top:1px solid var(--border);}
-.pg-btn{padding:.28rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;font-size:.78rem;color:var(--slate-md);font-family:var(--font-body);transition:all .14s;}
-.pg-btn:disabled{background:var(--bg);cursor:not-allowed;color:#ccc;}
-.pg-btn:not(:disabled):hover{border-color:var(--teal);color:var(--teal);}
-.filters{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;}
-.inp{padding:.4rem .8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;color:var(--slate);background:var(--white);outline:none;font-family:var(--font-body);transition:border .15s;}
-.inp:focus{border-color:var(--teal);}
-select.inp{cursor:pointer;}
-.btn{padding:.4rem .9rem;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:.8rem;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all .15s;display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;}
-.btn-primary{background:linear-gradient(135deg,var(--teal) 0%,#00BFFF 100%);color:white;box-shadow:0 3px 10px rgba(0,191,255,.25);}
-.btn-primary:hover{opacity:.88;transform:translateY(-1px);}
-.btn-green{background:var(--green);color:white;}
-.btn-green:hover{opacity:.88;}
-.btn-ghost{background:var(--white);color:var(--slate-md);border-color:var(--border);}
-.btn-ghost:hover{border-color:var(--slate-md);}
-.btn-danger{background:var(--red-lt);color:var(--red);border-color:var(--red-lt);}
-.btn-danger:hover{background:var(--red);color:white;}
-.btn-sm{padding:.25rem .6rem;font-size:.73rem;}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
-.badge{padding:.18rem .55rem;border-radius:100px;font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
-.modal-overlay{position:fixed;inset:0;background:rgba(15,30,45,.55);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;animation:fadeIn .18s;}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.modal{background:var(--white);border-radius:16px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:slideUp .2s;}
-@keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
-.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
-.modal-body{padding:1.5rem;display:flex;flex-direction:column;gap:1rem;}
-.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.65rem;}
-.field{display:flex;flex-direction:column;gap:.3rem;}
-.field label{font-size:.7rem;font-weight:800;color:#4a6a7a;text-transform:uppercase;letter-spacing:.08em;}
-.field input,.field select,.field textarea{padding:.55rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;color:var(--slate);outline:none;font-family:var(--font-body);transition:border .15s;width:100%;box-sizing:border-box;}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);}
-.field textarea{resize:vertical;line-height:1.6;}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.field-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;}
-.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;}
-.sec-title{font-family:var(--font-display);font-size:clamp(1.2rem,3vw,1.4rem);color:var(--slate);}
-.sec-sub{font-size:.75rem;color:var(--slate-lt);margin-top:.15rem;font-family:var(--font-body);}
-.alert{padding:.65rem 1rem;border-radius:8px;font-size:.82rem;font-weight:600;}
-.alert-success{background:var(--green-lt);border:1px solid #a0ddb8;color:var(--green);}
-.alert-error{background:var(--red-lt);border:1px solid #f5a0a0;color:var(--red);}
-.toggle{width:36px;height:20px;background:#ddd;border-radius:100px;position:relative;cursor:pointer;border:none;transition:background .2s;flex-shrink:0;}
-.toggle.on{background:var(--green);}
-.toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;background:white;border-radius:50%;transition:transform .2s;}
-.toggle.on::after{transform:translateX(16px);}
-.adm-tabbar{display:none;background:var(--white);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-.adm-tabbar::-webkit-scrollbar{display:none;}
-.tab-btn{flex-shrink:0;padding:.65rem .85rem;border:none;background:transparent;font-family:var(--font-body);font-size:.78rem;font-weight:500;color:var(--slate-lt);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;}
-.tab-btn.active{color:var(--green);font-weight:700;border-bottom-color:var(--green);}
-.hint{font-size:.7rem;color:var(--slate-lt);}
-.chip{padding:.15rem .5rem;border-radius:100px;background:var(--teal-lt);color:var(--teal);font-size:.7rem;font-weight:600;display:inline-block;}
-@media(max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr);}.adm-side{width:190px;}}
-@media(max-width:680px){.adm-side{display:none;}.adm-tabbar{display:flex;}.adm-content{padding:1rem;}.stat-grid{grid-template-columns:repeat(2,1fr);gap:.75rem;}.field-row{grid-template-columns:1fr;}.field-row3{grid-template-columns:1fr 1fr;}}
-`
+
+function formToPayload(form) {
+  return {
+    title:         form.title,
+    region:        form.region,
+    type:          form.type,
+    status:        form.status,
+    since:         form.since,
+    beneficiaries: form.beneficiaries,
+    emoji:         form.emoji,
+    img_gradient:  form.img_gradient,
+    short_desc:    form.short_desc,
+    full_desc:     form.full_desc,
+    tags:          textToArr(form.tags_text),
+    partners:      textToArr(form.partners_text),
+    outcomes:      textToArr(form.outcomes_text),
+    sort_order:    Number(form.sort_order) || 0,
+    is_active:     form.is_active,
+  }
+}
+
+function itemToForm(item) {
+  return {
+    title:          item.title         || '',
+    region:         item.region        || '',
+    type:           item.type          || '',
+    status:         item.status        || 'Active',
+    since:          item.since         || '',
+    beneficiaries:  item.beneficiaries || '',
+    emoji:          item.emoji         || '🤝',
+    img_gradient:   item.img_gradient  || GRADIENT_PRESETS[0].val,
+    short_desc:     item.short_desc    || '',
+    full_desc:      item.full_desc     || '',
+    tags_text:      arrToText(item.tags),
+    partners_text:  arrToText(item.partners),
+    outcomes_text:  arrToText(item.outcomes),
+    sort_order:     item.sort_order    ?? 0,
+    is_active:      item.is_active     !== false,
+  }
+}
+
+// ── Mini gradient preview ─────────────────────────────────────
+function GradientPreview({ gradient }) {
+  return (
+    <div style={{
+      width: '100%', height: 48, borderRadius: 8,
+      background: gradient, border: '1px solid var(--border)',
+      marginTop: '.25rem',
+    }} />
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────
+ function SocialWorkAdminSection() {
+  const [programs, setPrograms] = useState([])
+  const [total,    setTotal]    = useState(0)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState('')
+
+  const [modal,    setModal]    = useState(null)   // null | { data: item|null }
+  const [form,     setForm]     = useState(EMPTY_FORM)
+  const [saving,   setSaving]   = useState(false)
+  const [saveErr,  setSaveErr]  = useState('')
+
+  const [delConf,  setDelConf]  = useState(null)   // null | { id, label }
+  const [preview,  setPreview]  = useState(null)   // null | item  (card preview)
+  const [toast,    setToast]    = useState(null)
+  const [search,   setSearch]   = useState('')
+
+  const flash = (msg, ok = true) => {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const fld = k => e => setForm(f => ({ ...f, [k]: e?.target ? e.target.value : e }))
+
+  // ── Load ──────────────────────────────────────────────────
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const params = new URLSearchParams({ limit: 100, include_inactive: 'true' })
+      if (search) params.set('search', search)
+      const d = await apiFetch(`/admin/social-work-programs?${params}`)
+      const items = d.items || d.programs || d.data || []
+      setPrograms(items)
+      setTotal(d.pagination?.total || items.length)
+    } catch (e) { setError(e.message) }
+    finally { setLoading(false) }
+  }, [search])
+
+  useEffect(() => { load() }, [load])
+
+  // ── Modal open/close ─────────────────────────────────────
+  const openCreate = () => {
+    setForm({ ...EMPTY_FORM, sort_order: programs.length + 1 })
+    setSaveErr(''); setModal({ data: null })
+  }
+  const openEdit = item => {
+    setForm(itemToForm(item)); setSaveErr(''); setModal({ data: item })
+  }
+  const closeModal = () => { setModal(null); setSaveErr('') }
+
+  // ── Save ─────────────────────────────────────────────────
+  const save = async () => {
+    if (!form.title?.trim()) return setSaveErr('Title is required')
+    setSaving(true); setSaveErr('')
+    try {
+      const body = formToPayload(form)
+      if (modal.data) {
+        await apiFetch(`/admin/social-work-programs/${modal.data.id}`, {
+          method: 'PUT', body: JSON.stringify(body),
+        })
+        flash('Program updated ✓')
+      } else {
+        await apiFetch('/admin/social-work-programs', {
+          method: 'POST', body: JSON.stringify(body),
+        })
+        flash('Program created ✓')
+      }
+      closeModal(); load()
+    } catch (e) { setSaveErr(e.message) }
+    finally { setSaving(false) }
+  }
+
+  // ── Delete ───────────────────────────────────────────────
+  const doDelete = async () => {
+    try {
+      await apiFetch(`/admin/social-work-programs/${delConf.id}`, { method: 'DELETE' })
+      flash('Program deactivated')
+      setDelConf(null); load()
+    } catch (e) { flash(e.message, false); setDelConf(null) }
+  }
+
+  // ── Quick toggle active ───────────────────────────────────
+  const toggleActive = async (item) => {
+    try {
+      await apiFetch(`/admin/social-work-programs/${item.id}`, {
+        method: 'PUT', body: JSON.stringify({ is_active: !item.is_active }),
+      })
+      load()
+    } catch (e) { flash(e.message, false) }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  return (
+    <div style={{ position: 'relative' }}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999,
+          background: toast.ok ? 'var(--green)' : 'var(--red)',
+          color: 'white', padding: '.65rem 1.1rem', borderRadius: 'var(--radius)',
+          fontWeight: 600, fontSize: '.82rem', boxShadow: 'var(--shadow-md)',
+        }}>{toast.msg}</div>
+      )}
+
+      {/* Header */}
+      <div className="sec-head">
+        <div>
+          <h1 className="sec-title">Social Work Programs <span className="sec-count">({total})</span></h1>
+          <p className="sec-sub">Manage the program cards and modal content shown on the Social Work page</p>
+        </div>
+        <div className="sec-actions">
+          <button className="btn btn-ghost" onClick={load}>↺ Refresh</button>
+          <button className="btn btn-primary" onClick={openCreate}>+ New Program</button>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="filters">
+        <input className="inp" value={search} onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && load()}
+          placeholder="Search title / region / type…" style={{ width: 240 }} />
+        {search && <button className="btn btn-ghost" onClick={() => setSearch('')}>✕ Clear</button>}
+      </div>
+
+      {error && <div className="alert alert-error" style={{ marginBottom: '.85rem' }}>⚠️ {error}</div>}
+
+      {/* Table */}
+      <div className="tbl-wrap">
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead>
+              <tr>{['#', 'Preview', 'Program', 'Type', 'Region', 'Since', 'Active', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {loading
+                ? <tr><td className="tbl-loading" colSpan={8}><span className="spinner" /> Loading…</td></tr>
+                : programs.length === 0
+                  ? <tr><td colSpan={8}><div className="empty-state"><div className="empty-icon">🤝</div><div className="empty-text">No programs yet. Click + New Program to add one.</div></div></td></tr>
+                  : programs.map(p => (
+                      <tr key={p.id}>
+                        <td style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '.78rem', width: 32 }}>{p.sort_order}</td>
+
+                        {/* Gradient preview swatch */}
+                        <td style={{ width: 72 }}>
+                          <div style={{
+                            width: 56, height: 36, borderRadius: 8,
+                            background: p.img_gradient,
+                            border: '1px solid var(--border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.1rem',
+                          }}>{p.emoji}</div>
+                        </td>
+
+                        <td>
+                          <div style={{ fontWeight: 600, fontSize: '.83rem' }}>{p.title}</div>
+                          <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginTop: '.1rem' }}>
+                            {p.beneficiaries && <span style={{ marginRight: '.5rem' }}>👥 {p.beneficiaries}</span>}
+                            {Array.isArray(p.tags) && p.tags.slice(0, 2).map(t => (
+                              <span key={t} style={{ marginRight: '.3rem', background: 'var(--blue-lt)', color: 'var(--blue-dk)', padding: '1px 6px', borderRadius: 100, fontSize: '.62rem', fontWeight: 700 }}>#{t}</span>
+                            ))}
+                          </div>
+                        </td>
+
+                        <td style={{ fontSize: '.76rem' }}>{p.type || '—'}</td>
+                        <td style={{ fontSize: '.74rem', color: 'var(--text-muted)' }}>{p.region || '—'}</td>
+                        <td style={{ fontSize: '.74rem' }}>{p.since || '—'}</td>
+
+                        <td>
+                          <Toggle on={p.is_active} onChange={() => toggleActive(p)} />
+                        </td>
+
+                        <td>
+                          <div style={{ display: 'flex', gap: '.3rem', flexWrap: 'wrap' }}>
+                            <button className="btn btn-ghost btn-sm" title="Preview card" onClick={() => setPreview(p)}>👁</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" title="Edit" onClick={() => openEdit(p)}>✏️</button>
+                            <button className="btn btn-danger btn-sm btn-icon" title="Delete" onClick={() => setDelConf({ id: p.id, label: p.title })}>🗑</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── EDIT / CREATE MODAL ─────────────────────────────── */}
+      {modal && (
+        <div className="overlay" onClick={closeModal}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxWidth: 900 }}>
+            <div className="modal-head">
+              <span className="modal-head-title">{modal.data ? '✏️ Edit Program' : '+ New Social Work Program'}</span>
+              <button className="btn btn-ghost btn-sm" onClick={closeModal}>✕</button>
+            </div>
+
+            <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+
+              {/* ── Row 1: emoji + title ── */}
+              <div className="field-row">
+                <div className="field" style={{ flex: '0 0 80px' }}>
+                  <label>Emoji</label>
+                  <input className="inp" value={form.emoji} onChange={fld('emoji')}
+                    style={{ textAlign: 'center', fontSize: '1.4rem' }} />
+                </div>
+                <div className="field" style={{ flex: 1 }}>
+                  <label>Title *</label>
+                  <input className="inp" value={form.title} onChange={fld('title')} placeholder="e.g. Rural Mental Health Outreach" />
+                </div>
+              </div>
+
+              {/* ── Row 2: type + status ── */}
+              <div className="field-row">
+                <div className="field">
+                  <label>Program Type</label>
+                  <input className="inp" value={form.type} onChange={fld('type')} placeholder="e.g. Community Outreach" />
+                </div>
+                <div className="field">
+                  <label>Status</label>
+                  <select className="inp" value={form.status} onChange={fld('status')}>
+                    {['Active', 'Paused', 'Completed', 'Upcoming'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* ── Row 3: region + since + beneficiaries ── */}
+              <div className="field-row3" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
+                <div className="field">
+                  <label>Region / Location</label>
+                  <input className="inp" value={form.region} onChange={fld('region')} placeholder="e.g. Sindhupalchok & Dolakha" />
+                </div>
+                <div className="field">
+                  <label>Since (year)</label>
+                  <input className="inp" value={form.since} onChange={fld('since')} placeholder="2020" />
+                </div>
+                <div className="field">
+                  <label>Beneficiaries</label>
+                  <input className="inp" value={form.beneficiaries} onChange={fld('beneficiaries')} placeholder="1,200+" />
+                </div>
+              </div>
+
+              {/* ── Gradient picker ── */}
+              <div className="field">
+                <label>Card Gradient</label>
+                <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.4rem' }}>
+                  {GRADIENT_PRESETS.map(g => (
+                    <button key={g.label} type="button"
+                      onClick={() => setForm(f => ({ ...f, img_gradient: g.val }))}
+                      style={{
+                        width: 48, height: 32, borderRadius: 6,
+                        background: g.val,
+                        border: form.img_gradient === g.val ? '2.5px solid var(--blue)' : '1.5px solid var(--border)',
+                        cursor: 'pointer', position: 'relative',
+                      }}
+                      title={g.label}
+                    />
+                  ))}
+                </div>
+                <input className="inp mono" value={form.img_gradient} onChange={fld('img_gradient')}
+                  placeholder="linear-gradient(…)" style={{ fontSize: '.72rem' }} />
+                <GradientPreview gradient={form.img_gradient} />
+              </div>
+
+              {/* ── Short description (card) ── */}
+              <div className="field">
+                <label>Short Description (shown on card)</label>
+                <textarea className="inp" rows={3} value={form.short_desc} onChange={fld('short_desc')}
+                  placeholder="Brief 2-3 sentence summary shown on the card" />
+                <div className="field-hint">{form.short_desc.length}/300 chars recommended</div>
+              </div>
+
+              {/* ── Full description (modal) ── */}
+              <div className="field">
+                <label>Full Description (shown in detail modal)</label>
+                <textarea className="inp" rows={5} value={form.full_desc} onChange={fld('full_desc')}
+                  placeholder="Detailed description shown when user clicks 'Learn More'" />
+              </div>
+
+              {/* ── Tags / Partners / Outcomes ── */}
+              <div className="field-row3">
+                <div className="field">
+                  <label>Tags (one per line)</label>
+                  <textarea className="inp" rows={4} value={form.tags_text} onChange={fld('tags_text')}
+                    placeholder={'Trauma\nRural\nPost-Disaster'} style={{ resize: 'vertical' }} />
+                  <div className="field-hint">Shown as #hashtags on the card</div>
+                </div>
+                <div className="field">
+                  <label>Partners (one per line)</label>
+                  <textarea className="inp" rows={4} value={form.partners_text} onChange={fld('partners_text')}
+                    placeholder={'WHO Nepal\nTPO Nepal\nFCHVs'} style={{ resize: 'vertical' }} />
+                  <div className="field-hint">Shown in detail modal</div>
+                </div>
+                <div className="field">
+                  <label>Key Outcomes (one per line)</label>
+                  <textarea className="inp" rows={4} value={form.outcomes_text} onChange={fld('outcomes_text')}
+                    placeholder={'1,200 screenings\n340 referred to care\n80 FCHVs trained'} style={{ resize: 'vertical' }} />
+                  <div className="field-hint">Shown with ✓ checkmarks</div>
+                </div>
+              </div>
+
+              {/* ── Sort order + Active ── */}
+              <div className="field-row">
+                <div className="field">
+                  <label>Sort Order</label>
+                  <input className="inp" type="number" min="0" value={form.sort_order} onChange={fld('sort_order')} />
+                  <div className="field-hint">Lower = shown first on the page</div>
+                </div>
+                <div className="field" style={{ justifyContent: 'flex-end', paddingBottom: '.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer', marginTop: 'auto' }}>
+                    <Toggle on={form.is_active} onChange={v => setForm(f => ({ ...f, is_active: v }))} />
+                    <span style={{ fontSize: '.78rem' }}>Active (visible on site)</span>
+                  </label>
+                </div>
+              </div>
+
+              {saveErr && <div className="alert alert-error">{saveErr}</div>}
+            </div>
+
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={() => setPreview(formToPayload({ ...form, tags: textToArr(form.tags_text), partners: textToArr(form.partners_text), outcomes: textToArr(form.outcomes_text) }))}>
+                👁 Preview
+              </button>
+              <button className="btn btn-ghost" onClick={closeModal}>Cancel</button>
+              <button className="btn btn-primary" onClick={save} disabled={saving}>
+                {saving ? <><span className="spinner" /> Saving…</> : modal.data ? 'Save Changes' : 'Create Program'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CARD PREVIEW MODAL ─────────────────────────────── */}
+      {preview && (
+        <div className="overlay" onClick={() => setPreview(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--surface)', borderRadius: 'var(--radius-xl)',
+            padding: '1.5rem', maxWidth: 480, width: '100%',
+            boxShadow: 'var(--shadow-xl)', border: '1px solid var(--border)',
+            maxHeight: '90vh', overflowY: 'auto',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontWeight: 700, fontSize: '.9rem' }}>Card Preview</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPreview(null)}>✕</button>
+            </div>
+
+            {/* Simulated card */}
+            <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-md)' }}>
+              {/* Image area */}
+              <div style={{ height: 140, background: preview.img_gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <span style={{ fontSize: '2.8rem' }}>{preview.emoji}</span>
+                <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,255,120,0.2)', border: '1px solid rgba(0,255,120,0.35)', borderRadius: 100, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00e676', display: 'inline-block' }} />
+                  <span style={{ fontSize: '.6rem', fontWeight: 800, color: 'white' }}>{preview.status?.toUpperCase() || 'ACTIVE'}</span>
+                </div>
+                {preview.since && (
+                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 100, padding: '2px 8px', fontSize: '.6rem', fontWeight: 700, color: 'white' }}>Since {preview.since}</div>
+                )}
+                {/* Floating type label */}
+                <div style={{ position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', background: 'white', border: '1.5px solid #b0d4e8', borderRadius: 100, padding: '4px 14px', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,.1)', zIndex: 2 }}>
+                  <span style={{ fontSize: '.68rem', fontWeight: 800, color: '#2e6080' }}>{preview.type || 'Program Type'}</span>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '1.25rem 1.25rem 1rem', paddingTop: '1.5rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '.9rem', color: '#1a3a4a', marginBottom: '.25rem' }}>{preview.title || 'Program Title'}</div>
+                <div style={{ fontSize: '.7rem', color: '#007BA8', fontWeight: 700, marginBottom: '.6rem' }}>📍 {preview.region || 'Region'}</div>
+                <p style={{ fontSize: '.76rem', color: '#7a9aaa', lineHeight: 1.6, marginBottom: '.75rem' }}>
+                  {(preview.short_desc || preview.desc || '').slice(0, 120)}{(preview.short_desc || '').length > 120 ? '…' : ''}
+                </p>
+
+                {/* Tags */}
+                {Array.isArray(preview.tags) && preview.tags.length > 0 && (
+                  <div style={{ display: 'flex', gap: '.3rem', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+                    {preview.tags.map(t => (
+                      <span key={t} style={{ fontSize: '.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: '#F0FBFF', color: '#009FD4', border: '1px solid #daeef8' }}>#{t}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Outcomes */}
+                {Array.isArray(preview.outcomes) && preview.outcomes.length > 0 && (
+                  <div style={{ background: '#F0FBFF', borderRadius: 8, padding: '.6rem .8rem', marginBottom: '.85rem', border: '1px solid #daeef8' }}>
+                    <div style={{ fontSize: '.62rem', fontWeight: 800, color: '#7a9aaa', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: '.35rem' }}>Key Outcomes</div>
+                    {preview.outcomes.slice(0, 3).map((o, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.35rem', marginBottom: '.2rem' }}>
+                        <span style={{ width: 12, height: 12, borderRadius: '50%', background: 'linear-gradient(135deg,#007BA8,#00BFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: '.45rem', color: 'white', fontWeight: 800 }}>✓</span>
+                        </span>
+                        <span style={{ fontSize: '.72rem', color: '#2e6080' }}>{o}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '.9rem', color: '#1a3a4a' }}>{preview.beneficiaries || '—'}</div>
+                    <div style={{ fontSize: '.62rem', color: '#7a9aaa' }}>beneficiaries</div>
+                  </div>
+                  <div style={{ padding: '.45rem 1rem', borderRadius: 8, background: '#E0F7FF', color: '#009FD4', fontSize: '.76rem', fontWeight: 700 }}>Learn More →</div>
+                </div>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '.72rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '.75rem' }}>
+              This is an approximate preview. The live page may look slightly different.
+            </p>
+            <div style={{ textAlign: 'center', marginTop: '.5rem' }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPreview(null)}>Close Preview</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {delConf && (
+        <Confirm
+          msg={`Deactivate program "${delConf.label}"? It will be hidden from the site but not permanently deleted.`}
+          onConfirm={doDelete}
+          onCancel={() => setDelConf(null)}
+        />
+      )}
+    </div>
+  )
+}
+
 
 function injectCSS() {
-  if (document.getElementById('adm-full-css')) return
+  if (document.getElementById('adm-v2-css')) return
   const s = document.createElement('style')
-  s.id = 'adm-full-css'
+  s.id = 'adm-v2-css'
   s.textContent = CSS
   document.head.appendChild(s)
 }
 
-const SIDEBAR = [
-  { group: 'Core', items: [
-    { id: 'dashboard',    label: 'Dashboard',     icon: '📊' },
-    { id: 'users',        label: 'Users',         icon: '👥' },
-    { id: 'appointments', label: 'Appointments',  icon: '📅' },
-    { id: 'orders',       label: 'Orders',        icon: '📦' },
-    { id: 'payments',     label: 'Payments',      icon: '💳' },
-    { id: 'notifications',label: 'Send Notify',   icon: '🔔' },
-{ id: 'reviews', label: 'Video Reviews', icon: '🎥' },
-  ]},
-  { group: 'Content', items: [
-    { id: 'posts',          label: 'Blog Posts',    icon: '✍️' },
-    { id: 'news',           label: 'News Articles', icon: '📰' },
-    { id: 'resources',      label: 'Resources',     icon: '📥' },
-    { id: 'gallery',        label: 'Gallery',       icon: '🖼️' },
-    { id: 'research',       label: 'Research',      icon: '🔬' },
-    { id: 'psych_videos',   label: 'Psych Videos',  icon: '🎬' },
-    { id: 'psych_analyses', label: 'Psych Analyses',icon: '🧠' },
-    { id: 'psych_concepts', label: 'Psych Concepts',icon: '💡' },
-  ]},
-  { group: 'Services', items: [
-    { id: 'products',            label: 'Products',         icon: '🛍️' },
-    { id: 'courses',             label: 'Courses',          icon: '🎓' },
-    { id: 'assessments',         label: 'Assessments',      icon: '📋' },
-    { id: 'therapists',          label: 'Therapists',       icon: '🩺' },
-    { id: 'community',           label: 'Community Grps',   icon: '💬' },
-    { id: 'community_admin',     label: 'Community Admin',  icon: '🌐' },
-    { id: 'volunteers',          label: 'Volunteers',       icon: '🤝' },
-    { id: 'gallery_submissions', label: 'Photo Submissions',icon: '📸' },
-  ]},
-  { group: 'System', items: [
-    { id: 'faqs',          label: 'FAQs',         icon: '❓' },
-    { id: 'coupons',       label: 'Coupons',      icon: '🎫' },
-    { id: 'contacts',      label: 'Contact Msgs', icon: '📩' },
-    { id: 'subscriptions', label: 'Subscriptions',icon: '♻️' },
-    { id: 'settings',      label: 'Site Settings',icon: '⚙️' },
-  ]},
-]
-
-const STATUS_MAP = {
-  pending:     { bg: '#fff5e6', c: '#8a5a1a' },
-  pending_cod: { bg: '#fff9e6', c: '#8a5a1a' },
-  confirmed:   { bg: '#e8f8f0', c: '#1a7a4a' },
-  completed:   { bg: '#e0f7ff', c: '#007BA8' },
-  cancelled:   { bg: '#fff0f0', c: '#c0392b' },
-  refunded:    { bg: '#f0e8ff', c: '#5a1a8a' },
-  shipped:     { bg: '#e8f8f0', c: '#1a7a4a' },
-  delivered:   { bg: '#e0f7ff', c: '#007BA8' },
-  processing:  { bg: '#fff9e6', c: '#8a6a1a' },
-  active:      { bg: '#e8f8f0', c: '#1a7a4a' },
-  paused:      { bg: '#fff5e6', c: '#8a5a1a' },
-  reviewing:   { bg: '#e0f7ff', c: '#007BA8' },
-  approved:    { bg: '#e8f8f0', c: '#1a7a4a' },
-  rejected:    { bg: '#fff0f0', c: '#c0392b' },
-  waitlisted:  { bg: '#fff5e6', c: '#8a5a1a' },
-  published:   { bg: '#e8f8f0', c: '#1a7a4a' },
-  draft:       { bg: '#f0f4f8', c: '#5a7a8a' },
-  archived:    { bg: '#f0e8ff', c: '#5a1a8a' },
-  true:        { bg: '#e8f8f0', c: '#1a7a4a' },
-  false:       { bg: '#fff0f0', c: '#c0392b' },
-  free:        { bg: '#e8f8f0', c: '#1a7a4a' },
-  premium:     { bg: '#f0e8ff', c: '#5a1a8a' },
-  open:        { bg: '#e8f8f0', c: '#1a7a4a' },
-  unpaid:      { bg: '#fff5e6', c: '#8a5a1a' },
-  paid:        { bg: '#e8f8f0', c: '#1a7a4a' },
-  overdue:     { bg: '#fff0f0', c: '#c0392b' },
-  new:         { bg: '#e0f7ff', c: '#007BA8' },
-  resolved:    { bg: '#e8f8f0', c: '#1a7a4a' },
-  in_progress: { bg: '#fff9e6', c: '#8a6a1a' },
-  client:      { bg: '#e8f8f0', c: '#1a7a4a' },
-  therapist:   { bg: '#e0f7ff', c: '#007BA8' },
-  admin:       { bg: '#f0e8ff', c: '#5a1a8a' },
-  staff:       { bg: '#fff5e6', c: '#8a5a1a' },
-  beginner:    { bg: '#e8f8f0', c: '#1a7a4a' },
-  intermediate:{ bg: '#fff9e6', c: '#8a6a1a' },
-  advanced:    { bg: '#f0e8ff', c: '#5a1a8a' },
-  Beginner:    { bg: '#e8f8f0', c: '#1a7a4a' },
-  Intermediate:{ bg: '#fff9e6', c: '#8a6a1a' },
-  Advanced:    { bg: '#f0e8ff', c: '#5a1a8a' },
+// ─── STATUS → BADGE ──────────────────────────────────────────────────────────
+function statusVariant(s) {
+  const map = {
+    pending:'badge-amber', pending_cod:'badge-amber', confirmed:'badge-green',
+    completed:'badge-blue', cancelled:'badge-red', refunded:'badge-purple',
+    shipped:'badge-teal', delivered:'badge-blue', processing:'badge-amber',
+    active:'badge-green', paused:'badge-amber', reviewing:'badge-blue',
+    approved:'badge-green', rejected:'badge-red', waitlisted:'badge-amber',
+    published:'badge-green', draft:'badge-gray', archived:'badge-purple',
+    free:'badge-green', premium:'badge-purple', open:'badge-green',
+    paid:'badge-green', unpaid:'badge-amber', overdue:'badge-red',
+    new:'badge-blue', resolved:'badge-green', in_progress:'badge-teal',
+    client:'badge-green', therapist:'badge-blue', admin:'badge-purple',
+    staff:'badge-amber', beginner:'badge-green', intermediate:'badge-amber',
+    advanced:'badge-purple', failed:'badge-red',
+    true:'badge-green', false:'badge-red',
+  }
+  return map[String(s)?.toLowerCase()] || 'badge-gray'
 }
-
-function Badge({ s }) {
-  const v = STATUS_MAP[String(s)] || { bg: '#eee', c: '#444' }
-  return <span className="badge" style={{ background: v.bg, color: v.c }}>{String(s)}</span>
-}
-
-function Toggle({ on, onChange }) {
-  return <button className={`toggle${on ? ' on' : ''}`} onClick={() => onChange(!on)} type="button" />
-}
+function Badge({ s }) { return <span className={`badge ${statusVariant(s)}`}>{String(s)}</span> }
+function Toggle({ on, onChange }) { return <button type="button" className={`toggle${on ? ' on' : ''}`} onClick={() => onChange(!on)} /> }
 
 function Pager({ page, set, total }) {
   const tp = Math.max(1, Math.ceil(total / LIMIT))
@@ -229,321 +801,839 @@ function Pager({ page, set, total }) {
   return (
     <div className="pager">
       <button className="pg-btn" onClick={() => set(p => Math.max(1, p - 1))} disabled={page === 1}>← Prev</button>
-      <span style={{ fontSize: '.78rem', color: 'var(--slate-lt)', padding: '0 .4rem' }}>{page} / {tp} · {total} total</span>
+      <span className="pg-info">{page} / {tp} · <strong>{total}</strong> total</span>
       <button className="pg-btn" onClick={() => set(p => Math.min(tp, p + 1))} disabled={page === tp}>Next →</button>
     </div>
   )
 }
 
-function Confirm({ msg, onConfirm, onCancel }) {
+function Confirm({ msg, onConfirm, onCancel, danger = true }) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--slate)' }}>⚠️ Confirm</span>
-        </div>
-        <div className="modal-body">
-          <p style={{ fontSize: '.88rem', color: 'var(--slate-md)' }}>{msg}</p>
-        </div>
-        <div className="modal-footer">
+    <div className="overlay" onClick={onCancel}>
+      <div className="modal confirm-dialog" onClick={e => e.stopPropagation()}>
+        <div className="modal-head"><span className="modal-head-title">{danger ? '⚠️ Confirm Action' : '❓ Confirm'}</span></div>
+        <div className="modal-body"><p className="confirm-msg">{msg}</p></div>
+        <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-danger" onClick={onConfirm}>Confirm</button>
+          <button className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>Confirm</button>
         </div>
       </div>
     </div>
   )
 }
 
-function SectionHeader({ title, sub, count, onNew, children }) {
+function SectionHeader({ title, sub, count, onNew, newLabel = '+ New', children }) {
   return (
     <div className="sec-head">
       <div>
-        <h1 className="sec-title">
-          {title}
-          {count != null && <span style={{ fontSize: '.9rem', color: 'var(--slate-lt)', fontFamily: 'var(--font-body)', fontWeight: 400 }}> ({count})</span>}
-        </h1>
+        <h1 className="sec-title">{title}{count != null && <span className="sec-count">({count})</span>}</h1>
         {sub && <p className="sec-sub">{sub}</p>}
       </div>
-      <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="sec-actions">
         {children}
-        {onNew && <button className="btn btn-primary" onClick={onNew}>➕ New</button>}
+        {onNew && <button className="btn btn-primary" onClick={onNew}>{newLabel}</button>}
       </div>
     </div>
   )
 }
 
-function TblWrap({ cols, rows, loading: ld, empty = 'No records found.' }) {
+function Table({ cols, rows, loading, empty = 'No records found.' }) {
   return (
     <div className="tbl-wrap">
-      <table className="tbl">
-        <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
-        <tbody>
-          {ld
-            ? <tr><td className="tbl-empty" colSpan={cols.length}>Loading…</td></tr>
-            : rows.length === 0
-              ? <tr><td className="tbl-empty" colSpan={cols.length}>{empty}</td></tr>
-              : rows
-          }
-        </tbody>
-      </table>
+      <div className="tbl-scroll">
+        <table className="tbl">
+          <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+          <tbody>
+            {loading
+              ? <tr><td className="tbl-loading" colSpan={cols.length}><span className="spinner" /> Loading…</td></tr>
+              : rows.length === 0
+                ? <tr><td colSpan={cols.length}><div className="empty-state"><div className="empty-icon">📭</div><div className="empty-text">{empty}</div></div></td></tr>
+                : rows}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
 
-function Actions({ onEdit, onDelete }) {
+function RowActions({ onEdit, onDelete, children }) {
   return (
-    <div style={{ display: 'flex', gap: '.35rem' }}>
-      {onEdit   && <button className="btn btn-ghost btn-sm" onClick={onEdit}>✏️</button>}
-      {onDelete && <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑</button>}
+    <div style={{ display:'flex', gap:'.3rem', flexWrap:'wrap' }}>
+      {children}
+      {onEdit && <button className="btn btn-ghost btn-sm btn-icon" title="Edit" onClick={onEdit}>✏️</button>}
+      {onDelete && <button className="btn btn-danger btn-sm btn-icon" title="Delete" onClick={onDelete}>🗑</button>}
     </div>
   )
 }
 
-function resolveClientName(appt) {
-  return (
-    appt.client_name || appt.clients?.full_name || appt.profiles?.full_name ||
-    appt.client?.full_name || appt.client?.name || appt.user?.full_name ||
-    (appt.client_id ? `Client …${String(appt.client_id).slice(-6)}` : '—')
-  )
+function resolveClientName(r) {
+  return r.client_name || r.clients?.full_name || r.profiles?.full_name || r.client?.full_name || r.user?.full_name || (r.client_id ? `…${String(r.client_id).slice(-6)}` : '—')
 }
-
-function resolveTherapistName(appt) {
-  return (
-    appt.therapist_name || appt.therapists?.profiles?.full_name ||
-    appt.therapist?.profiles?.full_name || appt.therapist?.full_name ||
-    appt.therapists?.full_name || (appt.therapist_id ? `…${String(appt.therapist_id).slice(-6)}` : '—')
-  )
+function resolveTherapistName(r) {
+  return r.therapist_name || r.therapists?.profiles?.full_name || r.therapist?.full_name || (r.therapist_id ? `…${String(r.therapist_id).slice(-6)}` : '—')
 }
-
 function resolvePaymentDetails(pay) {
-  const clientName = pay.client_name || pay.profiles?.full_name || pay.clients?.full_name ||
-    pay.client?.full_name || (pay.client_id ? `…${String(pay.client_id).slice(-6)}` : '—')
-  const linkedTo = pay.appointment_id ? 'Appointment' : pay.order_id ? 'Order' : 'Other'
-  const linkedId = pay.appointment_id || pay.order_id || null
-  const isPending = ['pending', 'pending_cod'].includes(pay.status)
-  return { clientName, linkedTo, linkedId, isPending }
+  const clientName = pay.client_name || pay.profiles?.full_name || pay.clients?.full_name || pay.client?.full_name || (pay.client_id ? `…${String(pay.client_id).slice(-6)}` : '—')
+  let category = '—'
+  if (pay.category === 'community_group_membership' || pay.metadata?.item_type === 'community_group_membership') category = '🏘 Group Joined'
+  else if (pay.category === 'community_session') category = '📅 Session'
+  else if (pay.appointment_id) category = '📋 Appointment'
+  else if (pay.order_id) category = '📦 Order'
+  else if (pay.category) category = pay.category
+  const isPending = ['pending','pending_cod'].includes(pay.status)
+  return { clientName, category, isPending }
 }
 
-function PaymentValidityBadge({ status }) {
-  const map = {
-    completed:   { bg: '#e8f8f0', c: '#1a7a4a', label: '✓ Verified' },
-    pending_cod: { bg: '#fff9e6', c: '#8a5a1a', label: '⏳ COD — Awaiting' },
-    pending:     { bg: '#fff5e6', c: '#8a5a1a', label: '⏳ Pending' },
-    failed:      { bg: '#fff0f0', c: '#c0392b', label: '✗ Failed' },
-    refunded:    { bg: '#f0e8ff', c: '#5a1a8a', label: '↩ Refunded' },
+function PayBadge({ status }) {
+  const MAP = {
+    completed:   { bg:'#ecfdf5', c:'#065f46', t:'✓ Verified' },
+    pending_cod: { bg:'#fffbeb', c:'#92400e', t:'⏳ COD' },
+    pending:     { bg:'#fffbeb', c:'#92400e', t:'⏳ Pending' },
+    failed:      { bg:'#fef2f2', c:'#991b1b', t:'✗ Failed' },
+    refunded:    { bg:'#f5f3ff', c:'#5b21b6', t:'↩ Refunded' },
+    free:        { bg:'#ecfdf5', c:'#065f46', t:'🎁 Free' },
+    paid:        { bg:'#ecfdf5', c:'#065f46', t:'✓ Paid' },
+    unpaid:      { bg:'#f1f5f9', c:'#475569', t:'○ Unpaid' },
   }
-  const v = map[status] || { bg: '#eee', c: '#444', label: status }
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '.2rem .6rem', borderRadius: 100, background: v.bg, color: v.c, fontSize: '.68rem', fontWeight: 800 }}>
-      {v.label}
-    </span>
-  )
+  const v = MAP[status] || { bg:'#f1f5f9', c:'#475569', t: status || '—' }
+  return <span className="pay-badge" style={{ background:v.bg, color:v.c }}>{v.t}</span>
 }
 
-function AdminPaymentSection() {
-  const [pays,       setPays]       = useState([])
-  const [total,      setTotal]      = useState(0)
-  const [page,       setPage]       = useState(1)
-  const [status,     setStatus]     = useState('')
-  const [method,     setMethod]     = useState('')
-  const [category,   setCategory]   = useState('')
-  const [loading,    setLoading]    = useState(false)
-  const [expanded,   setExpanded]   = useState(null)
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+const SIDEBAR = [
+  { group:'Core', items:[
+    { id:'dashboard',     label:'Dashboard',       icon:'◈' },
+    { id:'users',         label:'Users',           icon:'◎' },
+    { id:'appointments',  label:'Appointments',    icon:'▦' },
+    { id:'orders',        label:'Orders',          icon:'⬡' },
+    { id:'payments',      label:'Payments',        icon:'◉' },
+    { id:'notifications', label:'Send Notify',     icon:'◈' },
+    { id:'reviews',       label:'Video Reviews',   icon:'▶' },
+  ]},
+  { group:'Content', items:[
+    { id:'posts',          label:'Blog Posts',     icon:'✦' },
+    { id:'news',           label:'News',           icon:'◆' },
+    { id:'resources',      label:'Resources',      icon:'▣' },
+    { id:'gallery',        label:'Gallery',        icon:'▦' },
+    { id:'research',       label:'Research',       icon:'◈' },
+    { id:'psych_videos',   label:'Psych Videos',   icon:'▶' },
+    { id:'psych_analyses', label:'Psych Analyses', icon:'◎' },
+    { id:'psych_concepts', label:'Psych Concepts', icon:'◆' },
+    { id:'room_bookings',  label:'Room Bookings',  icon:'▣' },
+  ]},
+  { group:'Services', items:[
+    { id:'products',            label:'Products',          icon:'⬡' },
+    { id:'courses',             label:'Courses',           icon:'◈' },
+    { id:'assessments',         label:'Assessments',       icon:'▦' },
+    { id:'therapists',          label:'Therapists',        icon:'◎' },
+    { id:'community',           label:'Community Groups',  icon:'◉' },
+    { id:'community_admin',     label:'Community Admin',   icon:'◆' },
+    { id:'social_work', label:'Social Work', icon:'🤝' },
+    { id:'volunteers',          label:'Volunteers',        icon:'✦' },
+    { id:'gallery_submissions', label:'Photo Submissions', icon:'▣' },
+    { id:'workshops',           label:'Workshops',         icon:'◈' },
+  ]},
+  { group:'System', items:[
+    { id:'hero_stats',    label:'Hero Stats',    icon:'✦' },
+    { id:'faqs',          label:'FAQs',          icon:'◎' },
+    { id:'coupons',       label:'Coupons',       icon:'◆' },
+    { id:'contacts',      label:'Contact Msgs',  icon:'▦' },
+    { id:'subscriptions', label:'Subscriptions', icon:'◈' },
+    { id:'settings',      label:'Site Settings', icon:'⬡' },
+  ]},
+]
+
+// ─── PAYMENTS SECTION ────────────────────────────────────────────────────────
+function PaymentsSection() {
+  const [pays, setPays]         = useState([])
+  const [total, setTotal]       = useState(0)
+  const [page, setPage]         = useState(1)
+  const [status, setStatus]     = useState('')
+  const [method, setMethod]     = useState('')
+  const [cat, setCat]           = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [expanded, setExpanded] = useState(null)
   const [confirming, setConfirming] = useState(null)
-  const [busy,       setBusy]       = useState({})
-  const [summary,    setSummary]    = useState(null)
-  
+  const [busy, setBusy]         = useState({})
+  const [summary, setSummary]   = useState(null)
 
-  useEffect(() => { load() }, [page, status, method, category]) // eslint-disable-line
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ page, limit: LIMIT })
-      if (status)   params.set('status',   status)
-      if (method)   params.set('method',   method)
-      if (category) params.set('category', category)
-      const d = await apiFetch(`/admin/payments?${params}`)
+      const p = new URLSearchParams({ page, limit: LIMIT })
+      if (status) p.set('status', status)
+      if (method) p.set('method', method)
+      if (cat) p.set('category', cat)
+      const d = await apiFetch(`/admin/payments?${p}`)
       const list = d.payments || d.items || d.data || []
-      setPays(list)
-      setTotal(d.pagination?.total || d.total || list.length)
-      setSummary({
-        total:     list.length,
-        completed: list.filter(p => p.status === 'completed').length,
-        pending:   list.filter(p => ['pending', 'pending_cod'].includes(p.status)).length,
-        failed:    list.filter(p => p.status === 'failed').length,
-        revenue:   list.filter(p => p.status === 'completed').reduce((s, p) => s + Number(p.amount || 0), 0),
-      })
+      setPays(list); setTotal(d.pagination?.total || d.total || list.length)
+      let rev = 0
+      try {
+        const all = await apiFetch('/admin/payments?page=1&limit=200&status=completed')
+        rev = (all.payments || all.items || all.data || []).reduce((s, p) => s + Number(p.amount || 0), 0)
+      } catch {}
+      setSummary({ total:list.length, completed:list.filter(p=>p.status==='completed').length, pending:list.filter(p=>['pending','pending_cod'].includes(p.status)).length, failed:list.filter(p=>p.status==='failed').length, revenue:rev })
     } catch (e) { console.error('Payments:', e) }
     finally { setLoading(false) }
-  }
+  }, [page, status, method, cat])
 
-  async function confirmPayment(id) {
-    setBusy(b => ({ ...b, [id]: true }))
-    try {
-      await apiFetch(`/admin/payments/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'completed' }) })
-      setConfirming(null); load()
-    } catch (e) { alert(e.message) }
-    finally { setBusy(b => ({ ...b, [id]: false })) }
-  }
+  useEffect(() => { load() }, [load])
 
-  async function rejectPayment(id) {
-    setBusy(b => ({ ...b, [id]: true }))
-    try {
-      await apiFetch(`/admin/payments/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'failed' }) }); load()
-    } catch (e) { alert(e.message) }
-    finally { setBusy(b => ({ ...b, [id]: false })) }
+  const confirm = async id => {
+    setBusy(b => ({ ...b, [id]:true }))
+    try { await apiFetch(`/admin/payments/${id}`, { method:'PUT', body:JSON.stringify({ status:'completed' }) }); setConfirming(null); load() }
+    catch (e) { alert(e.message) }
+    finally { setBusy(b => ({ ...b, [id]:false })) }
   }
-
-  async function refundPayment(id) {
-    try { await apiFetch(`/admin/payments/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'refunded' }) }); load() }
+  const reject = async id => {
+    setBusy(b => ({ ...b, [id]:true }))
+    try { await apiFetch(`/admin/payments/${id}`, { method:'PUT', body:JSON.stringify({ status:'failed' }) }); load() }
+    catch (e) { alert(e.message) }
+    finally { setBusy(b => ({ ...b, [id]:false })) }
+  }
+  const refund = async id => {
+    try { await apiFetch(`/admin/payments/${id}`, { method:'PUT', body:JSON.stringify({ status:'refunded' }) }); load() }
     catch (e) { alert(e.message) }
   }
 
+  const SUMCARDS = summary ? [
+    { label:'This Page',    val:summary.total,     color:'#f1f5f9', tc:'var(--text-primary)' },
+    { label:'Completed',    val:summary.completed, color:'#ecfdf5', tc:'#065f46' },
+    { label:'Pending / COD',val:summary.pending,   color:'#fffbeb', tc:'#92400e' },
+    { label:'Failed',       val:summary.failed,    color:'#fef2f2', tc:'#991b1b' },
+    { label:'Total Revenue',val:`NPR ${summary.revenue.toLocaleString()}`, color:'#eff6ff', tc:'#1e40af' },
+  ] : []
 
-  const tableRows = loading
-    ? [<tr key="loading"><td className="tbl-empty" colSpan={8}>Loading…</td></tr>]
+  const rows = loading
+    ? [<tr key="ld"><td className="tbl-loading" colSpan={8}><span className="spinner" /> Loading…</td></tr>]
     : pays.length === 0
-      ? [<tr key="empty"><td className="tbl-empty" colSpan={8}>No payments found.</td></tr>]
+      ? [<tr key="e"><td colSpan={8}><div className="empty-state"><div className="empty-icon">💳</div><div className="empty-text">No payments found</div></div></td></tr>]
       : pays.flatMap(pay => {
-          const { clientName, linkedTo, linkedId, isPending } = resolvePaymentDetails(pay)
-          const isExpanded = expanded === pay.id
-          const gw = pay.gateway_response
-          const mainRow = (
-            <tr key={pay.id} style={{ cursor: 'pointer' }} onClick={() => setExpanded(isExpanded ? null : pay.id)}>
+          const { clientName, category, isPending } = resolvePaymentDetails(pay)
+          const isExp = expanded === pay.id
+          const main = (
+            <tr key={pay.id} style={{ cursor:'pointer' }} onClick={() => setExpanded(isExp ? null : pay.id)}>
               <td>
-                <div style={{ fontWeight: 600, color: 'var(--slate)', fontSize: '.83rem' }}>{clientName}</div>
-                <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)', fontFamily: 'monospace' }}>{pay.transaction_id || String(pay.id || '').slice(0, 12)}</div>
+                <div style={{ fontWeight:600, fontSize:'.82rem', color:'var(--text-primary)' }}>{clientName}</div>
+                <div className="mono" style={{ fontSize:'.66rem', color:'var(--text-muted)' }}>{pay.transaction_id || String(pay.id || '').slice(0,12)}</div>
               </td>
-              <td><strong style={{ color: 'var(--slate)', fontSize: '.88rem' }}>{pay.currency || 'NPR'} {Number(pay.amount || 0).toLocaleString()}</strong></td>
-              <td><span style={{ fontSize: '.8rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--teal)' }}>{pay.method || '—'}</span></td>
-              <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{pay.category || linkedTo}</span></td>
-              <td><PaymentValidityBadge status={pay.status} /></td>
+              <td><strong style={{ fontSize:'.85rem' }}>NPR {Number(pay.amount || 0).toLocaleString()}</strong></td>
+              <td><span className="mono" style={{ fontSize:'.73rem', fontWeight:700, color:'var(--teal)', textTransform:'uppercase' }}>{pay.method || '—'}</span></td>
+              <td><span style={{ fontSize:'.72rem', color:'var(--text-muted)' }}>{category}</span></td>
+              <td><PayBadge status={pay.status} /></td>
               <td><Badge s={pay.status} /></td>
-              <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(pay.created_at)}</td>
+              <td style={{ fontSize:'.74rem', color:'var(--text-muted)' }}>{fmt(pay.created_at)}</td>
               <td onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', gap: '.35rem', flexWrap: 'wrap' }}>
+                <div style={{ display:'flex', gap:'.3rem', flexWrap:'wrap' }}>
                   {isPending && <>
-                    <button className="btn btn-green btn-sm" disabled={busy[pay.id]} onClick={() => setConfirming(pay.id)}>✓ Confirm</button>
-                    <button className="btn btn-danger btn-sm" disabled={busy[pay.id]} onClick={() => rejectPayment(pay.id)}>✗ Reject</button>
+                    <button className="btn btn-success btn-sm" disabled={busy[pay.id]} onClick={() => setConfirming(pay.id)}>✓</button>
+                    <button className="btn btn-danger btn-sm" disabled={busy[pay.id]} onClick={() => reject(pay.id)}>✗</button>
                   </>}
-                  {pay.status === 'completed' && <button className="btn btn-ghost btn-sm" onClick={() => refundPayment(pay.id)}>↩ Refund</button>}
-                  <button className="btn btn-ghost btn-sm" onClick={() => setExpanded(isExpanded ? null : pay.id)}>{isExpanded ? '▲' : '▼'}</button>
+                  {pay.status === 'completed' && <button className="btn btn-ghost btn-sm" onClick={() => refund(pay.id)}>↩</button>}
+                  <button className="btn btn-ghost btn-sm btn-icon">{isExp ? '▲' : '▼'}</button>
                 </div>
               </td>
             </tr>
           )
-          if (!isExpanded) return [mainRow]
-          const detailRow = (
-            <tr key={`${pay.id}-detail`}>
-              <td colSpan={8} style={{ padding: 0, background: '#f8fafc' }}>
-                <div style={{ padding: '1rem 1.1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '1rem' }}>
+          if (!isExp) return [main]
+          const gw = pay.gateway_response
+          const detail = (
+            <tr key={`${pay.id}-d`} className="detail-row">
+              <td colSpan={8} style={{ padding:0 }}>
+                <div className="detail-grid">
+                  <div className="detail-card">
+                    <div className="detail-card-title">Payment Details</div>
+                    {[['ID',pay.id],['Transaction',pay.transaction_id||'—'],['Method',pay.method||'—'],['Category',category],['Paid At',pay.paid_at?fmtT(pay.paid_at):'—'],['Created',fmtT(pay.created_at)]].map(([k,v]) => (
+                      <div key={k} className="detail-row-item"><span className="detail-row-key">{k}</span><span className="detail-row-val mono" style={{ fontSize:['ID','Transaction'].includes(k)?'.66rem':'.74rem' }}>{v}</span></div>
+                    ))}
+                  </div>
                   {gw && (
-                    <div style={{ background: 'var(--white)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', padding: '.85rem' }}>
-                      <div style={{ fontSize: '.68rem', fontWeight: 800, color: 'var(--slate-lt)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.5rem' }}>Gateway Response</div>
-                      <pre style={{ fontSize: '.72rem', color: 'var(--slate-md)', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, fontFamily: 'monospace' }}>
+                    <div className="detail-card">
+                      <div className="detail-card-title">Gateway Response</div>
+                      <pre style={{ fontSize:'.68rem', color:'var(--text-secondary)', overflowX:'auto', whiteSpace:'pre-wrap', wordBreak:'break-all', fontFamily:'var(--font-mono)' }}>
                         {typeof gw === 'string' ? gw : JSON.stringify(gw, null, 2)}
                       </pre>
                     </div>
                   )}
-                  <div style={{ background: 'var(--white)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', padding: '.85rem' }}>
-                    <div style={{ fontSize: '.68rem', fontWeight: 800, color: 'var(--slate-lt)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.5rem' }}>Payment Details</div>
-                    {[
-                      ['Payment ID', pay.id], ['Transaction ID', pay.transaction_id || '—'],
-                      ['Method', pay.method || '—'], ['Category', pay.category || linkedTo],
-                      ['Currency', pay.currency || 'NPR'], ['Paid At', pay.paid_at ? fmtT(pay.paid_at) : '—'],
-                      ['Created', fmtT(pay.created_at)],
-                      linkedId ? ['Linked To', `${linkedTo} · ${String(linkedId).slice(0, 12)}…`] : null,
-                    ].filter(Boolean).map(([k, v]) => (
-                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '.25rem 0', borderBottom: '1px solid var(--border)', fontSize: '.78rem' }}>
-                        <span style={{ color: 'var(--slate-lt)', fontWeight: 600 }}>{k}</span>
-                        <span style={{ color: 'var(--slate-md)', fontFamily: ['Payment ID', 'Transaction ID'].includes(k) ? 'monospace' : 'inherit', fontSize: ['Payment ID', 'Transaction ID'].includes(k) ? '.7rem' : 'inherit', wordBreak: 'break-all', maxWidth: '55%', textAlign: 'right' }}>{v}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </td>
             </tr>
           )
-          return [mainRow, detailRow]
+          return [main, detail]
         })
 
   return (
     <div>
-      <div className="sec-head">
-        <div><h1 className="sec-title">💳 Payments</h1><p className="sec-sub">Verify, confirm and manage all payment records</p></div>
-        <button className="btn btn-ghost" onClick={load}>🔄 Refresh</button>
-      </div>
-      {summary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: '.75rem', marginBottom: '1.25rem' }}>
-          {[
-            { label: 'This Page',     val: summary.total,                             bg: '#f0f4f8', c: 'var(--slate)' },
-            { label: 'Completed',     val: summary.completed,                         bg: '#e8f8f0', c: '#1a7a4a'      },
-            { label: 'Pending / COD', val: summary.pending,                           bg: '#fff9e6', c: '#8a5a1a'      },
-            { label: 'Failed',        val: summary.failed,                            bg: '#fff0f0', c: '#c0392b'      },
-            { label: 'Page Revenue',  val: `NPR ${summary.revenue.toLocaleString()}`, bg: '#e0f7ff', c: '#007BA8'      },
-          ].map((s, i) => (
-            <div key={i} style={{ background: s.bg, borderRadius: 'var(--radius-sm)', padding: '.85rem', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: s.c, fontFamily: 'var(--font-display)' }}>{s.val}</div>
-              <div style={{ fontSize: '.68rem', color: 'var(--slate-lt)', fontWeight: 700, marginTop: '.2rem', textTransform: 'uppercase', letterSpacing: '.07em' }}>{s.label}</div>
+      <SectionHeader title="Payments" sub="Verify, confirm and manage all payment records">
+        <button className="btn btn-ghost" onClick={load}>↺ Refresh</button>
+      </SectionHeader>
+      {SUMCARDS.length > 0 && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:'.65rem', marginBottom:'1.25rem' }}>
+          {SUMCARDS.map((s,i) => (
+            <div key={i} style={{ background:s.color, borderRadius:'var(--radius)', padding:'.85rem', border:'1px solid var(--border)' }}>
+              <div style={{ fontSize:'1.1rem', fontWeight:800, color:s.tc, letterSpacing:'-.02em' }}>{s.val}</div>
+              <div style={{ fontSize:'.63rem', color:'var(--text-muted)', fontWeight:700, marginTop:'.2rem', textTransform:'uppercase', letterSpacing:'.07em' }}>{s.label}</div>
             </div>
           ))}
+        </div>
+      )}
+      {pays.some(p => p.status === 'pending_cod') && (
+        <div className="alert alert-warn" style={{ marginBottom:'.85rem' }}>
+          ⚠️ <strong>{pays.filter(p => p.status === 'pending_cod').length} COD payment(s)</strong> awaiting manual confirmation.
         </div>
       )}
       <div className="filters">
         <select className="inp" value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}>
           <option value="">All statuses</option>
-          {['pending', 'pending_cod', 'completed', 'failed', 'refunded'].map(s => <option key={s} value={s}>{s}</option>)}
+          {['pending','pending_cod','completed','failed','refunded'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select className="inp" value={method} onChange={e => { setMethod(e.target.value); setPage(1) }}>
           <option value="">All methods</option>
-          {['esewa', 'khalti', 'stripe', 'bank_transfer', 'cash', 'fonepay'].map(m => <option key={m} value={m}>{m}</option>)}
+          {['esewa','khalti','stripe','bank_transfer','cash','fonepay'].map(m => <option key={m} value={m}>{m}</option>)}
         </select>
-        <select className="inp" value={category} onChange={e => { setCategory(e.target.value); setPage(1) }}>
+        <select className="inp" value={cat} onChange={e => { setCat(e.target.value); setPage(1) }}>
           <option value="">All categories</option>
-          {['appointment', 'order', 'other'].map(c => <option key={c} value={c}>{c}</option>)}
+          {['appointment','order','community_group_membership','community_session','other'].map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
-      {pays.some(p => p.status === 'pending_cod') && (
-        <div style={{ background: '#fff9e6', border: '1px solid #f5d87a', borderRadius: 'var(--radius-sm)', padding: '.75rem 1rem', marginBottom: '1rem', fontSize: '.82rem', color: '#8a5a1a', display: 'flex', gap: '.5rem', alignItems: 'center' }}>
-          ⚠️ <strong>{pays.filter(p => p.status === 'pending_cod').length} COD payment(s)</strong> awaiting manual confirmation.
-        </div>
-      )}
       <div className="tbl-wrap">
-        <table className="tbl">
-          <thead><tr><th>Client</th><th>Amount</th><th>Method</th><th>Category</th><th>Validity</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
-          <tbody>{tableRows}</tbody>
-        </table>
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead><tr>{['Client','Amount','Method','Category','Validity','Status','Date','Actions'].map(c => <th key={c}>{c}</th>)}</tr></thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </div>
       </div>
       <Pager page={page} set={setPage} total={total} />
       {confirming && (
-        <Confirm
-          msg={`Mark this payment as completed? NPR ${Number(pays.find(p => p.id === confirming)?.amount || 0).toLocaleString()}`}
-          onConfirm={() => confirmPayment(confirming)}
-          onCancel={() => setConfirming(null)}
-        />
+        <Confirm msg={`Mark payment of NPR ${Number(pays.find(p => p.id === confirming)?.amount || 0).toLocaleString()} as completed?`} onConfirm={() => confirm(confirming)} onCancel={() => setConfirming(null)} />
       )}
     </div>
   )
 }
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────
-export default function AdminDashboardFull() {
+// ─── HERO STATS SECTION ───────────────────────────────────────────────────────
+function HeroStatsSection() {
+  const DEFS = { hero_clients_count:'500', hero_therapists_count:'12', hero_rating:'4.9', hero_families_count:'500', hero_pill_rating:'4.9' }
+  const [vals, setVals]       = useState(DEFS)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving]   = useState(false)
+  const [result, setResult]   = useState(null)
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const d = await apiFetch('/admin/settings')
+        const list = d.settings || d.data || []
+        const m = { ...DEFS }
+        list.forEach(s => { if (s.key in m) m[s.key] = String(s.value ?? m[s.key]) })
+        setVals(m)
+      } catch {}
+      finally { setLoading(false) }
+    })()
+  }, [])
+
+  const save = async () => {
+    setSaving(true); setResult(null)
+    let ok = 0
+    for (const [key, value] of Object.entries(vals)) {
+      try {
+        await apiFetch(`/admin/settings/${key}`, { method:'PUT', body:JSON.stringify({ value }) })
+          .catch(() => apiFetch('/admin/settings', { method:'POST', body:JSON.stringify({ key, value }) }))
+        ok++
+      } catch {}
+    }
+    setSaving(false)
+    setResult(ok === Object.keys(vals).length ? { ok:true, msg:`✓ All ${ok} stats saved.` } : { ok:false, msg:`⚠ Saved ${ok}/${Object.keys(vals).length} values.` })
+  }
+
+  if (loading) return <div className="tbl-loading"><span className="spinner" /> Loading…</div>
+  return (
+    <div>
+      <SectionHeader title="Hero Stats" sub="Numbers shown on the public homepage" />
+      <div className="section-inner">
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'.85rem' }}>
+          {Object.entries(vals).map(([key, val]) => (
+            <div key={key} className="field">
+              <label>{key}</label>
+              <input className="inp" type="number" value={val} onChange={e => setVals(v => ({ ...v, [key]:e.target.value }))} />
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop:'1.25rem', display:'flex', gap:'.85rem', alignItems:'center', flexWrap:'wrap' }}>
+          <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? <><span className="spinner" /> Saving…</> : '💾 Save All Stats'}</button>
+          {result && <div className={`alert ${result.ok ? 'alert-success' : 'alert-error'}`}>{result.msg}</div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── COURSE ENROLLMENTS SECTION ───────────────────────────────────────────────
+// FIX: Defined at MODULE LEVEL (outside AdminDashboardPage) so hooks are valid
+function CourseEnrollmentsSection() {
+  const [enrollments,  setEnrollments]  = useState([])
+  const [total,        setTotal]        = useState(0)
+  const [page,         setPage]         = useState(1)
+  const [loading,      setLoading]      = useState(false)
+  const [loadErr,      setLoadErr]      = useState('')
+  const [courses,      setCoursesLocal] = useState([])
+
+  const [filterCourse, setFilterCourse] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [search,       setSearch]       = useState('')
+
+  const [busy,       setBusy]       = useState({})
+  const [confirmDlg, setConfirmDlg] = useState(null)
+  const [detailRow,  setDetailRow]  = useState(null)
+
+  const [addOpen,   setAddOpen]   = useState(false)
+  const [addForm,   setAddForm]   = useState({ course_id:'', user_email:'', payment_status:'free', amount:'' })
+  const [addErr,    setAddErr]    = useState('')
+  const [addSaving, setAddSaving] = useState(false)
+
+  const [toast, setToast] = useState(null)
+
+  const flash = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3400) }
+  const setB  = (k, v) => setBusy(b => ({ ...b, [k]: v }))
+
+  const statusBg = s => ({ confirmed:'#ecfdf5', pending:'#fffbeb', free:'#ecfdf5', cancelled:'#fef2f2' })[s] || '#f1f5f9'
+  const statusFg = s => ({ confirmed:'#065f46', pending:'#92400e', free:'#065f46', cancelled:'#991b1b' })[s] || '#475569'
+
+  // load course list for dropdowns
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const d = await apiFetch('/admin/courses?page=1&limit=200')
+        setCoursesLocal(d.items || d.courses || d.data || [])
+      } catch (e) { console.warn('courses list:', e.message) }
+    })()
+  }, [])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setLoadErr('')
+    try {
+      const p = new URLSearchParams({ page, limit: LIMIT })
+      if (filterCourse) p.set('course_id', filterCourse)
+      if (filterStatus) p.set('status',    filterStatus)
+      if (search)       p.set('search',    search)
+
+      const data = await apiFetch(`/enrollments/admin/list?${p}`)
+
+      const items = (data.items || data.enrollments || []).map(e => ({
+        id:             e.id,
+        payment_id:     e.payment_id     || null,
+        user_id:        e.user_id        || null,
+        user_name:      e.user_name      || e.profiles?.full_name || '—',
+        user_email:     e.user_email     || e.profiles?.email     || '',
+        avatar_url:     e.avatar_url     || e.profiles?.avatar_url|| null,
+        course_id:      e.course_id      || null,
+        course_title:   e.course_title   || e.courses?.title      || '—',
+        course_emoji:   e.course_emoji   || e.courses?.emoji      || '📚',
+        payment_status: e.payment_status || e.status              || 'pending',
+        is_free:        e.is_free        || Number(e.amount || 0) === 0,
+        amount:         e.amount,
+        method:         e.method         || null,
+        transaction_id: e.transaction_id || null,
+        enrolled_at:    e.enrolled_at    || e.created_at,
+        confirmed_at:   e.confirmed_at   || null,
+      }))
+
+      setEnrollments(items)
+      setTotal(data.pagination?.total || data.total || items.length)
+    } catch (e) {
+      setLoadErr(e.message)
+      setEnrollments([])
+      setTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, filterCourse, filterStatus, search])
+
+  useEffect(() => { load() }, [load])
+
+  const revokeEnrollment = async ({ id, paymentId }) => {
+    setB(id, true)
+    try {
+      await apiFetch(`/enrollments/admin/${id}`, { method: 'DELETE' })
+      if (paymentId) {
+        try {
+          await apiFetch(`/admin/payments/${paymentId}`, {
+            method: 'PUT', body: JSON.stringify({ status: 'failed' }),
+          })
+        } catch { /* non-fatal */ }
+      }
+      setConfirmDlg(null)
+      flash('Enrollment revoked')
+      load()
+    } catch (e) {
+      flash(e.message, false)
+    } finally {
+      setB(id, false)
+    }
+  }
+
+  const confirmEnrollment = async ({ id, paymentId }) => {
+    setB(id, true)
+    try {
+      await apiFetch(`/enrollments/admin/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed', confirmed_at: new Date().toISOString() }),
+      })
+      if (paymentId) {
+        try {
+          await apiFetch(`/admin/payments/${paymentId}`, {
+            method: 'PUT', body: JSON.stringify({ status: 'completed' }),
+          })
+        } catch { /* non-fatal */ }
+      }
+      setConfirmDlg(null)
+      flash('Enrollment confirmed ✓')
+      load()
+    } catch (e) {
+      flash(e.message, false)
+    } finally {
+      setB(id, false)
+    }
+  }
+
+  const submitAdd = async () => {
+    setAddErr('')
+    if (!addForm.course_id)  return setAddErr('Please select a course')
+    if (!addForm.user_email) return setAddErr('User email is required')
+    setAddSaving(true)
+    try {
+      await apiFetch('/enrollments/admin/enroll', {
+        method: 'POST',
+        body: JSON.stringify({
+          course_id:      addForm.course_id,
+          user_email:     addForm.user_email.trim(),
+          payment_status: addForm.payment_status,
+          amount:         addForm.amount ? Number(addForm.amount) : 0,
+        }),
+      })
+      setAddOpen(false)
+      setAddForm({ course_id:'', user_email:'', payment_status:'free', amount:'' })
+      flash('User enrolled successfully ✓')
+      load()
+    } catch (e) {
+      setAddErr(e.message)
+    } finally {
+      setAddSaving(false)
+    }
+  }
+
+  const seatCards = courses
+    .map(c => ({ id:c.id, title:c.title, emoji:c.emoji||'📚', seats:c.seats||c.max_seats||null, booked:c.booked_count||c.enrolled_count||0 }))
+    .filter(c => c.seats)
+
+  return (
+    <div style={{ position:'relative' }}>
+
+      {/* toast */}
+      {toast && (
+        <div style={{
+          position:'fixed', bottom:'1.5rem', right:'1.5rem', zIndex:9999,
+          background: toast.ok ? 'var(--green)' : 'var(--red)',
+          color:'white', padding:'.65rem 1.1rem', borderRadius:'var(--radius)',
+          fontWeight:600, fontSize:'.82rem', boxShadow:'var(--shadow-md)', animation:'fadeIn .2s',
+        }}>{toast.msg}</div>
+      )}
+
+      {/* seat summary cards */}
+      {seatCards.length > 0 && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:'.65rem', marginBottom:'1.25rem' }}>
+          {seatCards.map(c => {
+            const left = Math.max(0, c.seats - c.booked)
+            const pct  = Math.min(100, Math.round((c.booked / c.seats) * 100))
+            const col  = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--amber)' : 'var(--green)'
+            const active = filterCourse === String(c.id)
+            return (
+              <div key={c.id} onClick={() => setFilterCourse(active ? '' : String(c.id))} style={{
+                background: active ? 'var(--blue-lt)' : 'var(--surface)',
+                border:`1px solid ${active ? 'var(--blue)' : 'var(--border)'}`,
+                borderRadius:'var(--radius)', padding:'.85rem', cursor:'pointer', transition:'all .13s',
+              }}>
+                <div style={{ fontSize:'.7rem', fontWeight:700, color:'var(--text-label)', marginBottom:'.3rem', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {c.emoji} {c.title}
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'.3rem' }}>
+                  <span style={{ fontSize:'1.1rem', fontWeight:800, color: left===0 ? 'var(--red)' : 'var(--text-primary)' }}>{left}</span>
+                  <span style={{ fontSize:'.62rem', color:'var(--text-muted)' }}>of {c.seats} left</span>
+                </div>
+                <div style={{ height:3, background:'var(--border)', borderRadius:100, overflow:'hidden' }}>
+                  <div style={{ height:'100%', width:pct+'%', background:col, borderRadius:100, transition:'width .3s' }} />
+                </div>
+                {active && <div style={{ fontSize:'.6rem', color:'var(--blue-dk)', fontWeight:700, marginTop:'.3rem' }}>● Filtered</div>}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* filters */}
+      <div className="filters">
+        <input
+          className="inp" placeholder="Search name / email…" value={search} style={{ width:190 }}
+          onChange={e => { setSearch(e.target.value); setPage(1) }}
+          onKeyDown={e => e.key === 'Enter' && load()}
+        />
+        <select className="inp" value={filterCourse} onChange={e => { setFilterCourse(e.target.value); setPage(1) }}>
+          <option value="">All courses</option>
+          {courses.map(c => <option key={c.id} value={String(c.id)}>{c.emoji||'📚'} {c.title}</option>)}
+        </select>
+        <select className="inp" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1) }}>
+          <option value="">All statuses</option>
+          {['confirmed','pending','free','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button className="btn btn-ghost" onClick={load}>↺ Refresh</button>
+        <button className="btn btn-primary" onClick={() => { setAddOpen(true); setAddErr('') }}>+ Enroll User</button>
+        {(filterCourse || filterStatus || search) && (
+          <button className="btn btn-ghost" onClick={() => { setFilterCourse(''); setFilterStatus(''); setSearch(''); setPage(1) }}>✕ Clear</button>
+        )}
+      </div>
+
+      {loadErr && (
+        <div className="alert alert-error" style={{ marginBottom:'.85rem' }}>⚠️ {loadErr}</div>
+      )}
+
+      {/* table */}
+      <div className="tbl-wrap">
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead>
+              <tr>{['Student','Course','Method','Amount','Status','Enrolled At','Actions'].map(h => <th key={h}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {loading
+                ? <tr><td className="tbl-loading" colSpan={7}><span className="spinner" /> Loading enrollments…</td></tr>
+                : enrollments.length === 0 && !loadErr
+                  ? <tr><td colSpan={7}>
+                      <div className="empty-state">
+                        <div className="empty-icon">🎓</div>
+                        <div className="empty-text">
+                          {filterCourse||filterStatus||search ? 'No enrollments match your filters' : 'No enrollments yet'}
+                        </div>
+                      </div>
+                    </td></tr>
+                  : enrollments.map(enr => {
+                      const isPending = enr.payment_status === 'pending'
+                      const isFree    = enr.is_free || Number(enr.amount||0) === 0 || enr.payment_status === 'free'
+                      return (
+                        <tr key={enr.id} style={{ cursor:'pointer' }} onClick={() => setDetailRow(enr)}>
+                          <td onClick={e => e.stopPropagation()}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'.55rem' }}>
+                              {enr.avatar_url
+                                ? <img src={enr.avatar_url} style={{ width:28, height:28, borderRadius:'50%', objectFit:'cover', flexShrink:0 }} alt="" />
+                                : <div style={{ width:28, height:28, borderRadius:'50%', background:'var(--blue-lt)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.65rem', fontWeight:800, color:'var(--blue-dk)', flexShrink:0 }}>
+                                    {(enr.user_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+                                  </div>
+                              }
+                              <div>
+                                <div style={{ fontWeight:600, fontSize:'.82rem' }}>{enr.user_name}</div>
+                                <div style={{ fontSize:'.68rem', color:'var(--text-muted)' }}>{enr.user_email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight:600, fontSize:'.82rem' }}>{enr.course_emoji} {enr.course_title}</div>
+                            {enr.transaction_id && <div className="mono" style={{ fontSize:'.63rem', color:'var(--text-muted)' }}>{enr.transaction_id}</div>}
+                          </td>
+                          <td>
+                            <span className="mono" style={{ fontSize:'.72rem', fontWeight:700, color:'var(--teal)', textTransform:'uppercase' }}>
+                              {enr.method || '—'}
+                            </span>
+                          </td>
+                          <td>
+                            <strong style={{ fontSize:'.82rem' }}>
+                              {isFree ? <span style={{ color:'var(--green)' }}>Free</span> : `NPR ${Number(enr.amount).toLocaleString()}`}
+                            </strong>
+                          </td>
+                          <td>
+                            <span style={{
+                              display:'inline-block', padding:'.18rem .52rem', borderRadius:100,
+                              fontSize:'.63rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'.05em',
+                              background:statusBg(enr.payment_status), color:statusFg(enr.payment_status),
+                            }}>{enr.payment_status}</span>
+                          </td>
+                          <td style={{ fontSize:'.74rem', color:'var(--text-muted)', whiteSpace:'nowrap' }}>
+                            {fmtT(enr.enrolled_at)}
+                            {enr.confirmed_at && (
+                              <div style={{ fontSize:'.63rem', color:'var(--green)', marginTop:'.1rem' }}>✓ {fmtT(enr.confirmed_at)}</div>
+                            )}
+                          </td>
+                          <td onClick={e => e.stopPropagation()}>
+                            <div style={{ display:'flex', gap:'.3rem', flexWrap:'wrap' }}>
+                              {isPending && (
+                                <button className="btn btn-success btn-sm" disabled={busy[enr.id]} title="Confirm payment"
+                                  onClick={() => setConfirmDlg({ id:enr.id, paymentId:enr.payment_id, name:enr.user_name, action:'confirm' })}>✓</button>
+                              )}
+                              <button className="btn btn-ghost btn-sm btn-icon" title="View details"
+                                onClick={() => setDetailRow(enr)}>👁</button>
+                              <button className="btn btn-danger btn-sm" disabled={busy[enr.id]} title="Revoke enrollment"
+                                onClick={() => setConfirmDlg({ id:enr.id, paymentId:enr.payment_id, name:enr.user_name, action:'revoke' })}>Revoke</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <Pager page={page} set={setPage} total={total} />
+
+      {/* confirm dialog */}
+      {confirmDlg && (
+        <div className="overlay" onClick={() => setConfirmDlg(null)}>
+          <div className="modal confirm-dialog" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <span className="modal-head-title">{confirmDlg.action === 'revoke' ? '⚠️ Revoke Enrollment' : '✓ Confirm Payment'}</span>
+            </div>
+            <div className="modal-body">
+              <p className="confirm-msg">
+                {confirmDlg.action === 'revoke'
+                  ? `Permanently remove ${confirmDlg.name}'s enrollment? Their linked payment (if any) will be marked failed.`
+                  : `Mark ${confirmDlg.name}'s enrollment as confirmed and their linked payment as completed?`}
+              </p>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={() => setConfirmDlg(null)}>Cancel</button>
+              <button
+                className={`btn ${confirmDlg.action === 'revoke' ? 'btn-danger' : 'btn-success'}`}
+                disabled={busy[confirmDlg.id]}
+                onClick={() => confirmDlg.action === 'revoke' ? revokeEnrollment(confirmDlg) : confirmEnrollment(confirmDlg)}
+              >
+                {busy[confirmDlg.id] ? <><span className="spinner" /> Working…</> : confirmDlg.action === 'revoke' ? 'Yes, Revoke' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* detail modal */}
+      {detailRow && (
+        <div className="overlay" onClick={() => setDetailRow(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <span className="modal-head-title">📋 Enrollment Detail</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => setDetailRow(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="detail-grid" style={{ padding:0 }}>
+                {[
+                  { title:'Student',    rows:[['Name', detailRow.user_name],['Email', detailRow.user_email||'—'],['User ID', detailRow.user_id||'—']] },
+                  { title:'Course',     rows:[['Title', `${detailRow.course_emoji} ${detailRow.course_title}`],['Course ID', detailRow.course_id||'—'],['Status', detailRow.payment_status]] },
+                  { title:'Payment',    rows:[['Amount', detailRow.is_free ? 'Free' : `NPR ${Number(detailRow.amount||0).toLocaleString()}`],['Method', detailRow.method||'—'],['Txn ID', detailRow.transaction_id||'—'],['Payment ID', detailRow.payment_id||'—']] },
+                  { title:'Timestamps', rows:[['Enrolled', fmtT(detailRow.enrolled_at)],['Confirmed', detailRow.confirmed_at ? fmtT(detailRow.confirmed_at) : '—'],['Record ID', detailRow.id]] },
+                ].map(card => (
+                  <div key={card.title} className="detail-card">
+                    <div className="detail-card-title">{card.title}</div>
+                    {card.rows.map(([k, v]) => (
+                      <div key={k} className="detail-row-item">
+                        <span className="detail-row-key">{k}</span>
+                        <span className="detail-row-val mono" style={{ fontSize:['User ID','Course ID','Txn ID','Payment ID','Record ID'].includes(k)?'.63rem':'.74rem' }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-foot">
+              {detailRow.payment_status === 'pending' && (
+                <button className="btn btn-success" onClick={() => { setDetailRow(null); setConfirmDlg({ id:detailRow.id, paymentId:detailRow.payment_id, name:detailRow.user_name, action:'confirm' }) }}>
+                  ✓ Confirm Payment
+                </button>
+              )}
+              <button className="btn btn-danger" onClick={() => { setDetailRow(null); setConfirmDlg({ id:detailRow.id, paymentId:detailRow.payment_id, name:detailRow.user_name, action:'revoke' }) }}>
+                Revoke
+              </button>
+              <button className="btn btn-ghost" onClick={() => setDetailRow(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* manual enroll modal */}
+      {addOpen && (
+        <div className="overlay" onClick={() => setAddOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <span className="modal-head-title">+ Enroll a User</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => setAddOpen(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="field">
+                <label>Course *</label>
+                <select className="inp" value={addForm.course_id} onChange={e => setAddForm(f => ({ ...f, course_id:e.target.value }))}>
+                  <option value="">— Select course —</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.emoji||'📚'} {c.title}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>User Email *</label>
+                <input className="inp" type="email" placeholder="user@example.com"
+                  value={addForm.user_email} onChange={e => setAddForm(f => ({ ...f, user_email:e.target.value }))} />
+                <div className="field-hint">Must match an existing account in the system</div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Payment Status</label>
+                  <select className="inp" value={addForm.payment_status} onChange={e => setAddForm(f => ({ ...f, payment_status:e.target.value }))}>
+                    <option value="free">Free (no payment)</option>
+                    <option value="confirmed">Confirmed (paid)</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Amount (NPR)</label>
+                  <input className="inp" type="number" placeholder="0 = free"
+                    value={addForm.amount} onChange={e => setAddForm(f => ({ ...f, amount:e.target.value }))} />
+                </div>
+              </div>
+              {addErr && <div className="alert alert-error">{addErr}</div>}
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={() => setAddOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={submitAdd} disabled={addSaving}>
+                {addSaving ? <><span className="spinner" /> Enrolling…</> : 'Enroll User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  )
+}
+
+// ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
+export default function AdminDashboardPage() {
   useEffect(() => { injectCSS() }, [])
+
   const { navigate }                           = useRouter()
   const { user, loading: authLoading, logout } = useAuth()
-  const [tab, setTab] = useState('dashboard')
+  const [tab, setTab]                          = useState('dashboard')
 
-  const [stats,  setStats]  = useState(null)
+  // Dashboard
+  const [stats, setStats]   = useState(null)
   const [recent, setRecent] = useState([])
 
-  const [users,  setUsers]  = useState([]); const [uTotal, setUTotal] = useState(0); const [uPage, setUPage] = useState(1)
-  const [uSearch,setUSearch]= useState(''); const [uRole,  setURole]  = useState('')
-  const [appts,  setAppts]  = useState([]); const [aTotal, setATotal] = useState(0); const [aPage, setAPage] = useState(1)
-  const [aStatus,setAStatus]= useState('')
-  const [orders, setOrders] = useState([]); const [oTotal, setOTotal] = useState(0); const [oPage, setOPage] = useState(1)
-  const [oStatus,setOStatus]= useState('')
+  // Users
+  const [users, setUsers]     = useState([]); const [uTotal, setUTotal]   = useState(0); const [uPage, setUPage]   = useState(1)
+  const [uSearch, setUSearch] = useState(''); const [uRole, setURole]     = useState('')
 
+  // Appointments
+  const [appts, setAppts]     = useState([]); const [aTotal, setATotal]   = useState(0); const [aPage, setAPage]   = useState(1)
+  const [aStatus, setAStatus] = useState('')
+
+  // Orders
+  const [orders, setOrders]   = useState([]); const [oTotal, setOTotal]   = useState(0); const [oPage, setOPage]   = useState(1)
+  const [oStatus, setOStatus] = useState('')
+
+  // Notifications
   const [notifClients, setNotifClients] = useState([])
   const [notifTarget,  setNotifTarget]  = useState('')
   const [notifTitle,   setNotifTitle]   = useState('')
@@ -551,87 +1641,94 @@ export default function AdminDashboardFull() {
   const [notifType,    setNotifType]    = useState('system')
   const [notifSending, setNotifSending] = useState(false)
   const [notifResult,  setNotifResult]  = useState(null)
-  const [sentHistory,  setSentHistory]  = useState([])
 
-  // ── Volunteer & Gallery Submissions state ────────────────────
-  const [volunteers,    setVolunteers]    = useState([])
-  const [volTotal,      setVolTotal]      = useState(0)
-  const [volPage,       setVolPage]       = useState(1)
-  const [volSearch,     setVolSearch]     = useState('')
-  const [volStatus,     setVolStatus]     = useState('')
-  const [volDetail,     setVolDetail]     = useState(null)
+  // Room Bookings
+  const [roomBookings, setRoomBookings] = useState([]); const [rbTotal, setRbTotal] = useState(0); const [rbPage, setRbPage] = useState(1)
+  const [rbStatus, setRbStatus]         = useState(''); const [rbLoading, setRbLoading] = useState(false)
 
-  // FIX: was galsubPage — renamed consistently to galSubPage everywhere
-  const [galSubs,       setGalSubs]       = useState([])
-  const [galSubTotal,   setGalSubTotal]   = useState(0)
-  const [galSubPage,    setGalSubPage]    = useState(1)
-  const [galSubStatus,  setGalSubStatus]  = useState('')
+  // Volunteers
+  const [volunteers, setVolunteers] = useState([]); const [volTotal, setVolTotal] = useState(0); const [volPage, setVolPage] = useState(1)
+  const [volSearch, setVolSearch]   = useState(''); const [volStatus, setVolStatus] = useState(''); const [volDetail, setVolDetail] = useState(null)
 
-  const [commGroups,        setCommGroups]        = useState([])
-  const [commSessions,      setCommSessions]      = useState([])
-  const [commReservations,  setCommReservations]  = useState([])
-  const [commMemberships,   setCommMemberships]   = useState([])
-  const [commSessionsTotal, setCommSessionsTotal] = useState(0)
-  const [commSessionPage,   setCommSessionPage]   = useState(1)
-  const [commTab,           setCommTab]           = useState('groups')
-  const [sessionModal,      setSessionModal]      = useState(null)
-  const [sessionForm,       setSessionForm]       = useState({})
-  const [sessionSaving,     setSessionSaving]     = useState(false)
-  const [sessionErr,        setSessionErr]        = useState('')
-  const [selectedSessionId, setSelectedSessionId] = useState(null)
+  // Gallery Submissions
+  const [galSubs, setGalSubs]           = useState([]); const [galSubTotal, setGalSubTotal] = useState(0); const [galSubPage, setGalSubPage] = useState(1)
+  const [galSubStatus, setGalSubStatus] = useState('')
 
-  const [posts,      setPosts]      = useState([]); const [postsTotal,  setPostsTotal]  = useState(0); const [postsPage,  setPostsPage]  = useState(1)
-  const [news,       setNews]       = useState([]); const [newsTotal,   setNewsTotal]   = useState(0); const [newsPage,   setNewsPage]   = useState(1)
-  const [resources,  setRes]        = useState([]); const [resTotal,    setResTotal]    = useState(0); const [resPage,    setResPage]    = useState(1)
-  const [gallery,    setGallery]    = useState([]); const [galTotal,    setGalTotal]    = useState(0); const [galPage,    setGalPage]    = useState(1)
-  const [research,   setResearch]   = useState([]); const [rscTotal,    setRscTotal]    = useState(0); const [rscPage,    setRscPage]    = useState(1)
-  const [pvids,      setPvids]      = useState([]); const [pvTotal,     setPvTotal]     = useState(0); const [pvPage,     setPvPage]     = useState(1)
-  const [panalyses,  setPanalyses]  = useState([]); const [paTotal,     setPaTotal]     = useState(0); const [paPage,     setPaPage]     = useState(1)
-  const [pconcepts,  setPconcepts]  = useState([]); const [pcTotal,     setPcTotal]     = useState(0); const [pcPage,     setPcPage]     = useState(1)
-  const [therapists, setTherapists] = useState([]); const [thrTotal,    setThrTotal]    = useState(0); const [thrPage,    setThrPage]    = useState(1)
-  const [products,   setProducts]   = useState([]); const [prodTotal,   setProdTotal]   = useState(0); const [prodPage,   setProdPage]   = useState(1)
-  const [courses,    setCourses]    = useState([]); const [courseTotal, setCourseTotal] = useState(0); const [coursePage, setCoursePage] = useState(1)
-  const [assessments,setAssess]     = useState([]); const [assTotal,    setAssTotal]    = useState(0); const [assPage,    setAssPage]    = useState(1)
-  const [community,  setCommunity]  = useState([]); const [comTotal,    setComTotal]    = useState(0); const [comPage,    setComPage]    = useState(1)
-  const [faqs,       setFaqs]       = useState([]); const [faqTotal,    setFaqTotal]    = useState(0); const [faqPage,    setFaqPage]    = useState(1)
-  const [coupons,    setCoupons]    = useState([]); const [couTotal,    setCouTotal]    = useState(0); const [couPage,    setCouPage]    = useState(1)
-  const [contacts,   setContacts]   = useState([]); const [ctcTotal,    setCtcTotal]    = useState(0); const [ctcPage,    setCtcPage]    = useState(1)
-  const [subs,       setSubs]       = useState([]); const [subTotal,    setSubTotal]    = useState(0); const [subPage,    setSubPage]    = useState(1)
-  const [settings,   setSettings]   = useState([])
+  // Workshops
+  const [workshops, setWorkshops] = useState([]); const [wsTotal, setWsTotal] = useState(0)
+  const [wsRegs, setWsRegs]       = useState([]); const [wsTab, setWsTab]     = useState('list')
 
-  const [modal,      setModal]      = useState(null)
-  const [form,       setForm]       = useState({})
-  const [saving,     setSaving]     = useState(false)
-  const [saveErr,    setSaveErr]    = useState(null)
-  const [delConfirm, setDelConfirm] = useState(null)
-  const [busy,       setBusy]       = useState({})
-  const [photoReplace,   setPhotoReplace]   = useState(null)
-const [photoUploading, setPhotoUploading] = useState(false)
-const [photoError,     setPhotoError]     = useState('')
-  const setB = (k, v) => setBusy(b => ({ ...b, [k]: v }))
+  // Community Admin
+  const [commGroups, setCommGroups]                 = useState([])
+  const [commSessions, setCommSessions]             = useState([]); const [commSessionsTotal, setCommSessionsTotal] = useState(0); const [commSessionPage, setCommSessionPage] = useState(1)
+  const [commReservations, setCommReservations]     = useState([])
+  const [commMemberships, setCommMemberships]       = useState([])
+  const [commTab, setCommTab]                       = useState('groups')
+  const [selectedSessionId, setSelectedSessionId]   = useState(null)
+  const [sessionModal, setSessionModal]             = useState(null)
+  const [sessionForm, setSessionForm]               = useState({})
+  const [sessionSaving, setSessionSaving]           = useState(false)
+  const [sessionErr, setSessionErr]                 = useState('')
 
+  // Content tabs
+  const [posts, setPosts]         = useState([]); const [postsTotal, setPostsTotal]     = useState(0); const [postsPage, setPostsPage]     = useState(1)
+  const [news, setNews]           = useState([]); const [newsTotal, setNewsTotal]       = useState(0); const [newsPage, setNewsPage]       = useState(1)
+  const [resources, setRes]       = useState([]); const [resTotal, setResTotal]         = useState(0); const [resPage, setResPage]         = useState(1)
+  const [gallery, setGallery]     = useState([]); const [galTotal, setGalTotal]         = useState(0); const [galPage, setGalPage]         = useState(1)
+  const [research, setResearch]   = useState([]); const [rscTotal, setRscTotal]         = useState(0); const [rscPage, setRscPage]         = useState(1)
+  const [pvids, setPvids]         = useState([]); const [pvTotal, setPvTotal]           = useState(0); const [pvPage, setPvPage]           = useState(1)
+  const [panalyses, setPanalyses] = useState([]); const [paTotal, setPaTotal]           = useState(0); const [paPage, setPaPage]           = useState(1)
+  const [pconcepts, setPconcepts] = useState([]); const [pcTotal, setPcTotal]           = useState(0); const [pcPage, setPcPage]           = useState(1)
+  const [therapists, setTherapists] = useState([]); const [thrTotal, setThrTotal]       = useState(0); const [thrPage, setThrPage]         = useState(1)
+  const [products, setProducts]   = useState([]); const [prodTotal, setProdTotal]       = useState(0); const [prodPage, setProdPage]       = useState(1)
+  const [courses, setCourses]     = useState([]); const [courseTotal, setCourseTotal]   = useState(0); const [coursePage, setCoursePage]   = useState(1)
+  const [courseSubTab, setCourseSubTab] = useState('list')
+  const [assessments, setAssess]  = useState([]); const [assTotal, setAssTotal]         = useState(0); const [assPage, setAssPage]         = useState(1)
+  const [community, setCommunity] = useState([]); const [comTotal, setComTotal]         = useState(0); const [comPage, setComPage]         = useState(1)
+  const [faqs, setFaqs]           = useState([]); const [faqTotal, setFaqTotal]         = useState(0); const [faqPage, setFaqPage]         = useState(1)
+  const [coupons, setCoupons]     = useState([]); const [couTotal, setCouTotal]         = useState(0); const [couPage, setCouPage]         = useState(1)
+  const [contacts, setContacts]   = useState([]); const [ctcTotal, setCtcTotal]         = useState(0); const [ctcPage, setCtcPage]         = useState(1)
+  const [subs, setSubs]           = useState([]); const [subTotal, setSubTotal]         = useState(0); const [subPage, setSubPage]         = useState(1)
+  const [settings, setSettings]   = useState([])
+
+  // Modal
+  const [modal, setModal]             = useState(null)
+  const [form, setForm]               = useState({})
+  const [saving, setSaving]           = useState(false)
+  const [saveErr, setSaveErr]         = useState(null)
+  const [delConfirm, setDelConfirm]   = useState(null)
+  const [busy, setBusy]               = useState({})
+  const [photoReplace, setPhotoReplace]       = useState(null)
+  const [photoUploading, setPhotoUploading]   = useState(false)
+  const [photoError, setPhotoError]           = useState('')
+
+  const setB = (k, v) => setBusy(b => ({ ...b, [k]:v }))
+
+  // Auth guard
   useEffect(() => {
     if (authLoading) return
     if (!user) { navigate('/staff'); return }
-    if (!['admin', 'staff'].includes(user.role)) { navigate('/portal'); return }
-    fetchDashboard()
-  }, [user, authLoading]) // eslint-disable-line
+    if (!['admin','staff'].includes(user.role)) { navigate('/portal'); return }
+    loadDashboard()
+  }, [user, authLoading])
 
-  // FIX: galsubPage → galSubPage in the dependency array (was the crash source)
+  // Load on tab/page change
   useEffect(() => {
-    if (authLoading || !user || !['admin', 'staff'].includes(user.role)) return
+    if (authLoading || !user || !['admin','staff'].includes(user.role)) return
     const MAP = {
-      users:               () => fetchUsers(),
-      appointments:        () => fetchAppts(),
-      orders:              () => fetchOrders(),
-      notifications:       () => fetchNotifClients(),
+      users:               fetchUsers,
+      appointments:        fetchAppts,
+      orders:              fetchOrders,
+      notifications:       fetchNotifClients,
       posts:               () => sec('/admin/posts',            setPosts,      setPostsTotal,  postsPage),
       news:                () => sec('/admin/news',             setNews,       setNewsTotal,   newsPage),
       resources:           () => sec('/admin/resources',        setRes,        setResTotal,    resPage),
       therapists:          () => sec('/admin/therapists',       setTherapists, setThrTotal,    thrPage),
       gallery:             () => sec('/admin/gallery',          setGallery,    setGalTotal,    galPage),
-      volunteers:          () => secVol(),
-      gallery_submissions: () => secGalSub(),
+      volunteers:          fetchVolunteers,
+      room_bookings:       fetchRoomBookings,
+      gallery_submissions: fetchGalSubs,
+      workshops:           fetchWorkshops,
       research:            () => sec('/admin/research',         setResearch,   setRscTotal,    rscPage),
       psych_videos:        () => sec('/admin/psych-videos',     setPvids,      setPvTotal,     pvPage),
       psych_analyses:      () => sec('/admin/psych-analyses',   setPanalyses,  setPaTotal,     paPage),
@@ -644,263 +1741,215 @@ const [photoError,     setPhotoError]     = useState('')
       coupons:             () => sec('/admin/coupons',          setCoupons,    setCouTotal,    couPage),
       contacts:            () => sec('/admin/contacts',         setContacts,   setCtcTotal,    ctcPage),
       subscriptions:       () => sec('/admin/subscriptions',    setSubs,       setSubTotal,    subPage),
-      settings:            () => fetchSettings(),
+      settings:            fetchSettings,
+      community_admin:     fetchCommGroups,
     }
     if (MAP[tab]) MAP[tab]()
-  }, [tab, uPage, aPage, oPage, postsPage, newsPage, resPage,
-      galSubPage,   // FIX: was galsubPage (lowercase s) — now matches state variable
-      volPage, rscPage, pvPage, paPage, pcPage, prodPage, coursePage,
-      assPage, comPage, faqPage, couPage, ctcPage, subPage, thrPage]) // eslint-disable-line
+  }, [tab, uPage, aPage, oPage, postsPage, newsPage, resPage, galSubPage, volPage,
+      rscPage, pvPage, paPage, pcPage, prodPage, coursePage, assPage, comPage,
+      faqPage, couPage, rbPage, ctcPage, subPage, thrPage])
 
-  const fetchDashboard = async () => {
-  setB('dash', true)
-  try {
-    const d = await adminApi.dashboard()
-    const payments = d.recentPayments || []
-    setRecent(payments)
+  // Fetchers
+  const loadDashboard = async () => {
+    setB('dash', true)
+    try {
+      const d = await adminApi.dashboard()
+      setRecent(d.recentPayments || [])
+      const pd = await apiFetch('/admin/payments?page=1&limit=200')
+      const allP = pd.payments || pd.items || pd.data || []
+      const rev = allP.filter(p => p.status === 'completed').reduce((s, p) => s + Number(p.amount || 0), 0)
+      setStats({ ...(d.stats || {}), revenue30d:rev })
+    } catch {}
+    finally { setB('dash', false) }
+  }
 
-    // Fetch real payment data for accurate revenue
-    const pd = await apiFetch('/admin/payments?page=1&limit=100')
-    const allPayments = pd.payments || pd.items || pd.data || []
-    const calculatedRevenue = allPayments
-      .filter(p => p.status === 'completed')
-      .reduce((sum, p) => sum + Number(p.amount || 0), 0)
-
-    setStats({
-      ...(d.stats || {}),
-      revenue30d: calculatedRevenue,
-    })
-  } catch { /* silent */ }
-  finally { setB('dash', false) }
-}
   const fetchUsers = async () => {
     setB('users', true)
     try {
-      const d = await adminApi.users({ page: uPage, limit: LIMIT, q: uSearch || undefined, role: uRole || undefined })
+      const d = await adminApi.users({ page:uPage, limit:LIMIT, q:uSearch||undefined, role:uRole||undefined })
       setUsers(d.users || []); setUTotal(d.pagination?.total || 0)
-    } catch { /* silent */ }
+    } catch {}
     finally { setB('users', false) }
   }
 
   const fetchAppts = async () => {
     setB('appts', true)
     try {
-      const d = await adminApi.appointments({ page: aPage, limit: LIMIT, status: aStatus || undefined })
+      const d = await adminApi.appointments({ page:aPage, limit:LIMIT, status:aStatus||undefined })
       setAppts(d.appointments || []); setATotal(d.pagination?.total || 0)
-    } catch { /* silent */ }
+    } catch {}
     finally { setB('appts', false) }
   }
 
   const fetchOrders = async () => {
     setB('orders', true)
     try {
-      const d = await adminApi.orders({ page: oPage, limit: LIMIT, status: oStatus || undefined })
+      const d = await adminApi.orders({ page:oPage, limit:LIMIT, status:oStatus||undefined })
       setOrders(d.orders || []); setOTotal(d.pagination?.total || 0)
-    } catch { /* silent */ }
+    } catch {}
     finally { setB('orders', false) }
   }
 
   const fetchNotifClients = async () => {
-    try {
-      const d = await adminApi.users({ limit: 200, role: 'client' })
-      setNotifClients(d.users || [])
-    } catch { /* silent */ }
+    try { const d = await adminApi.users({ limit:200, role:'client' }); setNotifClients(d.users || []) } catch {}
   }
 
-  const sec = async (endpoint, setter, totalSetter, pg) => {
-    const busyKey = endpoint.replace('/admin/', '').replace(/-/g, '_')
-    setB(busyKey, true)
+  const fetchRoomBookings = async () => {
+    setRbLoading(true)
     try {
-      const d = await apiFetch(`${endpoint}?page=${pg}&limit=${LIMIT}`)
-      const arr = d.items || d.posts || d.users || d.news || d.resources || d.gallery ||
-        d.research || d.products || d.courses || d.assessments ||
-        d.faqs || d.coupons || d.contacts || d.settings ||
-        Object.values(d).find(v => Array.isArray(v)) || []
-      setter(arr)
-      totalSetter(d.pagination?.total ?? d.total ?? arr.length)
-    } catch (e) { console.error(`${endpoint}:`, e) }
-    finally { setB(busyKey, false) }
+      const p = new URLSearchParams({ page:rbPage, limit:LIMIT })
+      if (rbStatus) p.set('status', rbStatus)
+      const d = await apiFetch(`/admin/room-bookings?${p}`)
+      setRoomBookings(d.bookings || d.items || []); setRbTotal(d.pagination?.total || 0)
+    } catch (e) { console.error(e) }
+    finally { setRbLoading(false) }
   }
 
   const fetchSettings = async () => {
     setB('settings', true)
     try { const d = await apiFetch('/admin/settings'); setSettings(d.settings || d.data || []) }
-    catch { /* silent */ }
+    catch {}
     finally { setB('settings', false) }
   }
 
-  const fetchCommGroups = async () => {
-    try { const d = await apiFetch('/admin/community-groups?page=1&limit=50'); setCommGroups(d.items || []) }
-    catch (e) { console.error('commGroups:', e) }
+  const sec = async (ep, setter, totalSetter, pg) => {
+    const k = ep.replace('/admin/', '').replace(/-/g, '_')
+    setB(k, true)
+    try {
+      const d = await apiFetch(`${ep}?page=${pg}&limit=${LIMIT}`)
+      const arr = d.items || d.posts || d.users || d.news || d.resources || d.gallery ||
+        d.research || d.products || d.courses || d.assessments ||
+        d.faqs || d.coupons || d.contacts || d.settings ||
+        Object.values(d).find(v => Array.isArray(v)) || []
+      setter(arr); totalSetter(d.pagination?.total ?? d.total ?? arr.length)
+    } catch (e) { console.error(ep, e) }
+    finally { setB(k, false) }
   }
 
+  const fetchCommGroups = async () => {
+    try { const d = await apiFetch('/admin/community-groups?page=1&limit=50'); setCommGroups(d.items || d.groups || []) } catch (e) { console.error(e) }
+  }
   const fetchCommSessions = async (pg = 1) => {
     try {
       const d = await apiFetch(`/admin/group-sessions?page=${pg}&limit=20`)
       setCommSessions(d.items || []); setCommSessionsTotal(d.pagination?.total || 0)
-    } catch (e) { console.error('commSessions:', e) }
+    } catch (e) { console.error(e) }
   }
-
-  const fetchCommReservations = async (sessionId) => {
+  const fetchCommReservations = async (sessionId = null) => {
     try {
-      const d = await apiFetch(`/admin/group-reservations?session_id=${sessionId}&limit=100`)
-      setCommReservations(d.items || []); setSelectedSessionId(sessionId)
-    } catch (e) { console.error('commReservations:', e) }
+      const url = sessionId ? `/admin/group-reservations?session_id=${sessionId}&limit=100` : `/admin/group-reservations?limit=100`
+      const d = await apiFetch(url)
+      setCommReservations(d.items || [])
+      if (sessionId) setSelectedSessionId(sessionId)
+    } catch (e) { console.error(e) }
   }
-
-  const fetchCommMemberships = async (groupId) => {
+  const fetchCommMemberships = async (groupId = null) => {
     try {
-      const d = await apiFetch(`/admin/group-memberships?group_id=${groupId}&limit=100`)
+      const p = new URLSearchParams({ limit:100 })
+      if (groupId) p.set('group_id', groupId)
+      const d = await apiFetch(`/admin/group-memberships?${p}`)
       setCommMemberships(d.items || [])
-    } catch (e) { console.error('commMemberships:', e) }
+    } catch (e) { console.error(e) }
+  }
+
+  const fetchVolunteers = async () => {
+    setB('volunteers', true)
+    try {
+      const p = new URLSearchParams({ page:volPage, limit:LIMIT })
+      if (volStatus) p.set('status', volStatus)
+      if (volSearch) p.set('search', volSearch)
+      const d = await apiFetch(`/admin/volunteers?${p}`)
+      setVolunteers(d.items || []); setVolTotal(d.pagination?.total || 0)
+    } catch (e) { console.error(e) }
+    finally { setB('volunteers', false) }
+  }
+
+  const fetchGalSubs = async () => {
+    setB('gallery_submissions', true)
+    try {
+      const p = new URLSearchParams({ page:galSubPage, limit:LIMIT })
+      if (galSubStatus) p.set('status', galSubStatus)
+      const d = await apiFetch(`/admin/gallery-submissions?${p}`)
+      setGalSubs(d.items || []); setGalSubTotal(d.pagination?.total || 0)
+    } catch (e) { console.error(e) }
+    finally { setB('gallery_submissions', false) }
+  }
+
+  const fetchWorkshops = async () => {
+    setB('workshops', true)
+    try { const d = await apiFetch('/workshops/admin/all'); setWorkshops(d.workshops || []); setWsTotal(d.workshops?.length || 0) }
+    catch (e) { console.error(e) }
+    finally { setB('workshops', false) }
+  }
+
+  const fetchWsRegs = async () => {
+    setB('ws_regs', true)
+    try { const d = await apiFetch('/workshops/admin/registrations'); setWsRegs(d.registrations || []) }
+    catch (e) { console.error(e) }
+    finally { setB('ws_regs', false) }
   }
 
   const saveSessionModal = async () => {
     setSessionSaving(true); setSessionErr('')
     try {
-      if (sessionModal?.data) {
-        await apiFetch(`/admin/group-sessions/${sessionModal.data.id}`, { method: 'PUT', body: JSON.stringify(sessionForm) })
-      } else {
-        await apiFetch('/admin/group-sessions', { method: 'POST', body: JSON.stringify(sessionForm) })
-      }
+      const body = { ...sessionForm, max_spots:Number(sessionForm.max_spots||20), price:Number(sessionForm.price||0) }
+      if (sessionModal?.data) await apiFetch(`/admin/group-sessions/${sessionModal.data.id}`, { method:'PUT', body:JSON.stringify(body) })
+      else await apiFetch('/admin/group-sessions', { method:'POST', body:JSON.stringify(body) })
       setSessionModal(null); setSessionForm({})
       fetchCommSessions(commSessionPage)
     } catch (e) { setSessionErr(e.message) }
     finally { setSessionSaving(false) }
   }
 
-  // ── Volunteer fetch helpers ───────────────────────────────────
-  const secVol = async () => {
-    setB('volunteers', true)
-    try {
-      const params = new URLSearchParams({ page: volPage, limit: LIMIT })
-      if (volStatus) params.set('status', volStatus)
-      if (volSearch) params.set('search', volSearch)
-      const d = await apiFetch(`/admin/volunteers?${params}`)
-      setVolunteers(d.items || []); setVolTotal(d.pagination?.total || 0)
-    } catch (e) { console.error('volunteers:', e) }
-    finally { setB('volunteers', false) }
+  const ENDPOINTS = {
+    post:'/admin/posts', news_article:'/admin/news', resource:'/admin/resources',
+    gallery_item:'/admin/gallery', research_paper:'/admin/research', therapist_profile:'/admin/therapists',
+    psych_video:'/admin/psych-videos', psych_analysis:'/admin/psych-analyses', psych_concept:'/admin/psych-concepts',
+    product:'/admin/products', course:'/admin/courses', assessment:'/admin/assessments',
+    community_group:'/admin/community-groups', faq:'/admin/faqs', coupon:'/admin/coupons',
+    setting:'/admin/settings', workshop:null,
   }
 
-  // ── Gallery submissions fetch helpers ─────────────────────────
-  const secGalSub = async () => {
-    setB('gallery_submissions', true)
-    try {
-      const params = new URLSearchParams({ page: galSubPage, limit: LIMIT })
-      if (galSubStatus) params.set('status', galSubStatus)
-      const d = await apiFetch(`/admin/gallery-submissions?${params}`)
-      setGalSubs(d.items || []); setGalSubTotal(d.pagination?.total || 0)
-    } catch (e) { console.error('gallery_submissions:', e) }
-    finally { setB('gallery_submissions', false) }
+  const REFRESH_MAP = {
+    post:              () => sec('/admin/posts',            setPosts,      setPostsTotal,  postsPage),
+    news_article:      () => sec('/admin/news',             setNews,       setNewsTotal,   newsPage),
+    resource:          () => sec('/admin/resources',        setRes,        setResTotal,    resPage),
+    gallery_item:      () => sec('/admin/gallery',          setGallery,    setGalTotal,    galPage),
+    therapist_profile: () => sec('/admin/therapists',       setTherapists, setThrTotal,    thrPage),
+    research_paper:    () => sec('/admin/research',         setResearch,   setRscTotal,    rscPage),
+    psych_video:       () => sec('/admin/psych-videos',     setPvids,      setPvTotal,     pvPage),
+    psych_analysis:    () => sec('/admin/psych-analyses',   setPanalyses,  setPaTotal,     paPage),
+    psych_concept:     () => sec('/admin/psych-concepts',   setPconcepts,  setPcTotal,     pcPage),
+    product:           () => sec('/admin/products',         setProducts,   setProdTotal,   prodPage),
+    course:            () => sec('/admin/courses',          setCourses,    setCourseTotal, coursePage),
+    assessment:        () => sec('/admin/assessments',      setAssess,     setAssTotal,    assPage),
+    community_group:   () => sec('/admin/community-groups', setCommunity,  setComTotal,    comPage),
+    faq:               () => sec('/admin/faqs',             setFaqs,       setFaqTotal,    faqPage),
+    coupon:            () => sec('/admin/coupons',          setCoupons,    setCouTotal,    couPage),
+    setting:           fetchSettings,
+    workshop:          fetchWorkshops,
   }
 
-  async function updateVolStatus(id, status, notes) {
-    try {
-      await apiFetch(`/admin/volunteers/${id}`, { method: 'PUT', body: JSON.stringify({ status, admin_notes: notes }) })
-      secVol()
-    } catch (e) { alert(e.message) }
-  }
-
-  async function updateGalSubStatus(id, status) {
-    try {
-      await apiFetch(`/admin/gallery-submissions/${id}`, { method: 'PUT', body: JSON.stringify({ status }) })
-      secGalSub()
-    } catch (e) { alert(e.message) }
-  }
-
-  async function deleteGalSub(id) {
-    try { await apiFetch(`/admin/gallery-submissions/${id}`, { method: 'DELETE' }); secGalSub() }
-    catch (e) { alert(e.message) }
-  }
-
-  async function replaceGalleryPhoto(file, itemId) {
-    setPhotoUploading(true); setPhotoError('')
-    try {
-      const fd = new FormData()
-      fd.append('photo',    file)
-      fd.append('title',    photoReplace.title)
-      fd.append('category', photoReplace.category || 'Events')
-      fd.append('itemId',   itemId)
-
-      const res = await fetch(`${API_BASE}/gallery/replace-photo`, {
-        method:  'POST',
-        headers: { Authorization: `Bearer ${token()}` },
-        body:    fd,
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`)
-      setPhotoReplace(null)
-      sec('/admin/gallery', setGallery, setGalTotal, galPage)
-    } catch (e) { setPhotoError(e.message) }
-    finally { setPhotoUploading(false) }
-  }
-
-  async function downloadGalSub(id, fileName) {
-    try {
-      const d = await apiFetch(`/admin/gallery-submissions/${id}/download`)
-      const a = document.createElement('a')
-      a.href = d.url; a.download = d.file_name || fileName || 'photo.jpg'; a.target = '_blank'
-      document.body.appendChild(a); a.click(); document.body.removeChild(a)
-    } catch (e) { alert(e.message) }
-  }
-
-  const openCreate = (type, defaults = {}) => { setForm(defaults); setSaveErr(null); setModal({ type, data: null }) }
-  const openEdit   = (type, item)          => { setForm({ ...item }); setSaveErr(null); setModal({ type, data: item }) }
-  const closeModal = ()                    => { setModal(null); setForm({}); setSaveErr(null) }
-  const fld        = key => e => setForm(p => ({ ...p, [key]: e.target ? e.target.value : e }))
-
-  const ENDPOINT_MAP = {
-    post:              '/admin/posts',
-    news_article:      '/admin/news',
-    resource:          '/admin/resources',
-    gallery_item:      '/admin/gallery',
-    research_paper:    '/admin/research',
-    therapist_profile: '/admin/therapists',
-    psych_video:       '/admin/psych-videos',
-    psych_analysis:    '/admin/psych-analyses',
-    psych_concept:     '/admin/psych-concepts',
-    product:           '/admin/products',
-    course:            '/admin/courses',
-    assessment:        '/admin/assessments',
-    community_group:   '/admin/community-groups',
-    faq:               '/admin/faqs',
-    coupon:            '/admin/coupons',
-    setting:           '/admin/settings',
-  }
-
-  const refreshFor = type => {
-    const MAP = {
-      post:              () => sec('/admin/posts',            setPosts,      setPostsTotal,  postsPage),
-      news_article:      () => sec('/admin/news',             setNews,       setNewsTotal,   newsPage),
-      resource:          () => sec('/admin/resources',        setRes,        setResTotal,    resPage),
-      gallery_item:      () => sec('/admin/gallery',          setGallery,    setGalTotal,    galPage),
-      therapist_profile: () => sec('/admin/therapists',       setTherapists, setThrTotal,    thrPage),
-      research_paper:    () => sec('/admin/research',         setResearch,   setRscTotal,    rscPage),
-      psych_video:       () => sec('/admin/psych-videos',     setPvids,      setPvTotal,     pvPage),
-      psych_analysis:    () => sec('/admin/psych-analyses',   setPanalyses,  setPaTotal,     paPage),
-      psych_concept:     () => sec('/admin/psych-concepts',   setPconcepts,  setPcTotal,     pcPage),
-      product:           () => sec('/admin/products',         setProducts,   setProdTotal,   prodPage),
-      course:            () => sec('/admin/courses',          setCourses,    setCourseTotal, coursePage),
-      assessment:        () => sec('/admin/assessments',      setAssess,     setAssTotal,    assPage),
-      community_group:   () => sec('/admin/community-groups', setCommunity,  setComTotal,    comPage),
-      faq:               () => sec('/admin/faqs',             setFaqs,       setFaqTotal,    faqPage),
-      coupon:            () => sec('/admin/coupons',          setCoupons,    setCouTotal,    couPage),
-      setting:           () => fetchSettings(),
-    }
-    if (MAP[type]) MAP[type]()
-  }
+  const openCreate = (type, defs = {}) => { setForm(defs); setSaveErr(null); setModal({ type, data:null }) }
+  const openEdit   = (type, item)  => { setForm({ ...item }); setSaveErr(null); setModal({ type, data:item }) }
+  const closeModal = () => { setModal(null); setForm({}); setSaveErr(null) }
+  const fld = k => e => setForm(p => ({ ...p, [k]: e?.target ? e.target.value : e }))
 
   const saveModal = async () => {
     if (!modal) return
     setSaving(true); setSaveErr(null)
-    const ep = ENDPOINT_MAP[modal.type]
     try {
-      if (modal.data) {
-        await apiFetch(`${ep}/${modal.data.id}`, { method: 'PUT', body: JSON.stringify(form) })
+      if (modal.type === 'workshop') {
+        const body = { ...form, seats:Number(form.seats||20), price:Number(form.price||0), sort_order:Number(form.sort_order||0), tags:Array.isArray(form.tags)?form.tags:(form.tags||'').split(',').map(t=>t.trim()).filter(Boolean), is_active:form.is_active!==false }
+        if (modal.data) await apiFetch(`/workshops/admin/${modal.data.id}`, { method:'PATCH', body:JSON.stringify(body) })
+        else await apiFetch('/workshops/admin', { method:'POST', body:JSON.stringify(body) })
       } else {
-        await apiFetch(ep, { method: 'POST', body: JSON.stringify(form) })
+        const ep = ENDPOINTS[modal.type]
+        if (modal.data) await apiFetch(`${ep}/${modal.data.id}`, { method:'PUT', body:JSON.stringify(form) })
+        else await apiFetch(ep, { method:'POST', body:JSON.stringify(form) })
       }
-      closeModal(); refreshFor(modal.type)
+closeModal()
+await REFRESH_MAP[modal.type]?.()
     } catch (e) { setSaveErr(e.message) }
     finally { setSaving(false) }
   }
@@ -908,468 +1957,285 @@ const [photoError,     setPhotoError]     = useState('')
   const doDelete = async () => {
     if (!delConfirm) return
     try {
-      await apiFetch(`${delConfirm.endpoint}/${delConfirm.id}`, { method: 'DELETE' })
-      setDelConfirm(null)
-      if (delConfirm.refresh) delConfirm.refresh()
+      await apiFetch(`${delConfirm.endpoint}/${delConfirm.id}`, { method:'DELETE' })
+      setDelConfirm(null); delConfirm.refresh?.()
     } catch (e) { alert(e.message) }
   }
 
-  const doApptStatus  = async (id, s) => { try { await adminApi.updateAppointmentStatus(id, s); fetchAppts() } catch { /* silent */ } }
-  const doOrderStatus = async (id, s) => { try { await adminApi.updateOrderStatus(id, s); fetchOrders() } catch { /* silent */ } }
-  const doToggle      = async id      => { try { await adminApi.toggleActive(id); fetchUsers() } catch { /* silent */ } }
-  const doRole        = async (id, r) => { try { await adminApi.updateRole(id, r); fetchUsers() } catch { /* silent */ } }
+  const del = (ep, id, label, refresh) => setDelConfirm({ endpoint:ep, id, label, refresh })
+
+  const doApptStatus  = async (id, s) => { try { await adminApi.updateAppointmentStatus(id, s); fetchAppts() } catch {} }
+  const doOrderStatus = async (id, s) => { try { await adminApi.updateOrderStatus(id, s); fetchOrders() } catch {} }
+  const doToggle      = async id      => { try { await adminApi.toggleActive(id); fetchUsers() } catch {} }
+  const doRole        = async (id, r) => { try { await adminApi.updateRole(id, r); fetchUsers() } catch {} }
   const handleLogout  = async ()      => { await logout(); navigate('/staff') }
 
-  async function doContactStatus(id, status) {
-    try { await apiFetch(`/admin/contacts/${id}`, { method: 'PUT', body: JSON.stringify({ status }) }); sec('/admin/contacts', setContacts, setCtcTotal, ctcPage) } catch { /* silent */ }
+  const doContactStatus = async (id, s) => {
+    try { await apiFetch(`/admin/contacts/${id}`, { method:'PUT', body:JSON.stringify({ status:s }) }); sec('/admin/contacts', setContacts, setCtcTotal, ctcPage) } catch {}
   }
-  async function doSubStatus(id, status) {
-    try { await apiFetch(`/admin/subscriptions/${id}`, { method: 'PUT', body: JSON.stringify({ status }) }); sec('/admin/subscriptions', setSubs, setSubTotal, subPage) } catch { /* silent */ }
+  const doSubStatus = async (id, s) => {
+    try { await apiFetch(`/admin/subscriptions/${id}`, { method:'PUT', body:JSON.stringify({ status:s }) }); sec('/admin/subscriptions', setSubs, setSubTotal, subPage) } catch {}
+  }
+  const updateVolStatus = async (id, status, notes) => {
+    try { await apiFetch(`/admin/volunteers/${id}`, { method:'PUT', body:JSON.stringify({ status, admin_notes:notes }) }); fetchVolunteers() }
+    catch (e) { alert(e.message) }
+  }
+  const updateGalSubStatus = async (id, status) => {
+    try { await apiFetch(`/admin/gallery-submissions/${id}`, { method:'PUT', body:JSON.stringify({ status }) }); fetchGalSubs() }
+    catch (e) { alert(e.message) }
+  }
+  const replaceGalleryPhoto = async (file) => {
+    setPhotoUploading(true); setPhotoError('')
+    try {
+      const fd = new FormData()
+      fd.append('photo', file); fd.append('title', photoReplace.title)
+      fd.append('category', photoReplace.category || 'Events'); fd.append('itemId', photoReplace.id)
+      const res = await fetch(`${API_BASE}/gallery/replace-photo`, { method:'POST', headers:{ Authorization:`Bearer ${getToken()}` }, body:fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`)
+      setPhotoReplace(null); sec('/admin/gallery', setGallery, setGalTotal, galPage)
+    } catch (e) { setPhotoError(e.message) }
+    finally { setPhotoUploading(false) }
   }
 
-  async function sendNotif(e) {
+  const sendNotif = async e => {
     e.preventDefault(); setNotifSending(true); setNotifResult(null)
-    const tk = token()
+    const tk = getToken()
     const send = async uid => {
       const r = await fetch(`${API_BASE}/admin/notifications`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
-        body: JSON.stringify({ userId: uid, title: notifTitle, message: notifMsg, type: notifType }),
+        method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${tk}` },
+        body:JSON.stringify({ userId:uid, title:notifTitle, message:notifMsg, type:notifType }),
       })
       if (!r.ok) throw new Error('fail')
     }
     try {
       if (notifTarget === 'all') {
         let ok = 0
-        for (const c of notifClients) { try { await send(c.id); ok++ } catch { /* skip */ } }
-        setNotifResult({ ok: true, msg: `✓ Sent to ${ok} clients.` })
-        setSentHistory(h => [{ title: notifTitle, target: 'All clients', type: notifType, time: new Date() }, ...h].slice(0, 5))
+        for (const c of notifClients) { try { await send(c.id); ok++ } catch {} }
+        setNotifResult({ ok:true, msg:`✓ Sent to ${ok} clients.` })
       } else {
         await send(notifTarget)
         const c = notifClients.find(x => x.id === notifTarget)
-        setNotifResult({ ok: true, msg: `✓ Sent to ${c?.full_name || 'client'}.` })
-        setSentHistory(h => [{ title: notifTitle, target: c?.full_name || 'Client', type: notifType, time: new Date() }, ...h].slice(0, 5))
+        setNotifResult({ ok:true, msg:`✓ Sent to ${c?.full_name || 'client'}.` })
       }
       setNotifTitle(''); setNotifMsg(''); setNotifTarget('')
-    } catch (err) { setNotifResult({ ok: false, msg: `✗ ${err.message}` }) }
+    } catch (err) { setNotifResult({ ok:false, msg:`✗ ${err.message}` }) }
     finally { setNotifSending(false) }
   }
 
-  const inpSx = { padding: '.55rem .85rem', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: '.85rem', color: 'var(--slate)', outline: 'none', fontFamily: 'var(--font-body)', width: '100%', boxSizing: 'border-box' }
-  const selSx = { ...inpSx, cursor: 'pointer' }
-  const taSx  = { ...inpSx, resize: 'vertical', lineHeight: 1.6 }
-
-  function renderModalFields() {
+  // ── Modal fields ─────────────────────────────────────────────────────────
+  function renderFields() {
     if (!modal) return null
-    switch (modal.type) {
-     case 'post': return (<>
-  <div className="field-row">
-    <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} placeholder="Post title" /></div>
-    <div className="field"><label>Slug *</label><input style={inpSx} value={form.slug || ''} onChange={e => {
-      setForm(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') }))
-    }} placeholder="url-slug" /></div>
-  </div>
-  <div className="field"><label>Excerpt</label><textarea style={taSx} rows={2} value={form.excerpt || ''} onChange={fld('excerpt')} /></div>
-  <div className="field"><label>Content (Markdown)</label><textarea style={{ ...taSx, fontFamily: 'monospace', fontSize: '.82rem' }} rows={10} value={form.content || ''} onChange={fld('content')} placeholder="## Heading&#10;&#10;Write your article here in markdown...&#10;&#10;- Bullet point&#10;- Another point" /></div>
-  <div className="field-row">
-    <div className="field"><label>Category</label>
-      <select style={selSx} value={form.category || 'Anxiety'} onChange={fld('category')}>
-        {['Anxiety','Depression','Self-Care','Mindfulness','Relationships','Trauma','Parenting','Sleep'].map(c => <option key={c}>{c}</option>)}
-      </select>
-    </div>
-    <div className="field"><label>Author Name *</label><input style={inpSx} value={form.author || ''} onChange={fld('author')} placeholder="Dr. Anita Shrestha" /></div>
-  </div>
-  <div className="field-row">
-    <div className="field"><label>Author Role</label><input style={inpSx} value={form.author_role || ''} onChange={fld('author_role')} placeholder="Clinical Psychologist" /></div>
-    <div className="field"><label>Read Time</label><input style={inpSx} value={form.read_time || '5 min'} onChange={fld('read_time')} placeholder="5 min" /></div>
-  </div>
-  <div className="field-row">
-    <div className="field"><label>Publish Date</label><input style={inpSx} type="date" value={form.published_at ? form.published_at.slice(0,10) : new Date().toISOString().slice(0,10)} onChange={fld('published_at')} /></div>
-    <div className="field"><label>Cover Image URL</label><input style={inpSx} value={form.image_url || ''} onChange={fld('image_url')} placeholder="https://…supabase.co/storage/…" /></div>
-  </div>
-  <div className="field"><label>Gradient (fallback color)</label>
-    <select style={selSx} value={form.gradient || 'linear-gradient(135deg, #007BA8 0%, #00BFFF 100%)'} onChange={fld('gradient')}>
-      {[
-        'linear-gradient(135deg, #007BA8 0%, #00BFFF 100%)',
-        'linear-gradient(135deg, #009FD4 0%, #22d3ee 100%)',
-        'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)',
-        'linear-gradient(135deg, #2d4a3e 0%, #3d6b5a 100%)',
-        'linear-gradient(135deg, #006b8f 0%, #00BFFF 100%)',
-      ].map(g => <option key={g} value={g}>{g.slice(0,40)}…</option>)}
-    </select>
-  </div>
-  <div className="field"><label>Tags (comma separated)</label>
-    <input style={inpSx} value={Array.isArray(form.tags) ? form.tags.join(', ') : form.tags || ''} onChange={e => setForm(p => ({ ...p, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))} placeholder="anxiety, nepal, culture" />
-  </div>
-  <div style={{ display: 'flex', gap: '1.5rem' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-      <Toggle on={!!form.featured} onChange={v => setForm(p => ({ ...p, featured: v }))} />
-      <span style={{ fontSize: '.82rem' }}>⭐ Featured</span>
-    </div>
-  </div>
-</>)
-
-      case 'news_article': return (<>
-        <div className="field"><label>Headline *</label><input style={inpSx} value={form.headline || ''} onChange={fld('headline')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Slug *</label><input style={inpSx} value={form.slug || ''} onChange={fld('slug')} /></div>
-          <div className="field"><label>Tag</label><input style={inpSx} value={form.tag || ''} onChange={fld('tag')} placeholder="Research" /></div>
-        </div>
-        <div className="field"><label>Summary</label><textarea style={taSx} rows={3} value={form.summary || ''} onChange={fld('summary')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Author</label><input style={inpSx} value={form.author || ''} onChange={fld('author')} /></div>
-          <div className="field"><label>Author Role</label><input style={inpSx} value={form.author_role || ''} onChange={fld('author_role')} /></div>
-        </div>
-        <div className="field-row">
-          <div className="field"><label>Size</label><select style={selSx} value={form.size || 'medium'} onChange={fld('size')}><option value="hero">Hero</option><option value="secondary">Secondary</option><option value="medium">Medium</option><option value="small">Small</option></select></div>
-          <div className="field"><label>Read Time</label><input style={inpSx} value={form.read_time || '5 min read'} onChange={fld('read_time')} /></div>
-        </div>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          {[['is_published', 'Published'], ['is_featured', 'Featured']].map(([k, l]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-              <Toggle on={form[k] !== false} onChange={v => setForm(p => ({ ...p, [k]: v }))} />
-              <span style={{ fontSize: '.82rem' }}>{l}</span>
-            </div>
-          ))}
-        </div>
-      </>)
-
-      case 'resource': return (<>
-        <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} /></div>
-        <div className="field"><label>Description</label><textarea style={taSx} rows={2} value={form.description || ''} onChange={fld('description')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Category</label><input style={inpSx} value={form.category || ''} onChange={fld('category')} /></div>
-          <div className="field"><label>File Type</label><select style={selSx} value={form.file_type || 'pdf'} onChange={fld('file_type')}><option value="pdf">PDF</option><option value="video">Video</option><option value="audio">Audio</option><option value="worksheet">Worksheet</option><option value="ebook">eBook</option><option value="tool">Tool</option></select></div>
-        </div>
-        <div className="field-row">
-          <div className="field"><label>Emoji</label><input style={inpSx} value={form.emoji || '📄'} onChange={fld('emoji')} /></div>
-          <div className="field"><label>Price Label</label><input style={inpSx} value={form.price_label || 'FREE'} onChange={fld('price_label')} /></div>
-        </div>
-        <div className="field"><label>File URL</label><input style={inpSx} value={form.file_url || ''} onChange={fld('file_url')} placeholder="/resources/file.pdf" /></div>
-        <div className="field-row">
-          <div className="field"><label>Access Level</label><select style={selSx} value={form.access_level || 'public'} onChange={fld('access_level')}><option value="public">Public</option><option value="registered">Registered</option><option value="premium">Premium</option></select></div>
-          <div className="field"><label>Sort Order</label><input style={inpSx} type="number" value={form.sort_order || 0} onChange={fld('sort_order')} /></div>
-        </div>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          {[['is_free', 'Free'], ['is_active', 'Active']].map(([k, l]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-              <Toggle on={form[k] !== false} onChange={v => setForm(p => ({ ...p, [k]: v }))} />
-              <span style={{ fontSize: '.82rem' }}>{l}</span>
-            </div>
-          ))}
-        </div>
-      </>)
-
-      case 'gallery_item': return (<>
-        <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Category *</label><input style={inpSx} value={form.category || ''} onChange={fld('category')} placeholder="Events" /></div>
-          <div className="field"><label>Emoji</label><input style={inpSx} value={form.emoji || '📸'} onChange={fld('emoji')} /></div>
-        </div>
-        <div className="field"><label>Description</label><textarea style={taSx} rows={2} value={form.description || ''} onChange={fld('description')} /></div>
-        <div className="field"><label>Gradient (CSS)</label><input style={inpSx} value={form.gradient || ''} onChange={fld('gradient')} placeholder="linear-gradient(135deg,#007BA8,#00BFFF)" /></div>
-        <div className="field-row">
-          <div className="field"><label>Event Date</label><input style={inpSx} value={form.event_date || ''} onChange={fld('event_date')} placeholder="Mar 2024" /></div>
-          <div className="field"><label>Sort Order</label><input style={inpSx} type="number" value={form.sort_order || 0} onChange={fld('sort_order')} /></div>
-        </div>
-        <div className="field-row3">
-          <div className="field"><label>Col Span</label><input style={inpSx} type="number" value={form.col_span || 1} onChange={fld('col_span')} /></div>
-          <div className="field"><label>Row Span</label><input style={inpSx} type="number" value={form.row_span || 1} onChange={fld('row_span')} /></div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '.2rem' }}>
-            <Toggle on={form.is_active !== false} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
-            <span style={{ fontSize: '.82rem', marginLeft: '.5rem' }}>Active</span>
-          </div>
-        </div>
-      </>)
-
-      case 'research_paper': return (<>
-  <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} placeholder="Full research paper title" /></div>
-  <div className="field-row">
-    <div className="field"><label>Journal</label><input style={inpSx} value={form.journal || ''} onChange={fld('journal')} placeholder="Journal of Mental Health" /></div>
-    <div className="field"><label>Year</label><input style={inpSx} type="number" value={form.year || new Date().getFullYear()} onChange={fld('year')} /></div>
-  </div>
-  <div className="field"><label>Authors (comma separated)</label>
-    <input style={inpSx} value={Array.isArray(form.authors) ? form.authors.join(', ') : form.authors || ''} onChange={e => setForm(p => ({ ...p, authors: e.target.value.split(',').map(a => a.trim()).filter(Boolean) }))} placeholder="Dr. Name One, Dr. Name Two" />
-  </div>
-  <div className="field-row">
-    <div className="field"><label>Paper Type</label>
-      <select style={selSx} value={form.type || 'Clinical Study'} onChange={fld('type')}>
-        {['Clinical Study','Meta-Analysis','Case Report','Review Article','Policy Brief'].map(t => <option key={t}>{t}</option>)}
-      </select>
-    </div>
-    <div className="field"><label>DOI</label><input style={inpSx} value={form.doi || ''} onChange={fld('doi')} placeholder="10.xxxx/..." /></div>
-  </div>
-  <div className="field"><label>Abstract</label><textarea style={taSx} rows={4} value={form.abstract || ''} onChange={fld('abstract')} /></div>
-  <div className="field"><label>Keywords (comma separated)</label>
-    <input style={inpSx} value={Array.isArray(form.keywords) ? form.keywords.join(', ') : form.keywords || ''} onChange={e => setForm(p => ({ ...p, keywords: e.target.value.split(',').map(k => k.trim().toLowerCase()).filter(Boolean) }))} placeholder="depression, nepal, cbt" />
-  </div>
-  <div className="field"><label>PDF URL (from Supabase Storage)</label>
-    <input style={inpSx} value={form.pdf_url || ''} onChange={fld('pdf_url')} placeholder="https://…supabase.co/storage/v1/object/public/research-pdfs/…" />
-  </div>
-  <div className="field-row3">
-    <div className="field"><label>Citations</label><input style={inpSx} type="number" value={form.citations || 0} onChange={fld('citations')} /></div>
-    <div className="field"><label>Downloads</label><input style={inpSx} type="number" value={form.downloads || 0} onChange={fld('downloads')} /></div>
-    <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '.2rem', gap: '.5rem' }}>
-      <Toggle on={form.open_access !== false} onChange={v => setForm(p => ({ ...p, open_access: v }))} />
-      <span style={{ fontSize: '.82rem' }}>🔓 Open Access</span>
-    </div>
-  </div>
-</>)
-
-      case 'psych_video': return (<>
-        <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} /></div>
-        <div className="field"><label>YouTube ID *</label><input style={inpSx} value={form.youtube_id || ''} onChange={fld('youtube_id')} placeholder="dQw4w9WgXcQ" /></div>
-        <div className="field"><label>Description</label><textarea style={taSx} rows={2} value={form.description || ''} onChange={fld('description')} /></div>
-        <div className="field-row3">
-          <div className="field"><label>Duration</label><input style={inpSx} value={form.duration || ''} onChange={fld('duration')} placeholder="18:42" /></div>
-          <div className="field"><label>Views</label><input style={inpSx} value={form.views || ''} onChange={fld('views')} placeholder="12K views" /></div>
-          <div className="field"><label>Sort Order</label><input style={inpSx} type="number" value={form.sort_order || 0} onChange={fld('sort_order')} /></div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <Toggle on={form.is_active !== false} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
-          <span style={{ fontSize: '.82rem' }}>Active</span>
-        </div>
-      </>)
-
-      case 'psych_analysis': return (<>
-        <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Slug *</label><input style={inpSx} value={form.slug || ''} onChange={fld('slug')} /></div>
-          <div className="field"><label>Category</label><input style={inpSx} value={form.category || ''} onChange={fld('category')} /></div>
-        </div>
-        <div className="field-row">
-          <div className="field"><label>Icon</label><input style={inpSx} value={form.icon || '📄'} onChange={fld('icon')} /></div>
-          <div className="field"><label>Read Time</label><input style={inpSx} value={form.read_time || '5 min'} onChange={fld('read_time')} /></div>
-        </div>
-        <div className="field"><label>Excerpt</label><textarea style={taSx} rows={2} value={form.excerpt || ''} onChange={fld('excerpt')} /></div>
-        <div className="field"><label>Content</label><textarea style={taSx} rows={5} value={form.content || ''} onChange={fld('content')} /></div>
-        <div className="field"><label>Concepts (comma separated)</label><input style={inpSx} value={Array.isArray(form.concepts) ? form.concepts.join(', ') : form.concepts || ''} onChange={e => setForm(p => ({ ...p, concepts: e.target.value.split(',').map(c => c.trim()).filter(Boolean) }))} /></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <Toggle on={form.is_active !== false} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
-          <span style={{ fontSize: '.82rem' }}>Active</span>
-        </div>
-      </>)
-
-      case 'psych_concept': return (<>
+    const t = modal.type
+    if (t === 'post') return (<>
+      <div className="field-row">
+        <div className="field"><label>Title *</label><input className="inp" value={form.title||''} onChange={fld('title')} /></div>
+        <div className="field"><label>Slug *</label><input className="inp" value={form.slug||''} onChange={e => setForm(p => ({ ...p, slug:e.target.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') }))} /></div>
+      </div>
+      <div className="field"><label>Excerpt</label><textarea className="inp" rows={2} value={form.excerpt||''} onChange={fld('excerpt')} /></div>
+      <div className="field"><label>Content (Markdown)</label><textarea className="inp mono" rows={8} value={form.content||''} onChange={fld('content')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Category</label><select className="inp" value={form.category||'Anxiety'} onChange={fld('category')}>{['Anxiety','Depression','Self-Care','Mindfulness','Relationships','Trauma','Parenting','Sleep'].map(c=><option key={c}>{c}</option>)}</select></div>
+        <div className="field"><label>Author *</label><input className="inp" value={form.author||''} onChange={fld('author')} /></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Read Time</label><input className="inp" value={form.read_time||'5 min'} onChange={fld('read_time')} /></div>
+        <div className="field"><label>Publish Date</label><input className="inp" type="date" value={(form.published_at||new Date().toISOString()).slice(0,10)} onChange={fld('published_at')} /></div>
+      </div>
+      <div className="field"><label>Cover Image URL</label><input className="inp" value={form.image_url||''} onChange={fld('image_url')} /></div>
+      <div className="field"><label>Tags (comma separated)</label><input className="inp" value={Array.isArray(form.tags)?form.tags.join(', '):form.tags||''} onChange={e=>setForm(p=>({...p,tags:e.target.value.split(',').map(t=>t.trim()).filter(Boolean)}))} /></div>
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={!!form.featured} onChange={v=>setForm(p=>({...p,featured:v}))} /> Featured</label>
+    </>)
+    if (t === 'news_article') return (<>
+      <div className="field"><label>Headline *</label><input className="inp" value={form.headline||''} onChange={fld('headline')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Slug *</label><input className="inp" value={form.slug||''} onChange={fld('slug')} /></div>
+        <div className="field"><label>Tag</label><input className="inp" value={form.tag||''} onChange={fld('tag')} /></div>
+      </div>
+      <div className="field"><label>Summary</label><textarea className="inp" rows={3} value={form.summary||''} onChange={fld('summary')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Author</label><input className="inp" value={form.author||''} onChange={fld('author')} /></div>
+        <div className="field"><label>Author Role</label><input className="inp" value={form.author_role||''} onChange={fld('author_role')} /></div>
+      </div>
+      <div style={{display:'flex',gap:'1.25rem'}}>
+        {[['is_published','Published'],['is_featured','Featured']].map(([k,l])=>(<label key={k} style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form[k]!==false} onChange={v=>setForm(p=>({...p,[k]:v}))} />{l}</label>))}
+      </div>
+    </>)
+    if (t === 'resource') return (<>
+      <div className="field"><label>Title *</label><input className="inp" value={form.title||''} onChange={fld('title')} /></div>
+      <div className="field"><label>Description</label><textarea className="inp" rows={2} value={form.description||''} onChange={fld('description')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Category</label><input className="inp" value={form.category||''} onChange={fld('category')} /></div>
+        <div className="field"><label>File Type</label><select className="inp" value={form.file_type||'pdf'} onChange={fld('file_type')}><option value="pdf">PDF</option><option value="video">Video</option><option value="audio">Audio</option></select></div>
+      </div>
+      <div className="field"><label>File URL</label><input className="inp" value={form.file_url||''} onChange={fld('file_url')} /></div>
+      <div style={{display:'flex',gap:'1.25rem'}}>
+        {[['is_free','Free'],['is_active','Active']].map(([k,l])=>(<label key={k} style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form[k]!==false} onChange={v=>setForm(p=>({...p,[k]:v}))} />{l}</label>))}
+      </div>
+    </>)
+    if (t === 'gallery_item') return (<>
+      <div className="field"><label>Title *</label><input className="inp" value={form.title||''} onChange={fld('title')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Category *</label><input className="inp" value={form.category||''} onChange={fld('category')} /></div>
+        <div className="field"><label>Emoji</label><input className="inp" value={form.emoji||'📸'} onChange={fld('emoji')} /></div>
+      </div>
+      <div className="field"><label>Description</label><textarea className="inp" rows={2} value={form.description||''} onChange={fld('description')} /></div>
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form.is_active!==false} onChange={v=>setForm(p=>({...p,is_active:v}))} /> Active</label>
+    </>)
+    if (t === 'community_group') return (<>
+      <div className="field"><label>Name *</label><input className="inp" value={form.name||''} onChange={fld('name')} /></div>
+      <div className="field"><label>Description</label><textarea className="inp" rows={3} value={form.description||''} onChange={fld('description')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Emoji</label><input className="inp" value={form.emoji||'💙'} onChange={fld('emoji')} /></div>
+        <div className="field"><label>Color</label><input className="inp" value={form.color||''} onChange={fld('color')} placeholder="#3b82f6" /></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Membership Fee (NPR) — 0=Free</label><input className="inp" type="number" value={form.membership_fee||0} onChange={fld('membership_fee')} /></div>
+        <div className="field"><label>Period</label><select className="inp" value={form.membership_period||'one_time'} onChange={fld('membership_period')}><option value="one_time">One-time</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div>
+      </div>
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form.is_active!==false} onChange={v=>setForm(p=>({...p,is_active:v}))} /> Active</label>
+    </>)
+    if (t === 'faq') return (<>
+      <div className="field"><label>Question *</label><input className="inp" value={form.question||''} onChange={fld('question')} /></div>
+      <div className="field"><label>Answer *</label><textarea className="inp" rows={4} value={form.answer||''} onChange={fld('answer')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Category</label><input className="inp" value={form.category||''} onChange={fld('category')} /></div>
+        <div className="field"><label>Sort Order</label><input className="inp" type="number" value={form.sort_order||0} onChange={fld('sort_order')} /></div>
+      </div>
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form.is_active!==false} onChange={v=>setForm(p=>({...p,is_active:v}))} /> Active</label>
+    </>)
+    if (t === 'coupon') return (<>
+      <div className="field-row">
+        <div className="field"><label>Code *</label><input className="inp mono" value={form.code||''} onChange={fld('code')} /></div>
+        <div className="field"><label>Type</label><select className="inp" value={form.type||'percentage'} onChange={fld('type')}><option value="percentage">Percentage</option><option value="fixed">Fixed (NPR)</option></select></div>
+      </div>
+      <div className="field-row3">
+        <div className="field"><label>Value *</label><input className="inp" type="number" value={form.value||''} onChange={fld('value')} /></div>
+        <div className="field"><label>Min Order</label><input className="inp" type="number" value={form.min_order_amount||0} onChange={fld('min_order_amount')} /></div>
+        <div className="field"><label>Max Uses</label><input className="inp" type="number" value={form.max_uses||''} onChange={fld('max_uses')} /></div>
+      </div>
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form.is_active!==false} onChange={v=>setForm(p=>({...p,is_active:v}))} /> Active</label>
+    </>)
+    if (t === 'setting') return (<>
+      <div className="field"><label>Key</label><input className="inp mono" value={form.key||''} readOnly style={{background:'var(--surface-2)',cursor:'not-allowed'}} /></div>
+      <div className="field"><label>Value</label><textarea className="inp" rows={3} value={typeof form.value==='object'?JSON.stringify(form.value):String(form.value??'')} onChange={e=>setForm(p=>({...p,value:e.target.value}))} /><div className="field-hint">Wrap strings in quotes: "Nepal". Numbers without quotes.</div></div>
+    </>)
+    if (t === 'workshop') return (<>
+      <div className="field-row">
+        <div className="field"><label>Emoji</label><input className="inp" value={form.emoji||'🧠'} onChange={fld('emoji')} /></div>
+        <div className="field"><label>Title *</label><input className="inp" value={form.title||''} onChange={fld('title')} /></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Facilitator *</label><input className="inp" value={form.facilitator||''} onChange={fld('facilitator')} /></div>
+        <div className="field"><label>Mode *</label><select className="inp" value={form.mode||'Online (Zoom)'} onChange={fld('mode')}><option>Online (Zoom)</option><option>In-Person, Kathmandu</option><option>Hybrid</option></select></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Date *</label><input className="inp" value={form.date||''} onChange={fld('date')} placeholder="Sat, 21 Jun 2025" /></div>
+        <div className="field"><label>Time *</label><input className="inp" value={form.time||''} onChange={fld('time')} placeholder="10:00 AM – 1:00 PM" /></div>
+      </div>
+      <div className="field-row3">
+        <div className="field"><label>Seats</label><input className="inp" type="number" value={form.seats||20} onChange={fld('seats')} /></div>
+        <div className="field"><label>Price (NPR)</label><input className="inp" type="number" value={form.price??0} onChange={fld('price')} /></div>
+        <div className="field"><label>Sort Order</label><input className="inp" type="number" value={form.sort_order||0} onChange={fld('sort_order')} /></div>
+      </div>
+      <div className="field"><label>Description</label><textarea className="inp" rows={3} value={form.description||''} onChange={fld('description')} /></div>
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form.is_active!==false} onChange={v=>setForm(p=>({...p,is_active:v}))} /> Active</label>
+    </>)
+    if (t === 'research_paper') return (<>
+      <div className="field"><label>Title *</label><input className="inp" value={form.title||''} onChange={fld('title')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Journal</label><input className="inp" value={form.journal||''} onChange={fld('journal')} /></div>
+        <div className="field"><label>Year</label><input className="inp" type="number" value={form.year||''} onChange={fld('year')} /></div>
+      </div>
+      <div className="field"><label>Abstract</label><textarea className="inp" rows={3} value={form.abstract||''} onChange={fld('abstract')} /></div>
+      <div className="field"><label>PDF URL</label><input className="inp" value={form.pdf_url||''} onChange={fld('pdf_url')} /></div>
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form.open_access!==false} onChange={v=>setForm(p=>({...p,open_access:v}))} /> Open Access</label>
+    </>)
+    if (t === 'course') return (<>
+      <div className="field-row">
+        <div className="field"><label>Emoji</label><input className="inp" value={form.emoji||'📚'} onChange={fld('emoji')} /></div>
+        <div className="field"><label>Title *</label><input className="inp" value={form.title||''} onChange={fld('title')} /></div>
+      </div>
+      <div className="field"><label>Description</label><textarea className="inp" rows={2} value={form.description||''} onChange={fld('description')} /></div>
+      <div className="field-row">
+        <div className="field"><label>Level</label><select className="inp" value={form.level||'Beginner'} onChange={fld('level')}><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
+        <div className="field"><label>Price (NPR) — 0=Free</label><input className="inp" type="number" value={form.price||0} onChange={fld('price')} /></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Duration (hrs)</label><input className="inp" type="number" value={form.duration_hours||''} onChange={fld('duration_hours')} /></div>
+        <div className="field"><label>Lessons Count</label><input className="inp" type="number" value={form.lessons_count||''} onChange={fld('lessons_count')} /></div>
+      </div>
+      <div className="field-row">
         <div className="field">
-          <label>Term *</label>
-          <input style={inpSx} value={form.term || ''} onChange={fld('term')} placeholder="e.g. Cognitive Dissonance" />
+          <label>Start Date</label>
+          <input className="inp" type="date" value={(form.start_date||'').slice(0,10)} onChange={fld('start_date')} />
         </div>
         <div className="field">
-          <label>Definition *</label>
-          <textarea style={taSx} rows={4} value={form.definition || ''} onChange={fld('definition')} placeholder="The mental discomfort experienced when holding two contradictory beliefs…" />
+          <label>Start Time</label>
+          <input className="inp" type="time" value={form.start_time||''} onChange={fld('start_time')} />
         </div>
-        <div className="field-row">
-          <div className="field"><label>Sort Order</label><input style={inpSx} type="number" value={form.sort_order || 0} onChange={fld('sort_order')} /></div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '.2rem', gap: '.5rem' }}>
-            <Toggle on={form.is_active !== false} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
-            <span style={{ fontSize: '.82rem' }}>Active</span>
-          </div>
-        </div>
-      </>)
-
-      case 'therapist_profile': return (<>
-        <div className="field-row">
-          <div className="field"><label>Full Name *</label><input style={inpSx} value={form.full_name || ''} onChange={fld('full_name')} placeholder="Dr. Priya Tamang" /></div>
-          <div className="field"><label>Email</label><input style={inpSx} value={form.email || ''} onChange={fld('email')} type="email" /></div>
-        </div>
-        <div className="field-row">
-          <div className="field"><label>Phone</label><input style={inpSx} value={form.phone || ''} onChange={fld('phone')} /></div>
-          <div className="field"><label>Department</label><input style={inpSx} value={form.department || ''} onChange={fld('department')} placeholder="Clinical" /></div>
-        </div>
-        <div className="field-row">
-          <div className="field"><label>License Number</label><input style={inpSx} value={form.license_number || ''} onChange={fld('license_number')} /></div>
-          <div className="field"><label>License Type</label><input style={inpSx} value={form.license_type || ''} onChange={fld('license_type')} /></div>
-        </div>
-        <div className="field"><label>Specializations (comma separated)</label><input style={inpSx} value={Array.isArray(form.specializations) ? form.specializations.join(', ') : form.specializations || ''} onChange={e => setForm(p => ({ ...p, specializations: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} /></div>
-        <div className="field"><label>Bio</label><textarea style={taSx} rows={4} value={form.bio || ''} onChange={fld('bio')} /></div>
-        <div className="field-row3">
-          <div className="field"><label>Fee (NPR)</label><input style={inpSx} type="number" value={form.consultation_fee || ''} onChange={fld('consultation_fee')} /></div>
-          <div className="field"><label>Duration (min)</label><input style={inpSx} type="number" value={form.session_duration || 60} onChange={fld('session_duration')} /></div>
-          <div className="field"><label>Experience (yrs)</label><input style={inpSx} type="number" value={form.experience_years || 0} onChange={fld('experience_years')} /></div>
-        </div>
-        <div className="field-row">
-          <div className="field"><label>Languages (comma separated)</label><input style={inpSx} value={Array.isArray(form.languages_spoken) ? form.languages_spoken.join(', ') : form.languages_spoken || ''} onChange={e => setForm(p => ({ ...p, languages_spoken: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} /></div>
-          <div className="field"><label>Avatar URL</label><input style={inpSx} value={form.avatar_url || ''} onChange={fld('avatar_url')} /></div>
-        </div>
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-          {[['is_available', 'Available'], ['is_verified', 'Verified'], ['is_active', 'Active']].map(([k, l]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-              <Toggle on={form[k] !== false} onChange={v => setForm(p => ({ ...p, [k]: v }))} />
-              <span style={{ fontSize: '.82rem' }}>{l}</span>
-            </div>
-          ))}
-        </div>
-      </>)
-
-      case 'product': return (<>
-        <div className="field"><label>Name *</label><input style={inpSx} value={form.name || ''} onChange={fld('name')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Slug *</label><input style={inpSx} value={form.slug || ''} onChange={fld('slug')} /></div>
-          <div className="field"><label>SKU</label><input style={inpSx} value={form.sku || ''} onChange={fld('sku')} /></div>
-        </div>
-        <div className="field"><label>Description</label><textarea style={taSx} rows={3} value={form.description || ''} onChange={fld('description')} /></div>
-        <div className="field-row3">
-          <div className="field"><label>Price (NPR) *</label><input style={inpSx} type="number" value={form.price || ''} onChange={fld('price')} /></div>
-          <div className="field"><label>Sale Price</label><input style={inpSx} type="number" value={form.sale_price || ''} onChange={fld('sale_price')} /></div>
-          <div className="field"><label>Stock Qty</label><input style={inpSx} type="number" value={form.stock_quantity || 0} onChange={fld('stock_quantity')} /></div>
-        </div>
-        <div className="field"><label>Tags (comma separated)</label><input style={inpSx} value={Array.isArray(form.tags) ? form.tags.join(', ') : form.tags || ''} onChange={e => setForm(p => ({ ...p, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))} /></div>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          {[['is_digital', 'Digital'], ['is_active', 'Active'], ['is_featured', 'Featured']].map(([k, l]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-              <Toggle on={!!form[k]} onChange={v => setForm(p => ({ ...p, [k]: v }))} />
-              <span style={{ fontSize: '.82rem' }}>{l}</span>
-            </div>
-          ))}
-        </div>
-      </>)
-
-      case 'course': return (<>
-        <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Slug *</label><input style={inpSx} value={form.slug || ''} onChange={fld('slug')} /></div>
-          <div className="field"><label>Emoji</label><input style={inpSx} value={form.emoji || '📚'} onChange={fld('emoji')} /></div>
-        </div>
-        <div className="field"><label>Description</label><textarea style={taSx} rows={3} value={form.description || ''} onChange={fld('description')} /></div>
-        <div className="field-row3">
-          <div className="field"><label>Price (NPR)</label><input style={inpSx} type="number" value={form.price || 0} onChange={fld('price')} /></div>
-          <div className="field"><label>Price Label</label><input style={inpSx} value={form.price_label || 'FREE'} onChange={fld('price_label')} /></div>
-          <div className="field"><label>Level</label><select style={selSx} value={form.level || 'Beginner'} onChange={fld('level')}><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
-        </div>
-        <div className="field-row">
-          <div className="field"><label>Lessons Count</label><input style={inpSx} type="number" value={form.lessons_count || 0} onChange={fld('lessons_count')} /></div>
-          <div className="field"><label>Duration (hours)</label><input style={inpSx} type="number" value={form.duration_hours || 0} onChange={fld('duration_hours')} /></div>
-        </div>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          {[['is_free', 'Free'], ['is_published', 'Published']].map(([k, l]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-              <Toggle on={!!form[k]} onChange={v => setForm(p => ({ ...p, [k]: v }))} />
-              <span style={{ fontSize: '.82rem' }}>{l}</span>
-            </div>
-          ))}
-        </div>
-      </>)
-
-      case 'assessment': return (<>
-        <div className="field"><label>Title *</label><input style={inpSx} value={form.title || ''} onChange={fld('title')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Slug *</label><input style={inpSx} value={form.slug || ''} onChange={fld('slug')} /></div>
-          <div className="field"><label>Type</label><select style={selSx} value={form.type || 'custom'} onChange={fld('type')}><option value="phq9">PHQ-9</option><option value="gad7">GAD-7</option><option value="dass21">DASS-21</option><option value="burnout">Burnout</option><option value="stress">Stress</option><option value="custom">Custom</option></select></div>
-        </div>
-        <div className="field"><label>Description</label><textarea style={taSx} rows={2} value={form.description || ''} onChange={fld('description')} /></div>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          {[['is_free', 'Free'], ['is_active', 'Active']].map(([k, l]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-              <Toggle on={form[k] !== false} onChange={v => setForm(p => ({ ...p, [k]: v }))} />
-              <span style={{ fontSize: '.82rem' }}>{l}</span>
-            </div>
-          ))}
-        </div>
-      </>)
-
-      case 'community_group': return (<>
-        <div className="field"><label>Name *</label><input style={inpSx} value={form.name || ''} onChange={fld('name')} /></div>
-        <div className="field"><label>Description</label><textarea style={taSx} rows={3} value={form.description || ''} onChange={fld('description')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Emoji</label><input style={inpSx} value={form.emoji || '💙'} onChange={fld('emoji')} /></div>
-          <div className="field"><label>Color</label><input style={inpSx} value={form.color || ''} onChange={fld('color')} /></div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <Toggle on={form.is_active !== false} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
-          <span style={{ fontSize: '.82rem' }}>Active</span>
-        </div>
-      </>)
-
-      case 'faq': return (<>
-        <div className="field"><label>Question *</label><input style={inpSx} value={form.question || ''} onChange={fld('question')} /></div>
-        <div className="field"><label>Answer *</label><textarea style={taSx} rows={4} value={form.answer || ''} onChange={fld('answer')} /></div>
-        <div className="field-row">
-          <div className="field"><label>Category</label><input style={inpSx} value={form.category || ''} onChange={fld('category')} /></div>
-          <div className="field"><label>Sort Order</label><input style={inpSx} type="number" value={form.sort_order || 0} onChange={fld('sort_order')} /></div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <Toggle on={form.is_active !== false} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
-          <span style={{ fontSize: '.82rem' }}>Active</span>
-        </div>
-      </>)
-
-      case 'coupon': return (<>
-        <div className="field-row">
-          <div className="field"><label>Code *</label><input style={inpSx} value={form.code || ''} onChange={fld('code')} placeholder="WELCOME20" /></div>
-          <div className="field"><label>Type</label><select style={selSx} value={form.type || 'percentage'} onChange={fld('type')}><option value="percentage">Percentage</option><option value="fixed">Fixed (NPR)</option></select></div>
-        </div>
-        <div className="field"><label>Description</label><input style={inpSx} value={form.description || ''} onChange={fld('description')} /></div>
-        <div className="field-row3">
-          <div className="field"><label>Value *</label><input style={inpSx} type="number" value={form.value || ''} onChange={fld('value')} /></div>
-          <div className="field"><label>Min Order (NPR)</label><input style={inpSx} type="number" value={form.min_order_amount || 0} onChange={fld('min_order_amount')} /></div>
-          <div className="field"><label>Max Uses</label><input style={inpSx} type="number" value={form.max_uses || ''} onChange={fld('max_uses')} /></div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <Toggle on={form.is_active !== false} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
-          <span style={{ fontSize: '.82rem' }}>Active</span>
-        </div>
-      </>)
-
-      case 'setting': return (<>
-        <div className="field"><label>Key</label><input style={{ ...inpSx, background: '#f0f4f8', cursor: 'not-allowed' }} value={form.key || ''} readOnly /></div>
+      </div>
+      <div className="field-row">
         <div className="field">
-          <label>Value</label>
-          <textarea style={taSx} rows={3} value={typeof form.value === 'object' ? JSON.stringify(form.value) : String(form.value ?? '')} onChange={e => setForm(p => ({ ...p, value: e.target.value }))} />
-          <span className="hint">Wrap strings in quotes: "Nepal". Numbers without quotes.</span>
+          <label>Total Seats (blank = unlimited)</label>
+          <input className="inp" type="number" value={form.seats||''} onChange={fld('seats')} placeholder="e.g. 30" />
         </div>
-      </>)
-
-      default: return <p style={{ color: 'var(--slate-lt)', fontSize: '.85rem' }}>No form defined for "{modal.type}".</p>
-    }
+        <div className="field">
+          <label>Tags (comma separated)</label>
+          <input className="inp" value={Array.isArray(form.tags)?form.tags.join(', '):form.tags||''} onChange={e=>setForm(p=>({...p,tags:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)}))} />
+        </div>
+      </div>
+      <div className="field"><label>Thumbnail URL</label><input className="inp" value={form.thumbnail_url||''} onChange={fld('thumbnail_url')} /></div>
+      <div style={{display:'flex',gap:'1.25rem'}}>
+        {[['is_free','Free'],['is_published','Published']].map(([k,l])=>(<label key={k} style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form[k]!==false} onChange={v=>setForm(p=>({...p,[k]:v}))} />{l}</label>))}
+      </div>
+    </>)
+    if (['psych_video','psych_analysis','psych_concept','product','assessment','therapist_profile'].includes(t)) return (<>
+      <div className="field"><label>{t==='psych_concept'?'Term':'Title'} *</label><input className="inp" value={form.title||form.term||''} onChange={e=>setForm(p=>({...p,[t==='psych_concept'?'term':'title']:e.target.value}))} /></div>
+      {t==='psych_video' && <div className="field"><label>YouTube ID *</label><input className="inp mono" value={form.youtube_id||''} onChange={fld('youtube_id')} /></div>}
+      {t==='psych_concept' && <div className="field"><label>Definition *</label><textarea className="inp" rows={4} value={form.definition||''} onChange={fld('definition')} /></div>}
+      {t==='product' && <div className="field-row"><div className="field"><label>Price (NPR)</label><input className="inp" type="number" value={form.price||0} onChange={fld('price')} /></div><div className="field"><label>Stock</label><input className="inp" type="number" value={form.stock_quantity||0} onChange={fld('stock_quantity')} /></div></div>}
+      {t==='therapist_profile' && <div className="field-row"><div className="field"><label>Email</label><input className="inp" value={form.email||''} onChange={fld('email')} /></div><div className="field"><label>Fee (NPR)</label><input className="inp" type="number" value={form.consultation_fee||0} onChange={fld('consultation_fee')} /></div></div>}
+      <label style={{display:'flex',alignItems:'center',gap:'.5rem',fontSize:'.78rem',cursor:'pointer'}}><Toggle on={form.is_active!==false && form.is_available!==false} onChange={v=>setForm(p=>({...p,is_active:v,is_available:v}))} /> Active</label>
+    </>)
+    return <p style={{color:'var(--text-muted)',fontSize:'.82rem'}}>No form defined for "{t}".</p>
   }
 
-  
+  const MODAL_TITLES = { post:'Blog Post', news_article:'News Article', resource:'Resource', gallery_item:'Gallery Item', research_paper:'Research Paper', psych_video:'Psych Video', psych_analysis:'Psych Analysis', psych_concept:'Psych Concept', therapist_profile:'Therapist', product:'Product', course:'Course', assessment:'Assessment', community_group:'Community Group', faq:'FAQ', coupon:'Coupon', setting:'Setting', workshop:'Workshop' }
 
   if (authLoading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-      <div style={{ textAlign: 'center', color: 'var(--slate-lt)' }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: '.75rem' }}>🌿</div>
-        <p style={{ fontFamily: 'var(--font-body)' }}>Verifying session…</p>
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0d1117' }}>
+      <div style={{ textAlign:'center', color:'#4a5568' }}>
+        <div style={{ fontSize:'2rem', marginBottom:'.75rem' }}>◈</div>
+        <p style={{ fontFamily:'Sora, sans-serif', fontSize:'.82rem' }}>Verifying session…</p>
       </div>
     </div>
   )
 
   const allTabs = SIDEBAR.flatMap(g => g.items)
-  const del = (endpoint, id, label, refresh) => setDelConfirm({ endpoint, id, label, refresh })
 
   return (
     <div className="adm">
 
       {/* TOP BAR */}
       <div className="adm-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
-          <img src="/header.png" alt="" style={{ height: 28, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+        <div className="brand">
+          <img src="/header.png" className="brand-logo" alt="" onError={e => e.target.style.display='none'} />
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '.92rem', color: 'white', fontWeight: 600, lineHeight: 1.1 }}>Puja Samargi</div>
-            <div style={{ fontSize: '.6rem', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Admin Panel</div>
+            <div className="brand-name">Puja Samargi</div>
+            <div className="brand-sub">Admin Panel</div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: '.78rem' }}>
-            {(user?.fullName || user?.full_name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-          </div>
-          <span style={{ fontSize: '.8rem', color: 'rgba(255,255,255,.7)', fontFamily: 'var(--font-body)' }}>
-            {(user?.fullName || user?.full_name || '').split(' ')[0]}
-          </span>
-          <button onClick={handleLogout} style={{ padding: '.32rem .7rem', borderRadius: 6, border: '1.5px solid rgba(255,255,255,.25)', background: 'rgba(255,255,255,.1)', color: 'white', fontSize: '.75rem', cursor: 'pointer', fontFamily: 'inherit' }}>
-            Log Out
-          </button>
+        <div className="topbar-right">
+          <div className="avatar">{(user?.fullName||user?.full_name||'A').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+          <span className="topbar-name">{(user?.fullName||user?.full_name||'').split(' ')[0]}</span>
+          <button className="logout-btn" onClick={handleLogout}>Log out</button>
         </div>
       </div>
 
-      {/* MOBILE TABBAR */}
+      {/* MOBILE TAB BAR */}
       <div className="adm-tabbar">
-        {allTabs.map(t => (
-          <button key={t.id} className={`tab-btn${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
-            {t.icon} {t.label}
-          </button>
-        ))}
+        {allTabs.map(t => <button key={t.id} className={`mob-tab${tab===t.id?' active':''}`} onClick={() => setTab(t.id)}>{t.label}</button>)}
       </div>
 
       <div className="adm-body">
@@ -1378,80 +2244,65 @@ const [photoError,     setPhotoError]     = useState('')
         <div className="adm-side">
           {SIDEBAR.map(g => (
             <div key={g.group}>
-              <div className="side-group">{g.group}</div>
+              <div className="side-group-label">{g.group}</div>
               {g.items.map(t => (
-                <button key={t.id} className={`side-btn${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
-                  <span style={{ width: 16, textAlign: 'center', fontSize: '.85rem' }}>{t.icon}</span>
-                  {t.label}
+                <button key={t.id} className={`side-btn${tab===t.id?' active':''}`} onClick={() => setTab(t.id)}>
+                  <span className="side-icon">{t.icon}</span>{t.label}
                 </button>
               ))}
             </div>
           ))}
           <div className="side-divider" />
-          <button className="side-btn highlight" onClick={() => navigate('/register-staffs')}>
-            <span style={{ width: 16, textAlign: 'center' }}>➕</span>Register Staff
+          <button className="side-btn side-accent" onClick={() => navigate('/register-staffs')}>
+            <span className="side-icon">+</span>Register Staff
           </button>
         </div>
 
-        {/* MAIN CONTENT */}
+        {/* CONTENT */}
         <div className="adm-content">
 
           {/* ═══ DASHBOARD ═══ */}
           {tab === 'dashboard' && (
             <div>
-              <div className="sec-head">
-                <div><h1 className="sec-title">Overview</h1><p className="sec-sub">Welcome back, {(user?.fullName || user?.full_name || '').split(' ')[0]}.</p></div>
-                <button className="btn btn-ghost" onClick={fetchDashboard}>🔄 Refresh</button>
-              </div>
+              <SectionHeader title="Overview" sub={`Welcome back, ${(user?.fullName||user?.full_name||'').split(' ')[0]}.`}>
+                <button className="btn btn-ghost" onClick={loadDashboard}>↺ Refresh</button>
+              </SectionHeader>
               <div className="stat-grid">
                 {[
-                  { icon: '👥', val: stats?.totalUsers,        label: 'Total Clients',   color: '#e0f7ff', tab: 'users' },
-                  { icon: '📅', val: stats?.totalAppointments, label: 'Appointments',    color: '#e8f8f0', tab: 'appointments' },
-                  { icon: '📦', val: stats?.totalOrders,       label: 'Total Orders',    color: '#fff5e6', tab: 'orders' },
-{ icon: '💰', val: stats?.revenue30d != null ? `NPR ${Number(stats.revenue30d).toLocaleString()}` : undefined, label: 'Revenue (30d)', color: '#f0e8ff', tab: 'payments' },
-                ].map((s, i) => (
-                  <div key={i} className="stat-card" style={{ background: s.color }} onClick={() => setTab(s.tab)}>
-                    <div style={{ fontSize: '1.5rem', marginBottom: '.35rem' }}>{s.icon}</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.3rem,3vw,1.8rem)', color: 'var(--slate)', fontWeight: 700 }}>
-                      {s.val ?? <span style={{ opacity: .3, fontSize: '1.1rem' }}>—</span>}
-                    </div>
-                    <div style={{ fontSize: '.72rem', color: 'var(--slate-lt)', fontWeight: 600, marginTop: '.2rem' }}>{s.label}</div>
+                  { icon:'◎', val:stats?.totalUsers,        label:'Total Clients',  bg:'#eff6ff', tab:'users' },
+                  { icon:'▦', val:stats?.totalAppointments, label:'Appointments',   bg:'#ecfdf5', tab:'appointments' },
+                  { icon:'⬡', val:stats?.totalOrders,       label:'Total Orders',   bg:'#fffbeb', tab:'orders' },
+                  { icon:'◉', val:stats?.revenue30d!=null?`NPR ${Number(stats.revenue30d).toLocaleString()}`:null, label:'Revenue', bg:'#f5f3ff', tab:'payments' },
+                ].map((s,i) => (
+                  <div key={i} className="stat-card" style={{ background:s.bg }} onClick={() => setTab(s.tab)}>
+                    <div className="stat-icon">{s.icon}</div>
+                    <div className="stat-val">{s.val ?? <span style={{opacity:.3,fontSize:'1rem'}}>—</span>}</div>
+                    <div className="stat-label">{s.label}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '1.25rem', marginBottom: '1.5rem' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--slate)', marginBottom: '.85rem' }}>Quick Access</div>
-                <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
-                  {allTabs.slice(1).map(t => <button key={t.id} className="btn btn-ghost btn-sm" onClick={() => setTab(t.id)}>{t.icon} {t.label}</button>)}
+              <div className="section-inner">
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem' }}>
+                  <span style={{ fontWeight:700, fontSize:'.9rem' }}>Recent Payments</span>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setTab('payments')}>View all →</button>
                 </div>
-              </div>
-              <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '1.25rem' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--slate)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Recent Payments</span>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setTab('payments')}>View All →</button>
-                </div>
-                {busy.dash
-                  ? <p style={{ color: 'var(--slate-lt)', fontSize: '.82rem' }}>Loading…</p>
-                  : recent.length === 0
-                    ? <p style={{ color: 'var(--slate-lt)', fontSize: '.82rem' }}>No payments yet.</p>
-                    : recent.map((p, i) => {
-                        const { clientName, linkedTo, isPending } = resolvePaymentDetails(p)
-                        return (
-                          <div key={p.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.6rem 0', borderBottom: i < recent.length - 1 ? '1px solid var(--border)' : 'none', flexWrap: 'wrap', gap: '.5rem' }}>
-                            <div>
-                              <div style={{ fontSize: '.85rem', color: 'var(--slate)', fontWeight: 600 }}>
-                                {p.currency || 'NPR'} {Number(p.amount || 0).toLocaleString()}
-                                <span style={{ fontSize: '.72rem', color: 'var(--slate-lt)', fontWeight: 400, marginLeft: '.4rem' }}>· {p.method || '—'}</span>
-                              </div>
-                              <div style={{ fontSize: '.72rem', color: 'var(--slate-lt)' }}>{clientName} · {linkedTo} · {fmt(p.created_at)}</div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
-                              <PaymentValidityBadge status={p.status} />
-                              {isPending && <button className="btn btn-green btn-sm" onClick={() => setTab('payments')}>Confirm →</button>}
-                            </div>
+                {busy.dash ? <div className="tbl-loading"><span className="spinner" /> Loading…</div>
+                  : recent.length === 0 ? <div className="empty-state"><div className="empty-text">No payments yet.</div></div>
+                  : recent.map((p,i) => {
+                      const { clientName, category, isPending } = resolvePaymentDetails(p)
+                      return (
+                        <div key={p.id||i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'.6rem 0', borderBottom:i<recent.length-1?'1px solid var(--border-2)':'none', flexWrap:'wrap', gap:'.5rem' }}>
+                          <div>
+                            <div style={{ fontSize:'.83rem', fontWeight:700 }}>NPR {Number(p.amount||0).toLocaleString()} <span style={{ fontSize:'.72rem', color:'var(--text-muted)', fontWeight:400 }}>· {p.method||'—'}</span></div>
+                            <div style={{ fontSize:'.7rem', color:'var(--text-muted)' }}>{clientName} · {category} · {fmt(p.created_at)}</div>
                           </div>
-                        )
-                      })
+                          <div style={{ display:'flex', gap:'.35rem', alignItems:'center' }}>
+                            <PayBadge status={p.status} />
+                            {isPending && <button className="btn btn-success btn-sm" onClick={() => setTab('payments')}>Confirm →</button>}
+                          </div>
+                        </div>
+                      )
+                    })
                 }
               </div>
             </div>
@@ -1460,38 +2311,23 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ USERS ═══ */}
           {tab === 'users' && (
             <div>
-              <SectionHeader title="👥 Users" count={uTotal}>
-                <input className="inp" value={uSearch} onChange={e => setUSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchUsers()} placeholder="Search name/email…" style={{ width: 180 }} />
-                <select className="inp" value={uRole} onChange={e => { setURole(e.target.value); setUPage(1) }}>
+              <SectionHeader title="Users" count={uTotal}>
+                <input className="inp" value={uSearch} onChange={e=>setUSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchUsers()} placeholder="Search name / email…" style={{width:180}} />
+                <select className="inp" value={uRole} onChange={e=>{setURole(e.target.value);setUPage(1)}}>
                   <option value="">All roles</option>
-                  {['client', 'therapist', 'admin', 'staff'].map(r => <option key={r} value={r}>{r}</option>)}
+                  {['client','therapist','admin','staff'].map(r=><option key={r} value={r}>{r}</option>)}
                 </select>
-                <button className="btn btn-ghost" onClick={() => { setUPage(1); fetchUsers() }}>Search</button>
+                <button className="btn btn-ghost" onClick={()=>{setUPage(1);fetchUsers()}}>Search</button>
               </SectionHeader>
-              <TblWrap loading={busy.users} cols={['User', 'Email', 'Role', 'Status', 'Joined', 'Actions']}
-                rows={users.map(u => (
+              <Table loading={busy.users} cols={['User','Email','Role','Status','Joined','Actions']}
+                rows={users.map(u=>(
                   <tr key={u.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e0f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 800, color: '#007BA8', flexShrink: 0 }}>
-                          {(u.full_name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                        </div>
-                        <strong style={{ color: 'var(--slate)', fontSize: '.83rem' }}>{u.full_name}</strong>
-                      </div>
-                    </td>
-                    <td style={{ color: 'var(--slate-lt)', fontSize: '.77rem' }}>{u.email}</td>
-                    <td>
-                      <select className="inp" value={u.role} onChange={e => doRole(u.id, e.target.value)} style={{ padding: '.2rem .5rem', fontSize: '.75rem' }}>
-                        {['client', 'therapist', 'admin', 'staff'].map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                    </td>
-                    <td><Badge s={u.is_active ? 'active' : 'paused'} /></td>
-                    <td style={{ color: 'var(--slate-lt)', fontSize: '.77rem' }}>{fmt(u.created_at)}</td>
-                    <td>
-                      <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-green'}`} onClick={() => doToggle(u.id)}>
-                        {u.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
-                    </td>
+                    <td><strong style={{fontSize:'.82rem'}}>{u.full_name}</strong></td>
+                    <td style={{fontSize:'.74rem',color:'var(--text-muted)'}}>{u.email}</td>
+                    <td><select className="inp" value={u.role} onChange={e=>doRole(u.id,e.target.value)} style={{padding:'.18rem .45rem',fontSize:'.72rem'}}>{['client','therapist','admin','staff'].map(r=><option key={r} value={r}>{r}</option>)}</select></td>
+                    <td><Badge s={u.is_active?'active':'paused'} /></td>
+                    <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{fmt(u.created_at)}</td>
+                    <td><button className={`btn btn-sm ${u.is_active?'btn-danger':'btn-success'}`} onClick={()=>doToggle(u.id)}>{u.is_active?'Deactivate':'Activate'}</button></td>
                   </tr>
                 ))}
               />
@@ -1502,28 +2338,22 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ APPOINTMENTS ═══ */}
           {tab === 'appointments' && (
             <div>
-              <SectionHeader title="📅 Appointments" count={aTotal}>
-                <select className="inp" value={aStatus} onChange={e => { setAStatus(e.target.value); setAPage(1) }}>
+              <SectionHeader title="Appointments" count={aTotal}>
+                <select className="inp" value={aStatus} onChange={e=>{setAStatus(e.target.value);setAPage(1)}}>
                   <option value="">All statuses</option>
-                  {['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {['pending','confirmed','completed','cancelled','no_show'].map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
+                <button className="btn btn-ghost" onClick={fetchAppts}>↺</button>
               </SectionHeader>
-              <TblWrap loading={busy.appts} cols={['Client', 'Therapist', 'Date & Time', 'Type', 'Status', 'Update']}
-                rows={appts.map(a => (
+              <Table loading={busy.appts} cols={['Client','Therapist','Date & Time','Type','Status','Update']}
+                rows={appts.map(a=>(
                   <tr key={a.id}>
-                    <td>
-                      <strong style={{ color: 'var(--slate)', fontSize: '.83rem' }}>{resolveClientName(a)}</strong>
-                      {a.client_id && <div style={{ fontSize: '.68rem', color: 'var(--slate-lt)', fontFamily: 'monospace' }}>{String(a.client_id).slice(0, 12)}…</div>}
-                    </td>
-                    <td style={{ fontSize: '.82rem' }}>{resolveTherapistName(a)}</td>
-                    <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmtT(a.scheduled_at)}</td>
-                    <td><span style={{ fontSize: '.72rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{a.type}</span></td>
+                    <td><strong style={{fontSize:'.82rem'}}>{resolveClientName(a)}</strong></td>
+                    <td style={{fontSize:'.79rem'}}>{resolveTherapistName(a)}</td>
+                    <td style={{fontSize:'.74rem',color:'var(--text-muted)',whiteSpace:'nowrap'}}>{fmtT(a.scheduled_at)}</td>
+                    <td><span style={{fontSize:'.7rem',background:'var(--surface-2)',padding:'.15rem .4rem',borderRadius:4}}>{a.type}</span></td>
                     <td><Badge s={a.status} /></td>
-                    <td>
-                      <select className="inp" value={a.status} onChange={e => doApptStatus(a.id, e.target.value)} style={{ padding: '.22rem .45rem', fontSize: '.75rem' }}>
-                        {['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </td>
+                    <td><select className="inp" value={a.status} onChange={e=>doApptStatus(a.id,e.target.value)} style={{padding:'.18rem .42rem',fontSize:'.72rem'}}>{['pending','confirmed','completed','cancelled','no_show'].map(s=><option key={s} value={s}>{s}</option>)}</select></td>
                   </tr>
                 ))}
               />
@@ -1534,25 +2364,22 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ ORDERS ═══ */}
           {tab === 'orders' && (
             <div>
-              <SectionHeader title="📦 Orders" count={oTotal}>
-                <select className="inp" value={oStatus} onChange={e => { setOStatus(e.target.value); setOPage(1) }}>
+              <SectionHeader title="Orders" count={oTotal}>
+                <select className="inp" value={oStatus} onChange={e=>{setOStatus(e.target.value);setOPage(1)}}>
                   <option value="">All statuses</option>
-                  {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {['pending','confirmed','processing','shipped','delivered','cancelled','refunded'].map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
+                <button className="btn btn-ghost" onClick={fetchOrders}>↺</button>
               </SectionHeader>
-              <TblWrap loading={busy.orders} cols={['Order #', 'Client', 'Amount', 'Status', 'Date', 'Update']}
-                rows={orders.map(o => (
+              <Table loading={busy.orders} cols={['Order #','Client','Amount','Status','Date','Update']}
+                rows={orders.map(o=>(
                   <tr key={o.id}>
-                    <td style={{ fontWeight: 700, color: 'var(--green)', fontSize: '.78rem' }}>{o.order_number || '—'}</td>
-                    <td style={{ fontSize: '.82rem' }}>{o.client_name || o.clients?.full_name || o.profiles?.full_name || '—'}</td>
-                    <td><strong>NPR {Number(o.total_amount || 0).toLocaleString()}</strong></td>
+                    <td><span className="mono" style={{fontWeight:700,fontSize:'.78rem',color:'var(--blue-dk)'}}>{o.order_number||'—'}</span></td>
+                    <td style={{fontSize:'.79rem'}}>{o.client_name||o.clients?.full_name||'—'}</td>
+                    <td><strong>NPR {Number(o.total_amount||0).toLocaleString()}</strong></td>
                     <td><Badge s={o.status} /></td>
-                    <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(o.created_at)}</td>
-                    <td>
-                      <select className="inp" value={o.status} onChange={e => doOrderStatus(o.id, e.target.value)} style={{ padding: '.22rem .45rem', fontSize: '.75rem' }}>
-                        {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </td>
+                    <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{fmt(o.created_at)}</td>
+                    <td><select className="inp" value={o.status} onChange={e=>doOrderStatus(o.id,e.target.value)} style={{padding:'.18rem .42rem',fontSize:'.72rem'}}>{['pending','confirmed','processing','shipped','delivered','cancelled','refunded'].map(s=><option key={s} value={s}>{s}</option>)}</select></td>
                   </tr>
                 ))}
               />
@@ -1561,77 +2388,51 @@ const [photoError,     setPhotoError]     = useState('')
           )}
 
           {/* ═══ PAYMENTS ═══ */}
-          {tab === 'payments' && <AdminPaymentSection />}
+          {tab === 'payments' && <PaymentsSection />}
 
           {/* ═══ NOTIFICATIONS ═══ */}
           {tab === 'notifications' && (
             <div>
-              <h1 className="sec-title" style={{ marginBottom: '1.5rem' }}>🔔 Send Notifications</h1>
-              <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <form onSubmit={sendNotif} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <SectionHeader title="Send Notifications" sub="Push notifications to clients" />
+              <div className="section-inner" style={{maxWidth:600}}>
+                <form onSubmit={sendNotif} style={{display:'flex',flexDirection:'column',gap:'.9rem'}}>
                   <div className="field">
                     <label>Send To</label>
-                    <select style={{ padding: '.55rem .85rem', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: '.85rem', color: 'var(--slate)', outline: 'none', fontFamily: 'var(--font-body)', cursor: 'pointer', width: '100%' }} value={notifTarget} onChange={e => setNotifTarget(e.target.value)} required>
+                    <select className="inp" value={notifTarget} onChange={e=>setNotifTarget(e.target.value)} required>
                       <option value="">— Select recipient —</option>
                       <option value="all">📢 All Clients ({notifClients.length})</option>
-                      {notifClients.map(c => <option key={c.id} value={c.id}>{c.full_name} ({c.email})</option>)}
+                      {notifClients.map(c=><option key={c.id} value={c.id}>{c.full_name} ({c.email})</option>)}
                     </select>
                   </div>
                   <div className="field-row">
-                    <div className="field">
-                      <label>Type</label>
-                      <select style={{ padding: '.55rem .85rem', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: '.85rem', color: 'var(--slate)', outline: 'none', fontFamily: 'var(--font-body)', cursor: 'pointer', width: '100%' }} value={notifType} onChange={e => setNotifType(e.target.value)}>
-                        {['system', 'appointment', 'payment', 'reminder', 'message', 'review'].map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label>Title *</label>
-                      <input style={{ padding: '.55rem .85rem', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: '.85rem', color: 'var(--slate)', outline: 'none', fontFamily: 'var(--font-body)', width: '100%' }} value={notifTitle} onChange={e => setNotifTitle(e.target.value)} placeholder="e.g. Session reminder" required />
-                    </div>
+                    <div className="field"><label>Type</label><select className="inp" value={notifType} onChange={e=>setNotifType(e.target.value)}>{['system','appointment','payment','reminder','message','review'].map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="field"><label>Title *</label><input className="inp" value={notifTitle} onChange={e=>setNotifTitle(e.target.value)} placeholder="e.g. Session reminder" required /></div>
                   </div>
-                  <div className="field">
-                    <label>Message (optional)</label>
-                    <textarea style={{ padding: '.55rem .85rem', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: '.85rem', color: 'var(--slate)', outline: 'none', fontFamily: 'var(--font-body)', resize: 'vertical', lineHeight: 1.6, width: '100%' }} rows={3} value={notifMsg} onChange={e => setNotifMsg(e.target.value)} />
-                  </div>
-                  {notifResult && <div className={`alert ${notifResult.ok ? 'alert-success' : 'alert-error'}`}>{notifResult.msg}</div>}
-                  <button type="submit" className="btn btn-primary" disabled={notifSending || !notifTarget || !notifTitle.trim()} style={{ alignSelf: 'flex-start' }}>
-                    {notifSending ? 'Sending…' : '🔔 Send Notification'}
+                  <div className="field"><label>Message (optional)</label><textarea className="inp" rows={3} value={notifMsg} onChange={e=>setNotifMsg(e.target.value)} /></div>
+                  {notifResult && <div className={`alert ${notifResult.ok?'alert-success':'alert-error'}`}>{notifResult.msg}</div>}
+                  <button type="submit" className="btn btn-primary" disabled={notifSending||!notifTarget||!notifTitle.trim()} style={{alignSelf:'flex-start'}}>
+                    {notifSending ? <><span className="spinner" /> Sending…</> : '◈ Send Notification'}
                   </button>
                 </form>
               </div>
-              {sentHistory.length > 0 && (
-                <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '1.25rem' }}>
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--slate)', marginBottom: '.85rem' }}>Recently Sent</h2>
-                  {sentHistory.map((h, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.55rem 0', borderBottom: i < sentHistory.length - 1 ? '1px solid var(--border)' : 'none', flexWrap: 'wrap', gap: '.4rem' }}>
-                      <div>
-                        <div style={{ fontWeight: 700, color: 'var(--slate)', fontSize: '.85rem' }}>{h.title}</div>
-                        <div style={{ fontSize: '.72rem', color: 'var(--slate-lt)' }}>To: {h.target} · {h.type}</div>
-                      </div>
-                      <span style={{ fontSize: '.72rem', color: 'var(--slate-lt)' }}>{h.time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
+
+          {tab === 'hero_stats' && <HeroStatsSection />}
+          {tab === 'reviews'    && <ReviewsModeration />}
 
           {/* ═══ BLOG POSTS ═══ */}
           {tab === 'posts' && (
             <div>
-              <SectionHeader title="✍️ Blog Posts" count={postsTotal} sub="Manage all blog content" onNew={() => openCreate('post', { status: 'draft', featured: false })} />
-              <TblWrap loading={busy.posts} cols={['Title', 'Category', 'Author', 'Status', 'Featured', 'Actions']}
-                rows={posts.map(p => (
+              <SectionHeader title="Blog Posts" count={postsTotal} onNew={() => openCreate('post',{status:'draft',featured:false})} />
+              <Table loading={busy.posts} cols={['Title','Category','Author','Status','Actions']}
+                rows={posts.map(p=>(
                   <tr key={p.id}>
-                    <td style={{ maxWidth: 200 }}>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{p.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{p.slug}</div>
-                    </td>
-                    <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{p.category || '—'}</span></td>
-                    <td style={{ fontSize: '.8rem' }}>{p.author_name || '—'}</td>
-                    <td><Badge s={p.status || 'draft'} /></td>
-                    <td><Badge s={p.featured ? 'true' : 'false'} /></td>
-                    <td><Actions onEdit={() => openEdit('post', p)} onDelete={() => del('/admin/posts', p.id, p.title, () => sec('/admin/posts', setPosts, setPostsTotal, postsPage))} /></td>
+                    <td><div style={{fontWeight:600,fontSize:'.82rem'}}>{p.title}</div><div className="mono" style={{fontSize:'.66rem',color:'var(--text-muted)'}}>{p.slug}</div></td>
+                    <td><span style={{fontSize:'.72rem',background:'var(--surface-2)',padding:'.15rem .4rem',borderRadius:4}}>{p.category||'—'}</span></td>
+                    <td style={{fontSize:'.78rem'}}>{p.author_name||'—'}</td>
+                    <td><Badge s={p.status||'draft'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('post',p)} onDelete={()=>del('/admin/posts',p.id,p.title,()=>sec('/admin/posts',setPosts,setPostsTotal,postsPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1642,20 +2443,14 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ NEWS ═══ */}
           {tab === 'news' && (
             <div>
-              <SectionHeader title="📰 News Articles" count={newsTotal} sub="Manage news content" onNew={() => openCreate('news_article', { is_published: true, is_featured: false, size: 'medium' })} />
-              <TblWrap loading={busy.news} cols={['Headline', 'Author', 'Tag', 'Size', 'Featured', 'Published', 'Actions']}
-                rows={news.map(n => (
+              <SectionHeader title="News Articles" count={newsTotal} onNew={() => openCreate('news_article',{is_published:true,is_featured:false})} />
+              <Table loading={busy.news} cols={['Headline','Author','Published','Actions']}
+                rows={news.map(n=>(
                   <tr key={n.id}>
-                    <td style={{ maxWidth: 220 }}>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{n.headline}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{n.slug}</div>
-                    </td>
-                    <td style={{ fontSize: '.8rem' }}>{n.author || '—'}</td>
-                    <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{n.tag || '—'}</span></td>
-                    <td><Badge s={n.size || 'medium'} /></td>
-                    <td><Badge s={n.is_featured ? 'true' : 'false'} /></td>
-                    <td><Badge s={n.is_published ? 'published' : 'draft'} /></td>
-                    <td><Actions onEdit={() => openEdit('news_article', n)} onDelete={() => del('/admin/news', n.id, n.headline, () => sec('/admin/news', setNews, setNewsTotal, newsPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{n.headline}</td>
+                    <td style={{fontSize:'.78rem'}}>{n.author||'—'}</td>
+                    <td><Badge s={n.is_published?'published':'draft'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('news_article',n)} onDelete={()=>del('/admin/news',n.id,n.headline,()=>sec('/admin/news',setNews,setNewsTotal,newsPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1666,20 +2461,15 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ RESOURCES ═══ */}
           {tab === 'resources' && (
             <div>
-              <SectionHeader title="📥 Resources" count={resTotal} sub="Downloadable files and tools" onNew={() => openCreate('resource', { is_free: true, access_level: 'public', is_active: true, emoji: '📄', sort_order: 0 })} />
-              <TblWrap loading={busy.resources} cols={['Title', 'Category', 'Type', 'Price', 'Downloads', 'Active', 'Actions']}
-                rows={resources.map(r => (
+              <SectionHeader title="Resources" count={resTotal} onNew={() => openCreate('resource',{is_free:true,is_active:true})} />
+              <Table loading={busy.resources} cols={['Title','Category','Type','Active','Actions']}
+                rows={resources.map(r=>(
                   <tr key={r.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{r.emoji || '📄'} {r.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{r.description?.slice(0, 50)}</div>
-                    </td>
-                    <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{r.category || '—'}</span></td>
-                    <td><Badge s={r.file_type || r.type_label || '—'} /></td>
-                    <td style={{ fontSize: '.8rem' }}>{r.price_label || (r.is_free ? 'FREE' : 'Paid')}</td>
-                    <td style={{ textAlign: 'center' }}>{r.download_count || 0}</td>
-                    <td><Badge s={r.is_active !== false ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('resource', r)} onDelete={() => del('/admin/resources', r.id, r.title, () => sec('/admin/resources', setRes, setResTotal, resPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{r.title}</td>
+                    <td style={{fontSize:'.78rem'}}>{r.category||'—'}</td>
+                    <td><Badge s={r.file_type||'—'} /></td>
+                    <td><Badge s={r.is_active!==false?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('resource',r)} onDelete={()=>del('/admin/resources',r.id,r.title,()=>sec('/admin/resources',setRes,setResTotal,resPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1690,100 +2480,50 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ GALLERY ═══ */}
           {tab === 'gallery' && (
             <div>
-              <SectionHeader title="🖼️ Gallery" count={galTotal} sub="Photo gallery items" onNew={() => openCreate('gallery_item', { is_active: true, sort_order: 0, col_span: 1, row_span: 1, emoji: '📸' })} />
-              <TblWrap loading={busy.gallery} cols={['Title', 'Category', 'Date', 'Cols×Rows', 'Active', 'Actions']}
-                rows={gallery.map(g => (
+              <SectionHeader title="Gallery" count={galTotal} onNew={() => openCreate('gallery_item',{is_active:true,emoji:'📸'})} />
+              <Table loading={busy.gallery} cols={['Title','Category','Active','Actions']}
+                rows={gallery.map(g=>(
                   <tr key={g.id}>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{g.emoji} {g.title}</td>
+                    <td style={{fontSize:'.78rem'}}>{g.category}</td>
+                    <td><Badge s={g.is_active!==false?'active':'paused'} /></td>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{g.emoji} {g.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{g.description?.slice(0, 50)}</div>
+                      <RowActions onEdit={()=>openEdit('gallery_item',g)} onDelete={()=>del('/admin/gallery',g.id,g.title,()=>sec('/admin/gallery',setGallery,setGalTotal,galPage))}>
+                        <button className="btn btn-ghost btn-sm" onClick={()=>{setPhotoReplace({id:g.id,title:g.title,category:g.category});setPhotoError('')}}>🖼 Photo</button>
+                      </RowActions>
                     </td>
-                    <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{g.category}</span></td>
-                    <td style={{ fontSize: '.78rem', color: 'var(--slate-lt)' }}>{g.event_date || '—'}</td>
-                    <td style={{ textAlign: 'center', fontSize: '.82rem' }}>{g.col_span}×{g.row_span}</td>
-                    <td><Badge s={g.is_active !== false ? 'active' : 'paused'} /></td>
-<td>
-  <div style={{ display: 'flex', gap: '.35rem' }}>
-    <button className="btn btn-ghost btn-sm" onClick={() => openEdit('gallery_item', g)}>✏️</button>
-    <button className="btn btn-ghost btn-sm" style={{ color: '#007BA8' }}
-      onClick={() => { setPhotoReplace({ id: g.id, title: g.title, category: g.category }); setPhotoError('') }}>
-      🖼️ Photo
-    </button>
-    <button className="btn btn-danger btn-sm"
-      onClick={() => del('/admin/gallery', g.id, g.title, () => sec('/admin/gallery', setGallery, setGalTotal, galPage))}>
-      🗑
-    </button>
-  </div>
-</td>                  </tr>
+                  </tr>
                 ))}
               />
               <Pager page={galPage} set={setGalPage} total={galTotal} />
             </div>
           )}
 
-          {/* ═══ VIDEO REVIEWS ═══ */}
-{tab === 'reviews' && (
-  <ReviewsModeration />
-)}
+          {photoReplace && (
+            <div className="overlay" onClick={()=>setPhotoReplace(null)}>
+              <div className="modal" style={{maxWidth:420}} onClick={e=>e.stopPropagation()}>
+                <div className="modal-head"><span className="modal-head-title">Replace Photo — {photoReplace.title}</span><button className="btn btn-ghost btn-sm" onClick={()=>setPhotoReplace(null)}>✕</button></div>
+                <div className="modal-body">
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp" style={{padding:'.45rem',border:'1.5px solid var(--border)',borderRadius:'var(--radius-sm)',fontSize:'.78rem',width:'100%'}} onChange={e=>{const f=e.target.files[0];if(f)replaceGalleryPhoto(f)}} />
+                  {photoError && <div className="alert alert-error">{photoError}</div>}
+                  {photoUploading && <div style={{textAlign:'center',color:'var(--blue)',fontWeight:600,fontSize:'.82rem'}}><span className="spinner" /> Uploading…</div>}
+                </div>
+                <div className="modal-foot"><button className="btn btn-ghost" onClick={()=>setPhotoReplace(null)}>Cancel</button></div>
+              </div>
+            </div>
+          )}
 
-{photoReplace && (
-  <div className="modal-overlay" onClick={() => setPhotoReplace(null)}>
-    <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-      <div className="modal-header">
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--slate)' }}>
-          🖼️ Replace Photo
-        </span>
-        <button className="btn btn-ghost btn-sm" onClick={() => setPhotoReplace(null)}>✕</button>
-      </div>
-      <div className="modal-body">
-        <p style={{ fontSize: '.85rem', color: 'var(--slate-md)', marginBottom: '.5rem' }}>
-          Replacing photo for: <strong>{photoReplace.title}</strong>
-        </p>
-        <div className="field">
-          <label>Select New Photo</label>
-          <input
-            type="file"
-            accept=".jpg,.jpeg,.png,.webp"
-            style={{ padding: '.55rem', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: '.85rem', width: '100%' }}
-            onChange={e => {
-              const file = e.target.files[0]
-              if (!file) return
-              if (file.size > 10 * 1024 * 1024) { setPhotoError('File must be under 10 MB'); return }
-              replaceGalleryPhoto(file, photoReplace.id)
-            }}
-          />
-          <span className="hint">JPG, PNG, WEBP · Max 10 MB</span>
-        </div>
-        {photoError && <div className="alert alert-error">{photoError}</div>}
-        {photoUploading && (
-          <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--teal)', fontWeight: 600, fontSize: '.85rem' }}>
-            ⏳ Uploading photo…
-          </div>
-        )}
-      </div>
-      <div className="modal-footer">
-        <button className="btn btn-ghost" onClick={() => setPhotoReplace(null)}>Cancel</button>
-      </div>
-    </div>
-  </div>
-)}
           {/* ═══ RESEARCH ═══ */}
           {tab === 'research' && (
             <div>
-              <SectionHeader title="🔬 Research Papers" count={rscTotal} sub="Academic publications" onNew={() => openCreate('research_paper', { open_access: true, is_active: true, citations: 0, downloads: 0, paper_type: 'Clinical Study' })} />
-              <TblWrap loading={busy.research} cols={['Title', 'Journal', 'Year', 'Type', 'Citations', 'Open', 'Actions']}
-                rows={research.map(r => (
+              <SectionHeader title="Research Papers" count={rscTotal} onNew={() => openCreate('research_paper',{open_access:true})} />
+              <Table loading={busy.research} cols={['Title','Journal','Year','Actions']}
+                rows={research.map(r=>(
                   <tr key={r.id}>
-                    <td style={{ maxWidth: 240 }}>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{r.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{(r.authors || []).join(', ')}</div>
-                    </td>
-                    <td style={{ fontSize: '.78rem' }}>{r.journal || '—'}</td>
-                    <td style={{ fontWeight: 700 }}>{r.year || '—'}</td>
-                    <td><Badge s={r.paper_type || '—'} /></td>
-                    <td style={{ textAlign: 'center' }}>{r.citations || 0}</td>
-                    <td><Badge s={r.open_access ? 'open' : 'premium'} /></td>
-                    <td><Actions onEdit={() => openEdit('research_paper', r)} onDelete={() => del('/admin/research', r.id, r.title, () => sec('/admin/research', setResearch, setRscTotal, rscPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{r.title}</td>
+                    <td style={{fontSize:'.78rem'}}>{r.journal||'—'}</td>
+                    <td style={{fontSize:'.78rem'}}>{r.year||'—'}</td>
+                    <td><RowActions onEdit={()=>openEdit('research_paper',r)} onDelete={()=>del('/admin/research',r.id,r.title,()=>sec('/admin/research',setResearch,setRscTotal,rscPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1794,20 +2534,15 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ PSYCH VIDEOS ═══ */}
           {tab === 'psych_videos' && (
             <div>
-              <SectionHeader title="🎬 Psych Videos" count={pvTotal} sub="YouTube video library" onNew={() => openCreate('psych_video', { is_active: true, sort_order: 0 })} />
-              <TblWrap loading={busy.psych_videos} cols={['Title', 'YouTube ID', 'Duration', 'Views', 'Order', 'Active', 'Actions']}
-                rows={pvids.map(v => (
+              <SectionHeader title="Psych Videos" count={pvTotal} onNew={() => openCreate('psych_video',{is_active:true})} />
+              <Table loading={busy.psych_videos} cols={['Title','YouTube ID','Duration','Active','Actions']}
+                rows={pvids.map(v=>(
                   <tr key={v.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{v.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{v.description?.slice(0, 50)}</div>
-                    </td>
-                    <td><code style={{ fontSize: '.75rem', fontFamily: 'monospace', background: '#f0f4f8', padding: '.1rem .4rem', borderRadius: 4 }}>{v.youtube_id}</code></td>
-                    <td style={{ fontSize: '.78rem' }}>{v.duration || '—'}</td>
-                    <td style={{ fontSize: '.78rem' }}>{v.views || '—'}</td>
-                    <td style={{ textAlign: 'center' }}>{v.sort_order}</td>
-                    <td><Badge s={v.is_active !== false ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('psych_video', v)} onDelete={() => del('/admin/psych-videos', v.id, v.title, () => sec('/admin/psych-videos', setPvids, setPvTotal, pvPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{v.title}</td>
+                    <td><code className="mono" style={{fontSize:'.72rem',background:'var(--surface-2)',padding:'.12rem .38rem',borderRadius:4}}>{v.youtube_id}</code></td>
+                    <td style={{fontSize:'.78rem'}}>{v.duration||'—'}</td>
+                    <td><Badge s={v.is_active!==false?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('psych_video',v)} onDelete={()=>del('/admin/psych-videos',v.id,v.title,()=>sec('/admin/psych-videos',setPvids,setPvTotal,pvPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1818,20 +2553,14 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ PSYCH ANALYSES ═══ */}
           {tab === 'psych_analyses' && (
             <div>
-              <SectionHeader title="🧠 Psych Analyses" count={paTotal} sub="Psychology deep-dives" onNew={() => openCreate('psych_analysis', { is_active: true, sort_order: 0, icon: '📄' })} />
-              <TblWrap loading={busy.psych_analyses} cols={['Title', 'Category', 'Icon', 'Read Time', 'Order', 'Active', 'Actions']}
-                rows={panalyses.map(a => (
+              <SectionHeader title="Psych Analyses" count={paTotal} onNew={() => openCreate('psych_analysis',{is_active:true})} />
+              <Table loading={busy.psych_analyses} cols={['Title','Category','Active','Actions']}
+                rows={panalyses.map(a=>(
                   <tr key={a.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{a.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{a.slug}</div>
-                    </td>
-                    <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{a.category}</span></td>
-                    <td style={{ fontSize: '1.1rem' }}>{a.icon || '📄'}</td>
-                    <td style={{ fontSize: '.78rem' }}>{a.read_time || '—'}</td>
-                    <td style={{ textAlign: 'center' }}>{a.sort_order}</td>
-                    <td><Badge s={a.is_active !== false ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('psych_analysis', a)} onDelete={() => del('/admin/psych-analyses', a.id, a.title, () => sec('/admin/psych-analyses', setPanalyses, setPaTotal, paPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{a.title}</td>
+                    <td style={{fontSize:'.78rem'}}>{a.category||'—'}</td>
+                    <td><Badge s={a.is_active!==false?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('psych_analysis',a)} onDelete={()=>del('/admin/psych-analyses',a.id,a.title,()=>sec('/admin/psych-analyses',setPanalyses,setPaTotal,paPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1842,19 +2571,14 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ PSYCH CONCEPTS ═══ */}
           {tab === 'psych_concepts' && (
             <div>
-              <SectionHeader title="💡 Psych Concepts" count={pcTotal} sub="Psychology 101 glossary" onNew={() => openCreate('psych_concept', { is_active: true, sort_order: 0 })} />
-              <TblWrap loading={busy.psych_concepts} cols={['Term', 'Definition (preview)', 'Order', 'Active', 'Actions']}
-                rows={pconcepts.map(c => (
+              <SectionHeader title="Psych Concepts" count={pcTotal} onNew={() => openCreate('psych_concept',{is_active:true})} />
+              <Table loading={busy.psych_concepts} cols={['Term','Definition','Active','Actions']}
+                rows={pconcepts.map(c=>(
                   <tr key={c.id}>
-                    <td><div style={{ fontWeight: 700, fontSize: '.85rem', color: 'var(--teal-dk)' }}>{c.term}</div></td>
-                    <td style={{ maxWidth: 340 }}>
-                      <div style={{ fontSize: '.78rem', color: 'var(--slate-md)', lineHeight: 1.5 }}>
-                        {c.definition?.slice(0, 120)}{c.definition?.length > 120 ? '…' : ''}
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'center', fontSize: '.82rem' }}>{c.sort_order}</td>
-                    <td><Badge s={c.is_active !== false ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('psych_concept', c)} onDelete={() => del('/admin/psych-concepts', c.id, c.term, () => sec('/admin/psych-concepts', setPconcepts, setPcTotal, pcPage))} /></td>
+                    <td style={{fontWeight:700,fontSize:'.83rem',color:'var(--blue-dk)'}}>{c.term}</td>
+                    <td style={{maxWidth:300,fontSize:'.75rem'}}>{c.definition?.slice(0,90)}…</td>
+                    <td><Badge s={c.is_active!==false?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('psych_concept',c)} onDelete={()=>del('/admin/psych-concepts',c.id,c.term,()=>sec('/admin/psych-concepts',setPconcepts,setPcTotal,pcPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1865,35 +2589,14 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ THERAPISTS ═══ */}
           {tab === 'therapists' && (
             <div>
-              <SectionHeader title="🩺 Therapists" count={thrTotal} sub="Manage therapist profiles" onNew={() => openCreate('therapist_profile', { is_available: true, is_verified: true, is_active: true, consultation_fee: 2000, session_duration: 60, experience_years: 0, languages_spoken: ['Nepali', 'English'], specializations: [] })} />
-              <TblWrap loading={busy.therapists} cols={['Therapist', 'License / Specialization', 'Fee', 'Experience', 'Available', 'Verified', 'Actions']}
-                rows={therapists.map(t => (
+              <SectionHeader title="Therapists" count={thrTotal} onNew={() => openCreate('therapist_profile',{is_available:true,is_active:true})} />
+              <Table loading={busy.therapists} cols={['Therapist','Fee (NPR)','Available','Actions']}
+                rows={therapists.map(t=>(
                   <tr key={t.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                        {t.avatar_url
-                          ? <img src={t.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                          : <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#e0f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 800, color: '#007BA8', flexShrink: 0 }}>
-                              {(t.full_name || 'T').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                            </div>
-                        }
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '.83rem', color: 'var(--slate)' }}>{t.full_name || '—'}</div>
-                          <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{t.email || ''}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '.8rem', fontWeight: 600, color: 'var(--slate-md)' }}>{t.license_type || '—'}</div>
-                      <div style={{ display: 'flex', gap: '.25rem', flexWrap: 'wrap', marginTop: '.2rem' }}>
-                        {(t.specializations || []).slice(0, 3).map(s => <span key={s} className="chip" style={{ fontSize: '.65rem' }}>{s}</span>)}
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 700, fontSize: '.83rem' }}>NPR {Number(t.consultation_fee || 0).toLocaleString()}</td>
-                    <td style={{ fontSize: '.82rem', color: 'var(--slate-md)' }}>{t.experience_years ?? 0} yrs</td>
-                    <td><Badge s={t.is_available ? 'active' : 'paused'} /></td>
-                    <td><Badge s={t.is_verified ? 'true' : 'false'} /></td>
-                    <td><Actions onEdit={() => openEdit('therapist_profile', t)} onDelete={() => del('/admin/therapists', t.id, t.full_name || 'Therapist', () => sec('/admin/therapists', setTherapists, setThrTotal, thrPage))} /></td>
+                    <td><div style={{fontWeight:700,fontSize:'.82rem'}}>{t.full_name||'—'}</div><div style={{fontSize:'.7rem',color:'var(--text-muted)'}}>{t.email||''}</div></td>
+                    <td>NPR {Number(t.consultation_fee||0).toLocaleString()}</td>
+                    <td><Badge s={t.is_available?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('therapist_profile',t)} onDelete={()=>del('/admin/therapists',t.id,t.full_name||'Therapist',()=>sec('/admin/therapists',setTherapists,setThrTotal,thrPage))} /></td>
                   </tr>
                 ))}
               />
@@ -1901,100 +2604,50 @@ const [photoError,     setPhotoError]     = useState('')
             </div>
           )}
 
-          {/* ═══════════════════ VOLUNTEERS ════════════════════════ */}
-          {/* FIX: was a floating JSX expression outside return() — now properly inside */}
+          {/* ═══ VOLUNTEERS ═══ */}
           {tab === 'volunteers' && (
             <div>
-              <SectionHeader title="🤝 Volunteer Applications" count={volTotal} sub="Applications submitted via the volunteer form">
-                <input className="inp" value={volSearch}
-                  onChange={e => setVolSearch(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && secVol()}
-                  placeholder="Search name, email, role…" style={{ width: 200 }}
-                />
-                <select className="inp" value={volStatus} onChange={e => { setVolStatus(e.target.value); setVolPage(1) }}>
+              <SectionHeader title="Volunteer Applications" count={volTotal}>
+                <input className="inp" value={volSearch} onChange={e=>setVolSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchVolunteers()} placeholder="Search…" style={{width:180}} />
+                <select className="inp" value={volStatus} onChange={e=>{setVolStatus(e.target.value);setVolPage(1)}}>
                   <option value="">All statuses</option>
-                  {['new','reviewing','approved','rejected','waitlisted'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {['new','reviewing','approved','rejected','waitlisted'].map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
-                <button className="btn btn-ghost" onClick={secVol}>🔄</button>
+                <button className="btn btn-ghost" onClick={fetchVolunteers}>↺</button>
               </SectionHeader>
-              <TblWrap loading={busy.volunteers} cols={['Applicant', 'Role', 'District', 'Availability', 'Status', 'Applied', 'Actions']}
-                rows={volunteers.map(v => (
+              <Table loading={busy.volunteers} cols={['Applicant','Role','District','Status','Applied','Actions']}
+                rows={volunteers.map(v=>(
                   <tr key={v.id}>
+                    <td><div style={{fontWeight:700,fontSize:'.82rem'}}>{v.first_name} {v.last_name}</div><div style={{fontSize:'.7rem',color:'var(--text-muted)'}}>{v.email}</div></td>
+                    <td style={{fontSize:'.76rem'}}>{v.role}</td>
+                    <td style={{fontSize:'.76rem'}}>{v.district||'—'}</td>
+                    <td><select className="inp" value={v.status||'new'} onChange={e=>updateVolStatus(v.id,e.target.value,v.admin_notes)} style={{padding:'.18rem .42rem',fontSize:'.72rem'}}>{['new','reviewing','approved','rejected','waitlisted'].map(s=><option key={s} value={s}>{s}</option>)}</select></td>
+                    <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{fmt(v.created_at)}</td>
                     <td>
-                      <div style={{ fontWeight: 700, fontSize: '.83rem', color: 'var(--slate)' }}>{v.first_name} {v.last_name}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{v.email}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{v.phone}</div>
-                    </td>
-                    <td><span style={{ fontSize: '.78rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4, fontWeight: 600 }}>{v.role}</span></td>
-                    <td style={{ fontSize: '.8rem' }}>{v.district || '—'}</td>
-                    <td><div style={{ display: 'flex', gap: '.25rem', flexWrap: 'wrap' }}>{(v.availability || []).map(a => <span key={a} className="chip" style={{ fontSize: '.65rem' }}>{a}</span>)}</div></td>
-                    <td>
-                      <select className="inp" value={v.status || 'new'} onChange={e => updateVolStatus(v.id, e.target.value, v.admin_notes)} style={{ padding: '.22rem .45rem', fontSize: '.75rem' }}>
-                        {['new','reviewing','approved','rejected','waitlisted'].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </td>
-                    <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(v.created_at)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '.35rem' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setVolDetail(v)}>👁 View</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => setDelConfirm({ endpoint:'/admin/volunteers', id:v.id, label:`${v.first_name} ${v.last_name}`, refresh:secVol })}>🗑</button>
-                      </div>
+                      <RowActions onDelete={()=>del('/admin/volunteers',v.id,`${v.first_name} ${v.last_name}`,fetchVolunteers)}>
+                        <button className="btn btn-ghost btn-sm" onClick={()=>setVolDetail(v)}>View</button>
+                      </RowActions>
                     </td>
                   </tr>
                 ))}
               />
               <Pager page={volPage} set={setVolPage} total={volTotal} />
-
               {volDetail && (
-                <div className="modal-overlay" onClick={() => setVolDetail(null)}>
-                  <div className="modal" style={{ maxWidth: 660 }} onClick={e => e.stopPropagation()}>
-                    <div className="modal-header">
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--slate)' }}>
-                        🤝 {volDetail.first_name} {volDetail.last_name} — Application
-                      </span>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setVolDetail(null)}>✕</button>
-                    </div>
+                <div className="overlay" onClick={()=>setVolDetail(null)}>
+                  <div className="modal" onClick={e=>e.stopPropagation()}>
+                    <div className="modal-head"><span className="modal-head-title">Volunteer — {volDetail.first_name} {volDetail.last_name}</span><button className="btn btn-ghost btn-sm" onClick={()=>setVolDetail(null)}>✕</button></div>
                     <div className="modal-body">
-                      {[
-                        ['Full Name', `${volDetail.first_name} ${volDetail.last_name}`],
-                        ['Email', volDetail.email], ['Phone', volDetail.phone],
-                        ['District', volDetail.district || '—'], ['Address', volDetail.address || '—'],
-                        ['Profession', volDetail.profession || '—'], ['Organisation', volDetail.organisation || '—'],
-                        ['Experience', volDetail.experience || '—'], ['Role', volDetail.role],
-                        ['Availability', (volDetail.availability || []).join(', ') || '—'],
-                        ['Languages', (volDetail.languages || []).join(', ') || '—'],
-                        ['Hours/week', volDetail.hours || '—'], ['Reference', volDetail.reference || '—'],
-                      ].map(([k, val]) => (
-                        <div key={k} style={{ display: 'flex', gap: '1rem', padding: '.35rem 0', borderBottom: '1px solid var(--border)', fontSize: '.83rem' }}>
-                          <span style={{ color: 'var(--slate-lt)', fontWeight: 700, minWidth: 130, flexShrink: 0 }}>{k}</span>
-                          <span style={{ color: 'var(--slate-md)' }}>{val}</span>
-                        </div>
+                      {[['Email',volDetail.email],['Phone',volDetail.phone],['District',volDetail.district||'—'],['Role',volDetail.role]].map(([k,v])=>(
+                        <div key={k} style={{display:'flex',gap:'1rem',padding:'.32rem 0',borderBottom:'1px solid var(--border-2)',fontSize:'.82rem'}}><span style={{color:'var(--text-muted)',fontWeight:700,minWidth:110}}>{k}</span><span>{v}</span></div>
                       ))}
-                      {volDetail.skills && (
-                        <div style={{ marginTop: '.75rem' }}>
-                          <div style={{ fontSize: '.68rem', fontWeight: 800, color: 'var(--slate-lt)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.35rem' }}>Skills</div>
-                          <p style={{ fontSize: '.83rem', color: 'var(--slate-md)', lineHeight: 1.6 }}>{volDetail.skills}</p>
-                        </div>
-                      )}
-                      {volDetail.motivation && (
-                        <div style={{ marginTop: '.75rem' }}>
-                          <div style={{ fontSize: '.68rem', fontWeight: 800, color: 'var(--slate-lt)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.35rem' }}>Motivation</div>
-                          <p style={{ fontSize: '.83rem', color: 'var(--slate-md)', lineHeight: 1.6 }}>{volDetail.motivation}</p>
-                        </div>
-                      )}
-                      <div style={{ marginTop: '.75rem' }}>
-                        <div style={{ fontSize: '.68rem', fontWeight: 800, color: 'var(--slate-lt)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.35rem' }}>Admin Notes</div>
-                        <textarea className="inp" rows={3} defaultValue={volDetail.admin_notes || ''} placeholder="Add internal notes…"
-                          style={{ width: '100%', resize: 'vertical', fontFamily: 'var(--font-body)', fontSize: '.82rem' }} id="vol-admin-notes" />
+                      <div className="field" style={{marginTop:'.75rem'}}>
+                        <label>Admin Notes</label>
+                        <textarea className="inp" rows={3} defaultValue={volDetail.admin_notes||''} id="vol-notes" />
                       </div>
                     </div>
-                    <div className="modal-footer">
-                      <button className="btn btn-ghost" onClick={() => setVolDetail(null)}>Close</button>
-                      <button className="btn btn-primary" onClick={() => {
-                        const notes = document.getElementById('vol-admin-notes')?.value || ''
-                        updateVolStatus(volDetail.id, volDetail.status, notes)
-                        setVolDetail(null)
-                      }}>💾 Save Notes</button>
+                    <div className="modal-foot">
+                      <button className="btn btn-ghost" onClick={()=>setVolDetail(null)}>Close</button>
+                      <button className="btn btn-primary" onClick={()=>{updateVolStatus(volDetail.id,volDetail.status,document.getElementById('vol-notes')?.value||'');setVolDetail(null)}}>Save Notes</button>
                     </div>
                   </div>
                 </div>
@@ -2002,54 +2655,27 @@ const [photoError,     setPhotoError]     = useState('')
             </div>
           )}
 
-          {/* ═══════════════════ GALLERY SUBMISSIONS ═══════════════ */}
-          {/* FIX: was a floating JSX expression outside return() — now properly inside */}
+          {/* ═══ GALLERY SUBMISSIONS ═══ */}
           {tab === 'gallery_submissions' && (
             <div>
-              <SectionHeader title="📸 Photo Submissions" count={galSubTotal} sub="User-submitted photos from the gallery page">
-                <select className="inp" value={galSubStatus} onChange={e => { setGalSubStatus(e.target.value); setGalSubPage(1) }}>
+              <SectionHeader title="Photo Submissions" count={galSubTotal}>
+                <select className="inp" value={galSubStatus} onChange={e=>{setGalSubStatus(e.target.value);setGalSubPage(1)}}>
                   <option value="">All statuses</option>
-                  {['pending','approved','rejected','added_to_gallery'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {['pending','approved','rejected','added_to_gallery'].map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
-                <button className="btn btn-ghost" onClick={secGalSub}>🔄</button>
+                <button className="btn btn-ghost" onClick={fetchGalSubs}>↺</button>
               </SectionHeader>
-              <TblWrap loading={busy.gallery_submissions} cols={['Preview', 'Submitter', 'Message', 'Size', 'Status', 'Date', 'Actions']}
-                rows={galSubs.map(g => (
+              <Table loading={busy.gallery_submissions} cols={['Preview','Submitter','Status','Date','Actions']}
+                rows={galSubs.map(g=>(
                   <tr key={g.id}>
+                    <td><div style={{width:52,height:52,borderRadius:'var(--radius-sm)',overflow:'hidden',background:'var(--surface-2)'}}>{g.file_url?<img src={g.file_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />:<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',fontSize:'1.2rem'}}>🖼</div>}</div></td>
+                    <td><div style={{fontWeight:700,fontSize:'.82rem'}}>{g.name}</div><div style={{fontSize:'.7rem',color:'var(--text-muted)'}}>{g.email}</div></td>
+                    <td><select className="inp" value={g.status||'pending'} onChange={e=>updateGalSubStatus(g.id,e.target.value)} style={{padding:'.18rem .42rem',fontSize:'.72rem'}}>{['pending','approved','rejected','added_to_gallery'].map(s=><option key={s} value={s}>{s}</option>)}</select></td>
+                    <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{fmt(g.created_at)}</td>
                     <td>
-                      <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', background: 'var(--bg)', flexShrink: 0 }}>
-                        {g.file_url
-                          ? <img src={g.file_url} alt={g.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display='none'} />
-                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>🖼️</div>
-                        }
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 700, fontSize: '.83rem', color: 'var(--slate)' }}>{g.name}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{g.email}</div>
-                    </td>
-                    <td style={{ maxWidth: 160, fontSize: '.78rem', color: 'var(--slate-md)' }}>
-                      {g.message?.slice(0, 60) || <span style={{ color: 'var(--slate-lt)' }}>—</span>}
-                    </td>
-                    <td style={{ fontSize: '.78rem', color: 'var(--slate-lt)' }}>
-                      {g.file_size ? `${(g.file_size/1024/1024).toFixed(1)} MB` : '—'}
-                    </td>
-                    <td>
-                      <select className="inp" value={g.status || 'pending'} onChange={e => updateGalSubStatus(g.id, e.target.value)} style={{ padding: '.22rem .45rem', fontSize: '.75rem' }}>
-                        {['pending','approved','rejected','added_to_gallery'].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </td>
-                    <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(g.created_at)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '.35rem', flexWrap: 'wrap' }}>
-                        {g.file_url && (
-                          <a href={g.file_url} target="_blank" rel="noreferrer">
-                            <button className="btn btn-ghost btn-sm">👁 View</button>
-                          </a>
-                        )}
-                        <button className="btn btn-ghost btn-sm" onClick={() => downloadGalSub(g.id, g.file_name)}>⬇ DL</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => setDelConfirm({ endpoint:'/admin/gallery-submissions', id:g.id, label:g.file_name, refresh:secGalSub })}>🗑</button>
-                      </div>
+                      <RowActions onDelete={()=>del('/admin/gallery-submissions',g.id,g.file_name||'submission',fetchGalSubs)}>
+                        {g.file_url && <a href={g.file_url} target="_blank" rel="noreferrer"><button className="btn btn-ghost btn-sm">View</button></a>}
+                      </RowActions>
                     </td>
                   </tr>
                 ))}
@@ -2058,22 +2684,65 @@ const [photoError,     setPhotoError]     = useState('')
             </div>
           )}
 
+          {/* ═══ WORKSHOPS ═══ */}
+          {tab === 'workshops' && (
+            <div>
+              <SectionHeader title="Workshops">
+                <div style={{display:'flex',gap:'.4rem'}}>
+                  {['list','registrations'].map(t=><button key={t} className={`btn ${wsTab===t?'btn-primary':'btn-ghost'}`} onClick={()=>{setWsTab(t);if(t==='registrations')fetchWsRegs()}}>{t==='list'?'Workshops':'Registrations'}</button>)}
+                  {wsTab==='list' && <button className="btn btn-primary" onClick={()=>openCreate('workshop',{emoji:'🧠',seats:20,price:0,is_active:true})}>+ New</button>}
+                  <button className="btn btn-ghost" onClick={()=>wsTab==='list'?fetchWorkshops():fetchWsRegs()}>↺</button>
+                </div>
+              </SectionHeader>
+              {wsTab === 'list' && (
+                <Table loading={busy.workshops} cols={['Workshop','Facilitator','Date','Seats','Price','Active','Actions']}
+                  rows={workshops.map(w=>(
+                    <tr key={w.id}>
+                      <td><div style={{fontWeight:700,fontSize:'.82rem'}}>{w.emoji} {w.title}</div></td>
+                      <td style={{fontSize:'.78rem'}}>{w.facilitator}</td>
+                      <td style={{fontSize:'.74rem',color:'var(--text-muted)'}}>{w.date}</td>
+                      <td style={{fontSize:'.78rem'}}>{Number(w.booked||0)}/{w.seats}</td>
+                      <td>{w.price===0?<Badge s="free" />:`NPR ${Number(w.price).toLocaleString()}`}</td>
+                      <td><Badge s={w.is_active!==false?'active':'paused'} /></td>
+                      <td><RowActions onEdit={()=>openEdit('workshop',w)} onDelete={()=>del('/workshops/admin',w.id,w.title,fetchWorkshops)} /></td>
+                    </tr>
+                  ))}
+                />
+              )}
+              {wsTab === 'registrations' && (
+                <Table loading={busy.ws_regs} cols={['Attendee','Workshop','Payment','Status','Registered','Actions']}
+                  rows={wsRegs.map(r=>(
+                    <tr key={r.id}>
+                      <td><div style={{fontWeight:700,fontSize:'.82rem'}}>{r.attendee_name}</div><div style={{fontSize:'.7rem',color:'var(--text-muted)'}}>{r.attendee_email}</div></td>
+                      <td style={{fontSize:'.78rem'}}>{r.workshops?.title||'—'}</td>
+                      <td><PayBadge status={r.payment_status==='paid'?'paid':r.payment_status==='free'?'free':'pending'} /></td>
+                      <td><Badge s={r.status||'pending'} /></td>
+                      <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{fmt(r.created_at)}</td>
+                      <td>
+                        <div style={{display:'flex',gap:'.3rem'}}>
+                          {r.status!=='confirmed' && <button className="btn btn-success btn-sm" disabled={busy[`wr_${r.id}`]} onClick={async()=>{setB(`wr_${r.id}`,true);try{await apiFetch(`/workshops/admin/reg/${r.id}`,{method:'PATCH',body:JSON.stringify({status:'confirmed'})});fetchWsRegs()}catch(e){alert(e.message)}finally{setB(`wr_${r.id}`,false)}}}>✓ Confirm</button>}
+                          {r.status!=='cancelled' && <button className="btn btn-danger btn-sm" disabled={busy[`wr_${r.id}`]} onClick={async()=>{setB(`wr_${r.id}`,true);try{await apiFetch(`/workshops/admin/reg/${r.id}`,{method:'PATCH',body:JSON.stringify({status:'cancelled'})});fetchWsRegs()}catch(e){alert(e.message)}finally{setB(`wr_${r.id}`,false)}}}>✗ Cancel</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                />
+              )}
+            </div>
+          )}
+
           {/* ═══ PRODUCTS ═══ */}
           {tab === 'products' && (
             <div>
-              <SectionHeader title="🛍️ Products" count={prodTotal} onNew={() => openCreate('product', { is_active: true, is_digital: false, is_featured: false, stock_quantity: 0 })} />
-              <TblWrap loading={busy.products} cols={['Product', 'Price', 'Sale', 'Stock', 'Active', 'Actions']}
-                rows={products.map(p => (
+              <SectionHeader title="Products" count={prodTotal} onNew={() => openCreate('product',{is_active:true})} />
+              <Table loading={busy.products} cols={['Product','Price','Stock','Active','Actions']}
+                rows={products.map(p=>(
                   <tr key={p.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{p.name}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{p.sku || p.slug}</div>
-                    </td>
-                    <td>NPR {Number(p.price || 0).toLocaleString()}</td>
-                    <td style={{ color: 'var(--green)' }}>{p.sale_price ? `NPR ${Number(p.sale_price).toLocaleString()}` : '—'}</td>
-                    <td>{p.is_digital ? '∞' : (p.stock_quantity || 0)}</td>
-                    <td><Badge s={p.is_active ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('product', p)} onDelete={() => del('/admin/products', p.id, p.name, () => sec('/admin/products', setProducts, setProdTotal, prodPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{p.name}</td>
+                    <td>NPR {Number(p.price||0).toLocaleString()}</td>
+                    <td>{p.is_digital?'∞':(p.stock_quantity||0)}</td>
+                    <td><Badge s={p.is_active?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('product',p)} onDelete={()=>del('/admin/products',p.id,p.name,()=>sec('/admin/products',setProducts,setProdTotal,prodPage))} /></td>
                   </tr>
                 ))}
               />
@@ -2081,44 +2750,34 @@ const [photoError,     setPhotoError]     = useState('')
             </div>
           )}
 
-          {/* ═══ COURSES ═══ */}
           {tab === 'courses' && (
-            <div>
-              <SectionHeader title="🎓 Courses" count={courseTotal} sub="Online learning courses" onNew={() => openCreate('course', { is_free: true, is_published: false, level: 'Beginner', lessons_count: 0, emoji: '📚' })} />
-              <TblWrap loading={busy.courses} cols={['Course', 'Level', 'Price', 'Lessons', 'Published', 'Actions']}
-                rows={courses.map(c => (
-                  <tr key={c.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{c.emoji} {c.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{c.slug}</div>
-                    </td>
-                    <td><Badge s={c.level || 'Beginner'} /></td>
-                    <td style={{ fontWeight: 700 }}>{c.price_label || (c.is_free ? 'FREE' : `NPR ${Number(c.price || 0).toLocaleString()}`)}</td>
-                    <td style={{ textAlign: 'center' }}>{c.lessons_count || 0}</td>
-                    <td><Badge s={c.is_published ? 'published' : 'draft'} /></td>
-                    <td><Actions onEdit={() => openEdit('course', c)} onDelete={() => del('/admin/courses', c.id, c.title, () => sec('/admin/courses', setCourses, setCourseTotal, coursePage))} /></td>
-                  </tr>
-                ))}
-              />
-              <Pager page={coursePage} set={setCoursePage} total={courseTotal} />
-            </div>
-          )}
+  <CourseContentSection
+    courses={courses}
+    courseTotal={courseTotal}
+    coursePage={coursePage}
+    setCoursePage={setCoursePage}
+    busy={busy}
+    openEdit={openEdit}
+    openCreate={openCreate}
+    del={del}
+    sec={sec}
+    setCourses={setCourses}
+    setCourseTotal={setCourseTotal}
+    EnrollmentsComponent={CourseEnrollmentsSection}
+  />
+)}
 
           {/* ═══ ASSESSMENTS ═══ */}
           {tab === 'assessments' && (
             <div>
-              <SectionHeader title="📋 Assessments" count={assTotal} sub="Psychological screening tools" onNew={() => openCreate('assessment', { is_active: true, is_free: true, type: 'custom' })} />
-              <TblWrap loading={busy.assessments} cols={['Title', 'Type', 'Free', 'Active', 'Actions']}
-                rows={assessments.map(a => (
+              <SectionHeader title="Assessments" count={assTotal} onNew={() => openCreate('assessment',{is_active:true,is_free:true})} />
+              <Table loading={busy.assessments} cols={['Title','Type','Active','Actions']}
+                rows={assessments.map(a=>(
                   <tr key={a.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{a.title}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{a.description?.slice(0, 60)}</div>
-                    </td>
-                    <td><Badge s={a.type || '—'} /></td>
-                    <td><Badge s={a.is_free ? 'free' : 'premium'} /></td>
-                    <td><Badge s={a.is_active !== false ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('assessment', a)} onDelete={() => del('/admin/assessments', a.id, a.title, () => sec('/admin/assessments', setAssess, setAssTotal, assPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{a.title}</td>
+                    <td><Badge s={a.type||'—'} /></td>
+                    <td><Badge s={a.is_active!==false?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('assessment',a)} onDelete={()=>del('/admin/assessments',a.id,a.title,()=>sec('/admin/assessments',setAssess,setAssTotal,assPage))} /></td>
                   </tr>
                 ))}
               />
@@ -2129,18 +2788,14 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ COMMUNITY GROUPS ═══ */}
           {tab === 'community' && (
             <div>
-              <SectionHeader title="💬 Community Groups" count={comTotal} sub="Peer support groups" onNew={() => openCreate('community_group', { is_active: true, emoji: '💙', tags: [] })} />
-              <TblWrap loading={busy.community_groups} cols={['Group', 'Emoji', 'Tags', 'Active', 'Actions']}
-                rows={community.map(g => (
+              <SectionHeader title="Community Groups" count={comTotal} onNew={() => openCreate('community_group',{is_active:true,emoji:'💙'})} />
+              <Table loading={busy.community_groups} cols={['Group','Emoji','Active','Actions']}
+                rows={community.map(g=>(
                   <tr key={g.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{g.name}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{g.description?.slice(0, 60)}</div>
-                    </td>
-                    <td style={{ fontSize: '1.2rem' }}>{g.emoji}</td>
-                    <td><div style={{ display: 'flex', gap: '.25rem', flexWrap: 'wrap' }}>{(g.tags || []).map(t => <span key={t} className="chip">{t}</span>)}</div></td>
-                    <td><Badge s={g.is_active !== false ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('community_group', g)} onDelete={() => del('/admin/community-groups', g.id, g.name, () => sec('/admin/community-groups', setCommunity, setComTotal, comPage))} /></td>
+                    <td><div style={{fontWeight:600,fontSize:'.82rem'}}>{g.name}</div><div style={{fontSize:'.7rem',color:'var(--text-muted)'}}>{g.description?.slice(0,60)}</div></td>
+                    <td style={{fontSize:'1.2rem'}}>{g.emoji}</td>
+                    <td><Badge s={g.is_active!==false?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('community_group',g)} onDelete={()=>del('/admin/community-groups',g.id,g.name,()=>sec('/admin/community-groups',setCommunity,setComTotal,comPage))} /></td>
                   </tr>
                 ))}
               />
@@ -2148,208 +2803,207 @@ const [photoError,     setPhotoError]     = useState('')
             </div>
           )}
 
+          {/* ═══ ROOM BOOKINGS ═══ */}
+          {tab === 'room_bookings' && (
+            <div>
+              <SectionHeader title="Room Bookings" count={rbTotal}>
+                <select className="inp" value={rbStatus} onChange={e=>{setRbStatus(e.target.value);setRbPage(1)}}>
+                  <option value="">All statuses</option>
+                  {['pending','confirmed','cancelled'].map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+                <button className="btn btn-ghost" onClick={fetchRoomBookings}>↺</button>
+              </SectionHeader>
+              <Table loading={rbLoading} cols={['Client','Date','Time','Amount','Payment','Status','Actions']}
+                rows={roomBookings.map(b=>(
+                  <tr key={b.id}>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{b.profiles?.full_name||'—'}</td>
+                    <td style={{fontWeight:700}}>{b.booked_date}</td>
+                    <td style={{fontSize:'.76rem'}}>{b.start_time?.slice(0,5)} → {b.end_time?.slice(0,5)}</td>
+                    <td>NPR {Number(b.total_amount||0).toLocaleString()}</td>
+                    <td><Badge s={b.payment_status||'pending'} /></td>
+                    <td>
+                      <select className="inp" value={b.status||'pending'} style={{padding:'.18rem .42rem',fontSize:'.72rem'}}
+                        onChange={async e=>{try{await apiFetch(`/admin/room-bookings/${b.id}`,{method:'PUT',body:JSON.stringify({status:e.target.value})});fetchRoomBookings()}catch(err){alert(err.message)}}}>
+                        {['pending','confirmed','cancelled'].map(s=><option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
+                    <td><button className="btn btn-danger btn-sm" onClick={()=>del('/admin/room-bookings',b.id,`booking ${b.booked_date}`,fetchRoomBookings)}>🗑</button></td>
+                  </tr>
+                ))}
+              />
+              <Pager page={rbPage} set={setRbPage} total={rbTotal} />
+            </div>
+          )}
+
           {/* ═══ COMMUNITY ADMIN ═══ */}
           {tab === 'community_admin' && (
             <div>
-              <div className="sec-head">
-                <div>
-                  <h1 className="sec-title">🌐 Community Admin</h1>
-                  <p className="sec-sub">Manage support groups, therapy sessions, memberships and reservations</p>
-                </div>
-                <div style={{ display: 'flex', gap: '.5rem' }}>
-                  {['groups', 'sessions', 'reservations', 'memberships'].map(t => (
-                    <button key={t} className={`btn ${commTab === t ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={() => {
-                        setCommTab(t)
-                        if (t === 'groups')      fetchCommGroups()
-                        if (t === 'sessions')    fetchCommSessions(commSessionPage)
-                        if (t === 'reservations' && selectedSessionId) fetchCommReservations(selectedSessionId)
-                        if (t === 'memberships') apiFetch('/admin/group-memberships?limit=100').then(d => setCommMemberships(d.items || []))
-                      }}>
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </button>
-                  ))}
-                </div>
+              <SectionHeader title="Community Admin" sub="Groups · Sessions · Reservations · Memberships" />
+              <div className="sub-tabbar">
+                {[['groups','Groups'],['sessions','Sessions'],['reservations','Reservations'],['memberships','Memberships']].map(([t,l])=>(
+                  <button key={t} className={`sub-tab${commTab===t?' active':''}`} onClick={()=>{
+                    setCommTab(t)
+                    if(t==='groups')fetchCommGroups()
+                    if(t==='sessions')fetchCommSessions(commSessionPage)
+                    if(t==='reservations')fetchCommReservations(selectedSessionId||null)
+                    if(t==='memberships')fetchCommMemberships()
+                  }}>{l}</button>
+                ))}
               </div>
 
               {commTab === 'groups' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '.82rem', color: 'var(--slate-lt)' }}>{commGroups.length} groups</span>
-                    <button className="btn btn-ghost" onClick={fetchCommGroups}>🔄 Refresh</button>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'.85rem'}}>
+                    <span style={{fontSize:'.78rem',color:'var(--text-muted)'}}>{commGroups.length} groups</span>
+                    <button className="btn btn-ghost btn-sm" onClick={fetchCommGroups}>↺ Refresh</button>
                   </div>
-                  <TblWrap cols={['Group', 'Members', 'Tags', 'Status', 'Actions']}
-                    rows={commGroups.map(g => (
+                  <Table cols={['Group','Members','Fee','Status','Actions']}
+                    rows={commGroups.map(g=>(
                       <tr key={g.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                            <span style={{ fontSize: '1.4rem' }}>{g.emoji}</span>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '.83rem' }}>{g.name}</div>
-                              <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{g.description?.slice(0, 50)}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => { fetchCommMemberships(g.id); setCommTab('memberships') }}>
-                            👥 {g.member_count || 0} — View
-                          </button>
-                        </td>
-                        <td><div style={{ display: 'flex', gap: '.25rem', flexWrap: 'wrap' }}>{(g.tags || []).map(t => <span key={t} className="chip">{t}</span>)}</div></td>
-                        <td><Badge s={g.is_active !== false ? 'active' : 'paused'} /></td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '.35rem' }}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => { setCommTab('sessions'); fetchCommSessions() }}>📅 Sessions</button>
-                            <button className="btn btn-ghost btn-sm" onClick={() => openEdit('community_group', g)}>✏️</button>
-                          </div>
-                        </td>
+                        <td><div style={{display:'flex',alignItems:'center',gap:'.5rem'}}><span style={{fontSize:'1.3rem'}}>{g.emoji}</span><div><div style={{fontWeight:700,fontSize:'.82rem'}}>{g.name}</div><div style={{fontSize:'.68rem',color:'var(--text-muted)'}}>{g.description?.slice(0,45)}</div></div></div></td>
+                        <td><button className="btn btn-ghost btn-sm" onClick={()=>{fetchCommMemberships(g.id);setCommTab('memberships')}}>👥 {g.member_count||0}</button></td>
+                        <td>{Number(g.membership_fee||0)===0?<Badge s="free" />:<span style={{fontSize:'.78rem',fontWeight:700}}>NPR {Number(g.membership_fee).toLocaleString()}</span>}</td>
+                        <td><Badge s={g.is_active!==false?'active':'paused'} /></td>
+                        <td><RowActions onEdit={()=>openEdit('community_group',g)}><button className="btn btn-ghost btn-sm" onClick={()=>{setCommTab('sessions');fetchCommSessions()}}>Sessions</button></RowActions></td>
                       </tr>
                     ))}
                   />
                 </div>
               )}
 
+
               {commTab === 'sessions' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '.82rem', color: 'var(--slate-lt)' }}>{commSessions.length} sessions</span>
-                    <div style={{ display: 'flex', gap: '.5rem' }}>
-                      <button className="btn btn-ghost" onClick={() => fetchCommSessions(commSessionPage)}>🔄 Refresh</button>
-                      <button className="btn btn-primary" onClick={() => { setSessionForm({ max_spots: 20, mode: 'Online (Zoom)', price: 0 }); setSessionErr(''); setSessionModal({ data: null }) }}>➕ New Session</button>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'.85rem'}}>
+                    <span style={{fontSize:'.78rem',color:'var(--text-muted)'}}>{commSessions.length} sessions</span>
+                    <div style={{display:'flex',gap:'.4rem'}}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>fetchCommSessions(commSessionPage)}>↺ Refresh</button>
+                      <button className="btn btn-primary" onClick={()=>{setSessionForm({max_spots:20,mode:'Online (Zoom)',price:0,group_id:commGroups[0]?.id||''});setSessionErr('');setSessionModal({data:null})}}>+ New Session</button>
                     </div>
                   </div>
-                  <TblWrap cols={['Session', 'Group', 'Date & Time', 'Mode', 'Spots', 'Reserved', 'Left', 'Price', 'Actions']}
-                    rows={commSessions.map(s => (
+                  <Table cols={['Session','Group','Date','Mode','Spots','Left','Price','Actions']}
+                    rows={commSessions.map(s=>(
                       <tr key={s.id}>
+                        <td><div style={{fontWeight:700,fontSize:'.82rem'}}>{s.title}</div><div style={{fontSize:'.68rem',color:'var(--text-muted)'}}>👤 {s.facilitator}</div></td>
+                        <td style={{fontSize:'.76rem'}}>{s.community_groups?.emoji} {s.community_groups?.name||'—'}</td>
+                        <td style={{fontSize:'.72rem',color:'var(--text-muted)',whiteSpace:'nowrap'}}>{fmtT(s.scheduled_at)}</td>
+                        <td style={{fontSize:'.72rem'}}>{s.mode}</td>
+                        <td style={{textAlign:'center',fontWeight:700}}>{s.max_spots}</td>
+                        <td style={{textAlign:'center'}}><span style={{fontWeight:800,color:s.is_full?'var(--red)':s.spots_left<=3?'var(--amber)':'var(--green)'}}>{s.is_full?'FULL':s.spots_left}</span></td>
+                        <td>{Number(s.price)>0?`NPR ${Number(s.price).toLocaleString()}`:<Badge s="free" />}</td>
                         <td>
-                          <div style={{ fontWeight: 700, fontSize: '.83rem' }}>{s.title}</div>
-                          <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>👤 {s.facilitator}</div>
-                        </td>
-                        <td style={{ fontSize: '.8rem' }}>{s.community_groups?.emoji} {s.community_groups?.name || '—'}</td>
-                        <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)', whiteSpace: 'nowrap' }}>{fmtT(s.scheduled_at)}</td>
-                        <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{s.mode}</span></td>
-                        <td style={{ textAlign: 'center', fontWeight: 700 }}>{s.max_spots}</td>
-                        <td style={{ textAlign: 'center' }}><span style={{ color: s.reserved_count > 0 ? 'var(--green)' : 'var(--slate-lt)', fontWeight: 700 }}>{s.reserved_count}</span></td>
-                        <td style={{ textAlign: 'center' }}><span style={{ fontWeight: 800, color: s.is_full ? '#c0392b' : s.spots_left <= 3 ? '#8a5a1a' : '#1a7a4a' }}>{s.is_full ? 'FULL' : s.spots_left}</span></td>
-                        <td style={{ fontSize: '.8rem', fontWeight: 700 }}>{s.price > 0 ? `NPR ${Number(s.price).toLocaleString()}` : <Badge s="free" />}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '.35rem' }}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => { fetchCommReservations(s.id); setCommTab('reservations') }}>👥 {s.reserved_count}</button>
-                            <button className="btn btn-ghost btn-sm" onClick={() => { setSessionForm({ ...s }); setSessionErr(''); setSessionModal({ data: s }) }}>✏️</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => setDelConfirm({ endpoint: '/admin/group-sessions', id: s.id, label: s.title, refresh: () => fetchCommSessions(commSessionPage) })}>🗑</button>
-                          </div>
+                          <RowActions onEdit={()=>{setSessionForm({...s});setSessionErr('');setSessionModal({data:s})}} onDelete={()=>del('/admin/group-sessions',s.id,s.title,()=>fetchCommSessions(commSessionPage))}>
+                            <button className="btn btn-ghost btn-sm" onClick={()=>{fetchCommReservations(s.id);setCommTab('reservations')}}>👥 {s.reserved_count||0}</button>
+                          </RowActions>
                         </td>
                       </tr>
                     ))}
                   />
-                  <Pager page={commSessionPage} set={p => { setCommSessionPage(p); fetchCommSessions(p) }} total={commSessionsTotal} />
+                  <Pager page={commSessionPage} set={p=>{setCommSessionPage(p);fetchCommSessions(p)}} total={commSessionsTotal} />
                 </div>
               )}
 
               {commTab === 'reservations' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '.82rem', color: 'var(--slate-lt)' }}>{commReservations.length} reservation{commReservations.length !== 1 ? 's' : ''}</span>
-                    <div style={{ display: 'flex', gap: '.5rem' }}>
-                      <button className="btn btn-ghost" onClick={() => apiFetch('/admin/group-reservations?limit=100').then(d => setCommReservations(d.items || []))}>📋 All</button>
-                      {selectedSessionId && <button className="btn btn-ghost" onClick={() => fetchCommReservations(selectedSessionId)}>🔄 Refresh</button>}
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'.85rem',flexWrap:'wrap',gap:'.5rem'}}>
+                    <span style={{fontSize:'.78rem',color:'var(--text-muted)'}}>{commReservations.length} reservations</span>
+                    <div style={{display:'flex',gap:'.4rem'}}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>fetchCommReservations(null)}>📋 All</button>
+                      {selectedSessionId && <button className="btn btn-ghost btn-sm" onClick={()=>fetchCommReservations(selectedSessionId)}>↺</button>}
                     </div>
                   </div>
-                  <TblWrap cols={['Name', 'Anonymous', 'Session', 'Date', 'Booked At']}
-                    rows={commReservations.map(r => (
-                      <tr key={r.id}>
-                        <td style={{ fontWeight: 600, fontSize: '.83rem' }}>{r.display_name || '—'}</td>
-                        <td><Badge s={r.is_anonymous ? 'true' : 'false'} /></td>
-                        <td style={{ fontSize: '.8rem' }}>{r.group_sessions?.title || '—'}</td>
-                        <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{r.group_sessions?.scheduled_at ? fmtT(r.group_sessions.scheduled_at) : '—'}</td>
-                        <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(r.created_at)}</td>
-                      </tr>
-                    ))}
+                  {commReservations.some(r=>r.payment_status==='pending') && (
+                    <div className="alert alert-warn" style={{marginBottom:'.85rem'}}>⚠️ <strong>{commReservations.filter(r=>r.payment_status==='pending').length} reservation(s)</strong> awaiting payment verification.</div>
+                  )}
+                  <Table cols={['Attendee','Session','Method','Amount','Pay Status','Txn Ref','Booked','Actions']}
+                    rows={commReservations.map(r=>{
+                      const session=r.group_sessions||{}
+                      const isFree=!session.price||Number(session.price)===0
+                      const ps=isFree?'free':(r.payment_status||'unpaid')
+                      const isPending=ps==='pending'
+                      const isDone=ps==='paid'||ps==='free'
+                      return (
+                        <tr key={r.id}>
+                          <td><div style={{fontWeight:600,fontSize:'.82rem'}}>{r.display_name||'—'}</div>{r.is_anonymous&&<span className="badge badge-blue" style={{fontSize:'.58rem'}}>anon</span>}</td>
+                          <td style={{fontSize:'.76rem'}}>{session.title||'—'}</td>
+                          <td><span className="mono" style={{fontSize:'.7rem',fontWeight:700,color:'var(--teal)',textTransform:'uppercase'}}>{r.payment_method||(isFree?'free':'—')}</span></td>
+                          <td style={{fontWeight:700}}>{isFree?<span style={{color:'var(--green)'}}>Free</span>:`NPR ${Number(r.payment_amount||session.price||0).toLocaleString()}`}</td>
+                          <td><PayBadge status={ps} /></td>
+                          <td className="mono" style={{maxWidth:100,fontSize:'.68rem',color:'var(--text-muted)',wordBreak:'break-all'}}>{r.payment_reference||'—'}</td>
+                          <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{r.created_at?new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—'}</td>
+                          <td>
+                            <div style={{display:'flex',gap:'.3rem',flexWrap:'wrap'}}>
+                              {isPending&&<>
+                                <button className="btn btn-success btn-sm" disabled={busy[`res_${r.id}`]} onClick={async()=>{if(!window.confirm(`Confirm payment for ${r.display_name}?`))return;setBusy(b=>({...b,[`res_${r.id}`]:true}));try{if(r.payment_id)await apiFetch(`/admin/payments/${r.payment_id}`,{method:'PUT',body:JSON.stringify({status:'completed'})});else await apiFetch(`/admin/group-reservations/${r.id}`,{method:'PUT',body:JSON.stringify({payment_status:'paid',confirmed_at:new Date().toISOString()})});fetchCommReservations(selectedSessionId||null)}catch(e){alert(e.message)}finally{setBusy(b=>({...b,[`res_${r.id}`]:false}))}}}>✓</button>
+                                <button className="btn btn-danger btn-sm" disabled={busy[`res_${r.id}`]} onClick={async()=>{setBusy(b=>({...b,[`res_${r.id}`]:true}));try{if(r.payment_id)await apiFetch(`/admin/payments/${r.payment_id}`,{method:'PUT',body:JSON.stringify({status:'failed'})});else await apiFetch(`/admin/group-reservations/${r.id}`,{method:'PUT',body:JSON.stringify({payment_status:'failed'})});fetchCommReservations(selectedSessionId||null)}catch(e){alert(e.message)}finally{setBusy(b=>({...b,[`res_${r.id}`]:false}))}}}>✗</button>
+                              </>}
+                              {isDone&&<span style={{fontSize:'.68rem',color:'var(--green)',fontWeight:700}}>✓</span>}
+                              <button className="btn btn-danger btn-sm btn-icon" onClick={()=>del('/admin/group-reservations',r.id,`${r.display_name}'s reservation`,()=>fetchCommReservations(selectedSessionId||null))}>🗑</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   />
                 </div>
               )}
 
               {commTab === 'memberships' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '.82rem', color: 'var(--slate-lt)' }}>{commMemberships.length} membership{commMemberships.length !== 1 ? 's' : ''}</span>
-                    <button className="btn btn-ghost" onClick={() => apiFetch('/admin/group-memberships?limit=100').then(d => setCommMemberships(d.items || []))}>🔄 All Members</button>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'.85rem'}}>
+                    <span style={{fontSize:'.78rem',color:'var(--text-muted)'}}>{commMemberships.length} memberships</span>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>fetchCommMemberships()}>↺ All</button>
                   </div>
-                  <TblWrap cols={['Name', 'Anonymous', 'Group', 'Joined']}
-                    rows={commMemberships.map(m => (
-                      <tr key={m.id}>
-                        <td style={{ fontWeight: 600, fontSize: '.83rem' }}>{m.display_name || '—'}</td>
-                        <td><Badge s={m.is_anonymous ? 'true' : 'false'} /></td>
-                        <td style={{ fontSize: '.8rem' }}>{m.community_groups?.emoji} {m.community_groups?.name || '—'}</td>
-                        <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(m.created_at)}</td>
-                      </tr>
-                    ))}
+                  {commMemberships.some(m=>m.payment_status==='pending') && (
+                    <div className="alert alert-warn" style={{marginBottom:'.85rem'}}>⚠️ <strong>{commMemberships.filter(m=>m.payment_status==='pending').length} membership(s)</strong> awaiting payment verification.</div>
+                  )}
+                  <Table cols={['Member','Group','Pay Status','Method','Amount','Txn Ref','Joined','Actions']}
+                    rows={commMemberships.map(m=>{
+                      const isFree=m.payment_status==='free'||!m.payment_amount||Number(m.payment_amount)===0
+                      const isPending=m.payment_status==='pending'
+                      const isPaid=m.payment_status==='paid'||m.payment_status==='free'
+                      return (
+                        <tr key={m.id}>
+                          <td><div style={{fontWeight:600,fontSize:'.82rem'}}>{m.display_name||'—'}</div><div style={{fontSize:'.68rem',color:'var(--text-muted)'}}>{m.email||'—'}</div></td>
+                          <td style={{fontSize:'.78rem'}}>{m.community_groups?.emoji} {m.community_groups?.name||'—'}</td>
+                          <td><PayBadge status={m.payment_status||'unpaid'} /></td>
+                          <td><span className="mono" style={{fontSize:'.7rem',fontWeight:700,color:'var(--teal)',textTransform:'uppercase'}}>{m.payment_method||(isFree?'free':'—')}</span></td>
+                          <td style={{fontWeight:700}}>{isFree?<span style={{color:'var(--green)'}}>Free</span>:`NPR ${Number(m.payment_amount||0).toLocaleString()}`}</td>
+                          <td className="mono" style={{maxWidth:100,fontSize:'.68rem',color:'var(--text-muted)',wordBreak:'break-all'}}>{m.payment_reference||'—'}</td>
+                          <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{m.joined_at?new Date(m.joined_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}</td>
+                          <td>
+                            <div style={{display:'flex',gap:'.3rem',flexWrap:'wrap'}}>
+                              {isPending&&<>
+                                <button className="btn btn-success btn-sm" disabled={busy[`mem_${m.id}`]} onClick={async()=>{if(!window.confirm(`Confirm membership for ${m.display_name}?`))return;setBusy(b=>({...b,[`mem_${m.id}`]:true}));try{if(m.payment_id)await apiFetch(`/admin/payments/${m.payment_id}`,{method:'PUT',body:JSON.stringify({status:'completed'})});else await apiFetch(`/admin/group-memberships/${m.id}`,{method:'PUT',body:JSON.stringify({payment_status:'paid',confirmed_at:new Date().toISOString()})});fetchCommMemberships()}catch(e){alert(e.message)}finally{setBusy(b=>({...b,[`mem_${m.id}`]:false}))}}}>✓</button>
+                                <button className="btn btn-danger btn-sm" disabled={busy[`mem_${m.id}`]} onClick={async()=>{setBusy(b=>({...b,[`mem_${m.id}`]:true}));try{if(m.payment_id)await apiFetch(`/admin/payments/${m.payment_id}`,{method:'PUT',body:JSON.stringify({status:'failed'})});else await apiFetch(`/admin/group-memberships/${m.id}`,{method:'PUT',body:JSON.stringify({payment_status:'failed'})});fetchCommMemberships()}catch(e){alert(e.message)}finally{setBusy(b=>({...b,[`mem_${m.id}`]:false}))}}}>✗</button>
+                              </>}
+                              {isPaid&&<span style={{fontSize:'.68rem',color:'var(--green)',fontWeight:700}}>✓ Active</span>}
+                              <button className="btn btn-danger btn-sm btn-icon" onClick={()=>del('/admin/group-memberships',m.id,`${m.display_name}'s membership`,fetchCommMemberships)}>🗑</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   />
-                </div>
-              )}
-
-              {sessionModal && (
-                <div className="modal-overlay" onClick={() => setSessionModal(null)}>
-                  <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
-                    <div className="modal-header">
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--slate)' }}>
-                        {sessionModal.data ? '✏️ Edit Session' : '➕ New Group Session'}
-                      </span>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setSessionModal(null)}>✕</button>
-                    </div>
-                    <div className="modal-body">
-                      <div className="field"><label>Session Title *</label><input style={inpSx} value={sessionForm.title || ''} onChange={e => setSessionForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Mindfulness Circle — Weekly Session" /></div>
-                      <div className="field-row">
-                        <div className="field">
-                          <label>Group *</label>
-                          <select style={selSx} value={sessionForm.group_id || ''} onChange={e => setSessionForm(p => ({ ...p, group_id: e.target.value }))}>
-                            <option value="">— Select group —</option>
-                            {commGroups.map(g => <option key={g.id} value={g.id}>{g.emoji} {g.name}</option>)}
-                          </select>
-                        </div>
-                        <div className="field">
-                          <label>Mode</label>
-                          <select style={selSx} value={sessionForm.mode || 'Online (Zoom)'} onChange={e => setSessionForm(p => ({ ...p, mode: e.target.value }))}>
-                            <option>Online (Zoom)</option><option>In-Person, Kathmandu</option><option>Hybrid</option><option>Phone Call</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="field-row">
-                        <div className="field"><label>Date & Time *</label><input style={inpSx} type="datetime-local" value={sessionForm.scheduled_at ? sessionForm.scheduled_at.slice(0, 16) : ''} onChange={e => setSessionForm(p => ({ ...p, scheduled_at: new Date(e.target.value).toISOString() }))} /></div>
-                        <div className="field"><label>Facilitator</label><input style={inpSx} value={sessionForm.facilitator || ''} onChange={e => setSessionForm(p => ({ ...p, facilitator: e.target.value }))} placeholder="Ms. Priya Tamang" /></div>
-                      </div>
-                      <div className="field-row">
-                        <div className="field"><label>Max Spots</label><input style={inpSx} type="number" value={sessionForm.max_spots || 20} onChange={e => setSessionForm(p => ({ ...p, max_spots: Number(e.target.value) }))} /></div>
-                        <div className="field"><label>Price (NPR) — 0 = Free</label><input style={inpSx} type="number" value={sessionForm.price || 0} onChange={e => setSessionForm(p => ({ ...p, price: Number(e.target.value) }))} /></div>
-                      </div>
-                      <div className="field"><label>Notes</label><textarea style={{ ...inpSx, resize: 'vertical', lineHeight: 1.6 }} rows={2} value={sessionForm.notes || ''} onChange={e => setSessionForm(p => ({ ...p, notes: e.target.value }))} /></div>
-                    </div>
-                    {sessionErr && <div style={{ margin: '0 1.5rem .5rem' }}><div className="alert alert-error">{sessionErr}</div></div>}
-                    <div className="modal-footer">
-                      <button className="btn btn-ghost" onClick={() => setSessionModal(null)}>Cancel</button>
-                      <button className="btn btn-primary" onClick={saveSessionModal} disabled={sessionSaving}>{sessionSaving ? 'Saving…' : sessionModal.data ? '💾 Save Changes' : '➕ Create Session'}</button>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
           )}
 
+              {tab === 'social_work' && <SocialWorkAdminSection />}
+
+
           {/* ═══ FAQs ═══ */}
           {tab === 'faqs' && (
             <div>
-              <SectionHeader title="❓ FAQs" count={faqTotal} onNew={() => openCreate('faq', { is_active: true, sort_order: 0 })} />
-              <TblWrap loading={busy.faqs} cols={['Question', 'Category', 'Order', 'Active', 'Actions']}
-                rows={faqs.map(fq => (
+              <SectionHeader title="FAQs" count={faqTotal} onNew={() => openCreate('faq',{is_active:true,sort_order:0})} />
+              <Table loading={busy.faqs} cols={['Question','Category','Active','Actions']}
+                rows={faqs.map(fq=>(
                   <tr key={fq.id}>
-                    <td style={{ maxWidth: 260 }}>
-                      <div style={{ fontWeight: 600, fontSize: '.82rem' }}>{fq.question}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--slate-lt)' }}>{fq.answer?.slice(0, 60)}…</div>
-                    </td>
-                    <td><span style={{ fontSize: '.75rem', background: 'var(--bg)', padding: '.15rem .45rem', borderRadius: 4 }}>{fq.category || '—'}</span></td>
-                    <td style={{ textAlign: 'center' }}>{fq.sort_order || 0}</td>
-                    <td><Badge s={fq.is_active !== false ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('faq', fq)} onDelete={() => del('/admin/faqs', fq.id, fq.question, () => sec('/admin/faqs', setFaqs, setFaqTotal, faqPage))} /></td>
+                    <td style={{fontWeight:600,fontSize:'.82rem',maxWidth:340}}>{fq.question}</td>
+                    <td style={{fontSize:'.76rem'}}>{fq.category||'—'}</td>
+                    <td><Badge s={fq.is_active!==false?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('faq',fq)} onDelete={()=>del('/admin/faqs',fq.id,fq.question,()=>sec('/admin/faqs',setFaqs,setFaqTotal,faqPage))} /></td>
                   </tr>
                 ))}
               />
@@ -2360,17 +3014,16 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ COUPONS ═══ */}
           {tab === 'coupons' && (
             <div>
-              <SectionHeader title="🎫 Coupons" count={couTotal} onNew={() => openCreate('coupon', { is_active: true, type: 'percentage', value: 10, min_order_amount: 0 })} />
-              <TblWrap loading={busy.coupons} cols={['Code', 'Type', 'Value', 'Min Order', 'Uses', 'Active', 'Actions']}
-                rows={coupons.map(c => (
+              <SectionHeader title="Coupons" count={couTotal} onNew={() => openCreate('coupon',{is_active:true,type:'percentage',value:10})} />
+              <Table loading={busy.coupons} cols={['Code','Type','Value','Uses','Active','Actions']}
+                rows={coupons.map(c=>(
                   <tr key={c.id}>
-                    <td><code style={{ fontSize: '.82rem', fontWeight: 700, background: '#f0f4f8', padding: '.15rem .45rem', borderRadius: 4, color: 'var(--teal-dk)' }}>{c.code}</code></td>
-                    <td><Badge s={c.type || 'percentage'} /></td>
-                    <td style={{ fontWeight: 700 }}>{c.type === 'percentage' ? `${c.value}%` : `NPR ${c.value}`}</td>
-                    <td>{c.min_order_amount ? `NPR ${c.min_order_amount}` : '—'}</td>
-                    <td>{c.used_count || 0}/{c.max_uses || '∞'}</td>
-                    <td><Badge s={c.is_active ? 'active' : 'paused'} /></td>
-                    <td><Actions onEdit={() => openEdit('coupon', c)} onDelete={() => del('/admin/coupons', c.id, c.code, () => sec('/admin/coupons', setCoupons, setCouTotal, couPage))} /></td>
+                    <td><code className="mono" style={{fontWeight:700,background:'var(--surface-2)',padding:'.12rem .38rem',borderRadius:4,fontSize:'.78rem',color:'var(--blue-dk)'}}>{c.code}</code></td>
+                    <td><Badge s={c.type||'percentage'} /></td>
+                    <td>{c.type==='percentage'?`${c.value}%`:`NPR ${c.value}`}</td>
+                    <td>{c.used_count||0}/{c.max_uses||'∞'}</td>
+                    <td><Badge s={c.is_active?'active':'paused'} /></td>
+                    <td><RowActions onEdit={()=>openEdit('coupon',c)} onDelete={()=>del('/admin/coupons',c.id,c.code,()=>sec('/admin/coupons',setCoupons,setCouTotal,couPage))} /></td>
                   </tr>
                 ))}
               />
@@ -2381,21 +3034,18 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ CONTACTS ═══ */}
           {tab === 'contacts' && (
             <div>
-              <SectionHeader title="📩 Contact Messages" count={ctcTotal} />
-              <TblWrap loading={busy.contacts} cols={['Name', 'Email', 'Subject', 'Type', 'Status', 'Date', 'Update']}
-                rows={contacts.map(c => (
+              <SectionHeader title="Contact Messages" count={ctcTotal}>
+                <button className="btn btn-ghost" onClick={()=>sec('/admin/contacts',setContacts,setCtcTotal,ctcPage)}>↺</button>
+              </SectionHeader>
+              <Table loading={busy.contacts} cols={['Name','Email','Subject','Status','Date','Update']}
+                rows={contacts.map(c=>(
                   <tr key={c.id}>
-                    <td style={{ fontWeight: 600, fontSize: '.82rem' }}>{c.name}</td>
-                    <td style={{ fontSize: '.78rem', color: 'var(--slate-lt)' }}>{c.email}</td>
-                    <td style={{ maxWidth: 160, fontSize: '.8rem' }}>{c.subject || (c.message?.slice(0, 40) + '…')}</td>
-                    <td><Badge s={c.type || 'general'} /></td>
-                    <td><Badge s={c.status || 'new'} /></td>
-                    <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(c.created_at)}</td>
-                    <td>
-                      <select className="inp" value={c.status || 'new'} onChange={e => doContactStatus(c.id, e.target.value)} style={{ padding: '.2rem .45rem', fontSize: '.75rem' }}>
-                        {['new', 'in_progress', 'resolved', 'closed'].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{c.name}</td>
+                    <td style={{fontSize:'.74rem',color:'var(--text-muted)'}}>{c.email}</td>
+                    <td style={{maxWidth:160,fontSize:'.76rem'}}>{c.subject||(c.message?.slice(0,40)+'…')}</td>
+                    <td><Badge s={c.status||'new'} /></td>
+                    <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{fmt(c.created_at)}</td>
+                    <td><select className="inp" value={c.status||'new'} onChange={e=>doContactStatus(c.id,e.target.value)} style={{padding:'.18rem .42rem',fontSize:'.72rem'}}>{['new','in_progress','resolved','closed'].map(s=><option key={s} value={s}>{s}</option>)}</select></td>
                   </tr>
                 ))}
               />
@@ -2406,21 +3056,18 @@ const [photoError,     setPhotoError]     = useState('')
           {/* ═══ SUBSCRIPTIONS ═══ */}
           {tab === 'subscriptions' && (
             <div>
-              <SectionHeader title="♻️ Subscriptions" count={subTotal} />
-              <TblWrap loading={busy.subscriptions} cols={['Client', 'Plan', 'Amount', 'Status', 'Started', 'Expires', 'Update']}
-                rows={subs.map(s => (
+              <SectionHeader title="Subscriptions" count={subTotal}>
+                <button className="btn btn-ghost" onClick={()=>sec('/admin/subscriptions',setSubs,setSubTotal,subPage)}>↺</button>
+              </SectionHeader>
+              <Table loading={busy.subscriptions} cols={['Client','Plan','Amount','Status','Started','Update']}
+                rows={subs.map(s=>(
                   <tr key={s.id}>
-                    <td style={{ fontWeight: 600, fontSize: '.82rem' }}>{s.client_name || s.profiles?.full_name || s.client_id || '—'}</td>
-                    <td>{s.plan_name}</td>
-                    <td style={{ fontWeight: 600 }}>{s.amount ? `NPR ${Number(s.amount).toLocaleString()}` : '—'}</td>
-                    <td><Badge s={s.status || 'active'} /></td>
-                    <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{fmt(s.started_at)}</td>
-                    <td style={{ fontSize: '.77rem', color: 'var(--slate-lt)' }}>{s.expires_at ? fmt(s.expires_at) : '—'}</td>
-                    <td>
-                      <select className="inp" value={s.status || 'active'} onChange={e => doSubStatus(s.id, e.target.value)} style={{ padding: '.2rem .45rem', fontSize: '.75rem' }}>
-                        {['active', 'cancelled', 'expired', 'paused'].map(x => <option key={x} value={x}>{x}</option>)}
-                      </select>
-                    </td>
+                    <td style={{fontWeight:600,fontSize:'.82rem'}}>{s.client_name||s.profiles?.full_name||'—'}</td>
+                    <td style={{fontSize:'.78rem'}}>{s.plan_name}</td>
+                    <td>{s.amount?`NPR ${Number(s.amount).toLocaleString()}`:'—'}</td>
+                    <td><Badge s={s.status||'active'} /></td>
+                    <td style={{fontSize:'.72rem',color:'var(--text-muted)'}}>{fmt(s.started_at)}</td>
+                    <td><select className="inp" value={s.status||'active'} onChange={e=>doSubStatus(s.id,e.target.value)} style={{padding:'.18rem .42rem',fontSize:'.72rem'}}>{['active','cancelled','expired','paused'].map(x=><option key={x} value={x}>{x}</option>)}</select></td>
                   </tr>
                 ))}
               />
@@ -2428,24 +3075,22 @@ const [photoError,     setPhotoError]     = useState('')
             </div>
           )}
 
-          {/* ═══ SITE SETTINGS ═══ */}
+          {/* ═══ SETTINGS ═══ */}
           {tab === 'settings' && (
             <div>
-              <SectionHeader title="⚙️ Site Settings" />
-              <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden' }}>
-                {busy.settings
-                  ? <p style={{ padding: '2rem', color: 'var(--slate-lt)', fontSize: '.85rem' }}>Loading…</p>
-                  : settings.length === 0
-                    ? <p style={{ padding: '2rem', color: 'var(--slate-lt)', fontSize: '.85rem' }}>No settings found.</p>
-                    : settings.map((s, i) => (
-                        <div key={s.key || i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '.7rem 1rem', borderBottom: i < settings.length - 1 ? '1px solid var(--border)' : 'none', flexWrap: 'wrap' }}>
-                          <code style={{ fontFamily: 'monospace', fontSize: '.78rem', color: 'var(--teal-dk)', background: '#f0f4f8', padding: '.15rem .45rem', borderRadius: 4, minWidth: 180, flexShrink: 0 }}>{s.key}</code>
-                          <span style={{ fontSize: '.82rem', color: 'var(--slate-md)', flex: 1, wordBreak: 'break-all' }}>
-                            {typeof s.value === 'object' ? JSON.stringify(s.value) : String(s.value ?? '')}
-                          </span>
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit('setting', { key: s.key, value: typeof s.value === 'object' ? JSON.stringify(s.value) : String(s.value ?? '') })}>✏️ Edit</button>
-                        </div>
-                      ))
+              <SectionHeader title="Site Settings">
+                <button className="btn btn-ghost" onClick={fetchSettings}>↺</button>
+              </SectionHeader>
+              <div className="tbl-wrap">
+                {busy.settings ? <div className="tbl-loading"><span className="spinner" /> Loading…</div>
+                  : settings.length === 0 ? <div className="empty-state"><div className="empty-text">No settings found.</div></div>
+                  : settings.map((s,i)=>(
+                    <div key={s.key||i} style={{display:'flex',alignItems:'center',gap:'1rem',padding:'.65rem 1rem',borderBottom:i<settings.length-1?'1px solid var(--border-2)':'none',flexWrap:'wrap'}}>
+                      <code className="mono" style={{fontSize:'.74rem',color:'var(--blue-dk)',background:'var(--surface-2)',padding:'.12rem .4rem',borderRadius:4,minWidth:200}}>{s.key}</code>
+                      <span style={{fontSize:'.79rem',color:'var(--text-secondary)',flex:1,wordBreak:'break-all'}}>{typeof s.value==='object'?JSON.stringify(s.value):String(s.value??'')}</span>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>openEdit('setting',{key:s.key,value:String(s.value??'')})}>✏️ Edit</button>
+                    </div>
+                  ))
                 }
               </div>
             </div>
@@ -2454,44 +3099,63 @@ const [photoError,     setPhotoError]     = useState('')
         </div>{/* /adm-content */}
       </div>{/* /adm-body */}
 
-      {modal && (
-  <div className="modal-overlay" onClick={closeModal}>
-    <div className="modal" style={{ maxWidth: 660 }} onClick={e => e.stopPropagation()}>
-      <div className="modal-header">
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--slate)' }}>
-          {modal.data ? '✏️ Edit' : '➕ New'} {({
-            post: 'Blog Post', news_article: 'News Article', resource: 'Resource',
-            gallery_item: 'Gallery Item', research_paper: 'Research Paper',
-            psych_video: 'Psych Video', psych_analysis: 'Psych Analysis',
-            psych_concept: 'Psych Concept', therapist_profile: 'Therapist Profile',
-            product: 'Product', course: 'Course', assessment: 'Assessment',
-            community_group: 'Community Group', faq: 'FAQ', coupon: 'Coupon',
-            setting: 'Site Setting',
-          })[modal.type] || modal.type}
-        </span>
-        <button className="btn btn-ghost btn-sm" onClick={closeModal}>✕</button>
-      </div>
-      <div className="modal-body">{renderModalFields()}</div>
-      {saveErr && (
-        <div style={{ margin: '0 1.5rem .5rem' }}>
-          <div className="alert alert-error">{saveErr}</div>
+      {/* SESSION MODAL */}
+      {sessionModal && (
+        <div className="overlay" onClick={()=>setSessionModal(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-head">
+              <span className="modal-head-title">{sessionModal.data ? '✏️ Edit Session' : '+ New Group Session'}</span>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setSessionModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="field-row">
+                <div className="field"><label>Title *</label><input className="inp" value={sessionForm.title||''} onChange={e=>setSessionForm(f=>({...f,title:e.target.value}))} placeholder="e.g. Anxiety Support Circle" /></div>
+                <div className="field"><label>Group *</label><select className="inp" value={sessionForm.group_id||''} onChange={e=>setSessionForm(f=>({...f,group_id:e.target.value}))}><option value="">— Select group —</option>{commGroups.map(g=><option key={g.id} value={g.id}>{g.emoji} {g.name}</option>)}</select></div>
+              </div>
+              <div className="field-row">
+                <div className="field"><label>Facilitator *</label><input className="inp" value={sessionForm.facilitator||''} onChange={e=>setSessionForm(f=>({...f,facilitator:e.target.value}))} /></div>
+                <div className="field"><label>Mode</label><select className="inp" value={sessionForm.mode||'Online (Zoom)'} onChange={e=>setSessionForm(f=>({...f,mode:e.target.value}))}><option>Online (Zoom)</option><option>In-Person, Kathmandu</option><option>Hybrid</option></select></div>
+              </div>
+              <div className="field-row">
+                <div className="field"><label>Scheduled At *</label><input className="inp" type="datetime-local" value={sessionForm.scheduled_at?sessionForm.scheduled_at.slice(0,16):''} onChange={e=>setSessionForm(f=>({...f,scheduled_at:e.target.value}))} /></div>
+                <div className="field"><label>Duration (min)</label><input className="inp" type="number" value={sessionForm.duration_minutes||60} onChange={e=>setSessionForm(f=>({...f,duration_minutes:Number(e.target.value)}))} /></div>
+              </div>
+              <div className="field-row">
+                <div className="field"><label>Max Spots</label><input className="inp" type="number" value={sessionForm.max_spots||20} onChange={e=>setSessionForm(f=>({...f,max_spots:Number(e.target.value)}))} /></div>
+                <div className="field"><label>Price (NPR) — 0=Free</label><input className="inp" type="number" value={sessionForm.price??0} onChange={e=>setSessionForm(f=>({...f,price:Number(e.target.value)}))} /></div>
+              </div>
+              <div className="field"><label>Description</label><textarea className="inp" rows={3} value={sessionForm.description||''} onChange={e=>setSessionForm(f=>({...f,description:e.target.value}))} /></div>
+              {sessionErr && <div className="alert alert-error">{sessionErr}</div>}
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setSessionModal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveSessionModal} disabled={sessionSaving}>{sessionSaving?<><span className="spinner" /> Saving…</>:sessionModal.data?'Save Changes':'Create Session'}</button>
+            </div>
+          </div>
         </div>
       )}
-      <div className="modal-footer">
-        <button className="btn btn-ghost" onClick={closeModal}>Cancel</button>
-        <button className="btn btn-primary" onClick={saveModal} disabled={saving}>
-          {saving ? 'Saving…' : modal.data ? '💾 Save Changes' : '➕ Create'}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+
+      {/* GENERIC CRUD MODAL */}
+      {modal && (
+        <div className="overlay" onClick={closeModal}>
+          <div className="modal modal-lg" onClick={e=>e.stopPropagation()}>
+            <div className="modal-head">
+              <span className="modal-head-title">{modal.data ? '✏️ Edit' : '+ New'} {MODAL_TITLES[modal.type] || modal.type}</span>
+              <button className="btn btn-ghost btn-sm" onClick={closeModal}>✕</button>
+            </div>
+            <div className="modal-body">{renderFields()}</div>
+            {saveErr && <div style={{margin:'0 1.4rem .5rem'}}><div className="alert alert-error">{saveErr}</div></div>}
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={closeModal}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveModal} disabled={saving}>{saving?<><span className="spinner" /> Saving…</>:modal.data?'Save Changes':'Create'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DIALOG */}
       {delConfirm && (
-        <Confirm
-          msg={`Delete "${delConfirm.label}"? This cannot be undone.`}
-          onConfirm={doDelete}
-          onCancel={() => setDelConfirm(null)}
-        />
+        <Confirm msg={`Delete "${delConfirm.label}"? This cannot be undone.`} onConfirm={doDelete} onCancel={()=>setDelConfirm(null)} />
       )}
 
     </div>

@@ -131,7 +131,7 @@ html {
 }
 
 .logo-mark {
-  width: 42px; height: 42px;
+  width: 82px; height: 62px;
   border-radius: 10px;
   overflow: hidden;
   flex-shrink: 0;
@@ -204,6 +204,13 @@ html {
   padding-top: var(--navbar-h);
   min-height: 100vh;
 }
+
+/* Hide Google Translate toolbar */
+.goog-te-banner-frame { display: none !important; }
+.skiptranslate        { display: none !important; }
+.goog-te-gadget       { display: none !important; }
+#goog-gt-tt           { display: none !important; }
+body                  { top: 0 !important; position: static !important; }
 
 /* ============================================================
    PAGE HERO  (sub-header banner on inner pages)

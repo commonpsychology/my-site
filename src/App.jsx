@@ -2,6 +2,7 @@ import { RouterProvider, useRouter } from './context/RouterContext'
 import { AuthProvider } from './context/AuthContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { PaymentProvider } from './components/PaymentModal'
+import { TherapistsProvider } from './context/TherapistsContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import MyOrdersPage from './pages/MyOrdersPage'
@@ -28,6 +29,7 @@ import PaymentEthicsPage   from './pages/PaymentEthicsPage'
 import SignInPage          from './pages/SignInPage'
 import RegisterPage        from './pages/RegisterPage'
 import StorePage           from './pages/StorePage'
+import OnlineCourses      from './pages/OnlineCourses'
 import MessagesPage        from './pages/MessagesPage'
 import PrivacyPage         from './pages/PrivacyPage'
 import OurPlacePage        from './pages/OurplacePage'
@@ -38,6 +40,7 @@ import ClientPortalPage    from './pages/ClientsPortalPage'
 import CommunityPage       from './pages/CommunityPage'
 import RegisterStaffPage   from './pages/RegisterStaffPage'
 import AIToolsPage         from './pages/AitoolsPage'
+import NeurosciencePage    from './pages/NeuroScience'
 import MyAccountPage       from './pages/Myaccountpage'
 import DisordersPage       from './pages/DisordersPage'
 import PsychologicalViewPage from './pages/PsychologicalViewPage'
@@ -68,8 +71,10 @@ const ROUTES = {
   '/contact':            ContactPage,
   '/about':              ContactPage,
   '/signin':             SignInPage,
+  '/neuro-science':       NeurosciencePage,
   '/my-orders':          MyOrdersPage,
   '/our-news':           OurNews,
+  '/courses-videos':     OnlineCourses,
   '/register':           RegisterPage,
   '/disaster-management': DisasterManagement,
   '/store':              StorePage,
@@ -149,7 +154,9 @@ export default function App() {
       <AuthProvider>
         <LanguageProvider>
           <PaymentProvider>
-            <div className="app"><AppRoutes /></div>
+            <TherapistsProvider>
+              <div className="app"><AppRoutes /></div>
+            </TherapistsProvider>
           </PaymentProvider>
         </LanguageProvider>
       </AuthProvider>

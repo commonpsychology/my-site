@@ -1,12 +1,12 @@
-// PaymentModal.jsx — v2.6
+// PaymentModal.jsx — v2.7
+// ✅ Fixed: metadata spread no longer overwrites amount/method
+// ✅ Fixed: amount always sent as integer (Math.round)
+// ✅ Fixed: method always sent as backend-expected string
 // ✅ Auth guard in PaymentProvider + PaymentModal
 // ✅ createPortal COD popup
 // ✅ /payment-qr.png → eSewa & Khalti
 // ✅ /bank-qr.png    → Bank Transfer & FonePay
 // ✅ QR 260px with image-rendering:pixelated
-// ✅ eSewa / Khalti / FonePay / Bank Transfer → no extra fields, confirm button is the last step
-// ✅ Card → keeps name / number / expiry / cvc fields
-// ✅ COD → review portal then confirm
 
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react'
 import { createPortal } from 'react-dom'
@@ -77,15 +77,8 @@ const injectCSS = () => {
 .psm-amount-meta   { font-size:.7rem; color:rgba(255,255,255,.72); text-align:right; line-height:1.5 }
 .psm-qr-img-wrap { display:flex; justify-content:center; margin-bottom:.75rem }
 .psm-qr-img {
-  width:260px;
-  height:260px;
-  image-rendering:pixelated;
-  object-fit:contain;
-  border-radius:12px;
-  border:2px solid var(--psm-border);
-  background:#fff;
-  padding:8px;
-  display:block
+  width:260px; height:260px; image-rendering:pixelated; object-fit:contain;
+  border-radius:12px; border:2px solid var(--psm-border); background:#fff; padding:8px; display:block
 }
 .psm-qr-hint { text-align:center; font-size:.75rem; color:var(--psm-slate-lt); margin-bottom:.85rem; line-height:1.6 }
 .psm-detail-table { background:white; border:1px solid var(--psm-border); border-radius:10px; overflow:hidden; margin-bottom:.85rem }
@@ -118,8 +111,6 @@ const injectCSS = () => {
 .psm-spinner { width:20px; height:20px; border:2.5px solid rgba(255,255,255,.35); border-top-color:white; border-radius:50%; animation:psmSpin .7s linear infinite; flex-shrink:0 }
 .psm-progress { height:3px; background:var(--psm-border); border-radius:100px; overflow:hidden; margin-bottom:1rem }
 .psm-progress-bar { height:100%; background:linear-gradient(90deg,var(--psm-teal),#00BFFF); border-radius:100px; transition:width .4s ease }
-
-/* ── Auth wall ── */
 .psm-auth-wall { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2.5rem 2rem; text-align:center; gap:1rem }
 .psm-auth-wall-icon { width:64px; height:64px; border-radius:50%; background:var(--psm-bg); display:flex; align-items:center; justify-content:center; font-size:1.8rem; border:2px solid var(--psm-border) }
 .psm-auth-wall-title { font-family:var(--psm-display); font-size:1.2rem; color:var(--psm-slate) }
@@ -128,8 +119,6 @@ const injectCSS = () => {
 .psm-auth-signin-btn:hover { opacity:.9; transform:translateY(-1px) }
 .psm-auth-register-link { font-size:.78rem; color:var(--psm-slate-lt) }
 .psm-auth-register-link a { color:var(--psm-teal); font-weight:600; text-decoration:none; cursor:pointer }
-
-/* ── COD portal ── */
 .psm-cod-overlay { position:fixed; inset:0; background:rgba(8,20,35,.8); backdrop-filter:blur(8px); z-index:10002; display:flex; align-items:center; justify-content:center; padding:1rem; animation:psmFadeIn .18s ease }
 .psm-cod-modal { background:white; border-radius:20px; width:100%; max-width:420px; box-shadow:0 32px 100px rgba(0,0,0,.25); animation:psmSlideUp .24s cubic-bezier(.22,1,.36,1); overflow:hidden; font-family:var(--psm-body) }
 .psm-cod-hero { background:linear-gradient(135deg,#007BA8 0%,#00BFFF 100%); padding:1.75rem 1.5rem 1.5rem; text-align:center }
@@ -143,7 +132,6 @@ const injectCSS = () => {
 .psm-cod-confirm:disabled { opacity:.6; cursor:not-allowed }
 .psm-cod-cancel { padding:.85rem 1.25rem; border-radius:11px; border:1.5px solid #e2e8f0; background:none; color:#7a9aaa; font-family:var(--psm-body); font-size:.85rem; cursor:pointer; transition:all .15s }
 .psm-cod-cancel:hover { border-color:#007BA8; color:#007BA8 }
-
 @media(max-width:540px) {
   .psm-modal { border-radius:16px 16px 0 0; max-height:95vh }
   .psm-overlay { align-items:flex-end }
@@ -207,7 +195,6 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
     </div>
   )
 
-  /* ── eSewa ── */
   if (gateway.id === 'esewa') return (
     <div className="psm-panel">
       <div className="psm-panel-title">🟢 eSewa Payment</div>
@@ -223,7 +210,6 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
     </div>
   )
 
-  /* ── Khalti ── */
   if (gateway.id === 'khalti') return (
     <div className="psm-panel">
       <div className="psm-panel-title">🟣 Khalti Payment</div>
@@ -238,7 +224,6 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
     </div>
   )
 
-  /* ── FonePay ── */
   if (gateway.id === 'fonepay') return (
     <div className="psm-panel">
       <div className="psm-panel-title">📲 FonePay Payment</div>
@@ -248,16 +233,15 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
       </div>
       <QRHint text={`Open your bank / FonePay app → Scan QR → Pay NPR ${finalAmount.toLocaleString()}`} />
       <DetailTable rows={[
-        ['Merchant Name', 'Puja Samargi',                       null],
-        ['FonePay ID',    FONEPAY_ID,                           FONEPAY_ID],
-        ['Amount',        `NPR ${finalAmount.toLocaleString()}`, String(finalAmount)],
-        ['Remarks',       remarks,                               null],
-        ['Order Ref',     orderId,                               orderId],
+        ['Merchant Name', 'Puja Samargi',                        null],
+        ['FonePay ID',    FONEPAY_ID,                            FONEPAY_ID],
+        ['Amount',        `NPR ${finalAmount.toLocaleString()}`,  String(finalAmount)],
+        ['Remarks',       remarks,                                null],
+        ['Order Ref',     orderId,                                orderId],
       ]} />
     </div>
   )
 
-  /* ── Bank Transfer ── */
   if (gateway.id === 'bank_transfer') return (
     <div className="psm-panel">
       <div className="psm-panel-title">🏦 Bank Transfer</div>
@@ -276,7 +260,6 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
     </div>
   )
 
-  /* ── Card ── */
   if (gateway.id === 'stripe') return (
     <div className="psm-panel">
       <div className="psm-panel-title">💳 Card Details</div>
@@ -290,7 +273,6 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
     </div>
   )
 
-  /* ── COD ── */
   if (gateway.id === 'cash') return (
     <div className="psm-panel">
       <div className="psm-panel-title">💵 Cash / Pay on Delivery</div>
@@ -429,10 +411,11 @@ function PaymentModal({ config, onClose, onResult }) {
 
   const [gateway,       setGateway]       = useState(null)
   const [step,          setStep]          = useState('select')
+    const [couponLocked,  setCouponLocked]  = useState(false)  
+
   const [coupon,        setCoupon]        = useState('')
   const [couponApplied, setCouponApplied] = useState(null)
   const [couponError,   setCouponError]   = useState('')
-  const [amount]                          = useState(config.amount || 0)
   const [txnId,         setTxnId]         = useState('')
   const [errMsg,        setErrMsg]        = useState('')
   const [copied,        setCopied]        = useState(false)
@@ -446,26 +429,37 @@ function PaymentModal({ config, onClose, onResult }) {
   const token = () => localStorage.getItem('accessToken')
   const API   = import.meta.env?.VITE_API_URL || 'http://localhost:5000/api'
 
+  // ── FIX: ensure amount is always a valid positive number ──────────────────
+  const baseAmount = Math.round(Math.max(0, Number(config.amount) || 0))
+
   const allowedGateways = config.allowedGateways
     ? GATEWAYS.filter(g => config.allowedGateways.includes(g.id))
     : GATEWAYS
 
   const finalAmount = couponApplied
-    ? Math.max(0, amount - (couponApplied.type === 'percentage'
-        ? Math.round(amount * couponApplied.value / 100)
+    ? Math.max(0, baseAmount - (couponApplied.type === 'percentage'
+        ? Math.round(baseAmount * couponApplied.value / 100)
         : couponApplied.value))
-    : amount
-  const discount = amount - finalAmount
+    : baseAmount
+  const discount = baseAmount - finalAmount
 
   async function applyCoupon() {
-    setCouponError('')
-    try {
-      const res  = await fetch(`${API}/coupons/validate`, { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token()}`}, body:JSON.stringify({ code:coupon, amount }) })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Invalid coupon')
-      setCouponApplied(data.coupon)
-    } catch(e) { setCouponError(e.message) }
-  }
+  setCouponError('')
+  setCouponLocked(false)
+  try {
+    const res  = await fetch(`${API}/payments/coupons/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token()}` },
+      body: JSON.stringify({ code: coupon, amount: baseAmount }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      if (data.alreadyClaimed) setCouponLocked(true)
+      throw new Error(data.message || 'Invalid coupon')
+    }
+    setCouponApplied(data.coupon)
+  } catch(e) { setCouponError(e.message) }
+}
 
   function copyText(txt) {
     navigator.clipboard.writeText(txt).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800) })
@@ -486,44 +480,96 @@ function PaymentModal({ config, onClose, onResult }) {
   async function submitPayment() {
     setShowCOD(false)
     if (!gateway) return
-    setStep('processing')
-    const payload = {
-      amount:      finalAmount,
-      currency:    config.currency || 'NPR',
-      method:      gateway.id,
-      category:    config.type || 'generic',
-      coupon_code: couponApplied?.code || undefined,
-      ...config.metadata,
+
+    // ── FIX: validate amount and method before sending ────────────────────
+    const safeAmount = Math.round(Number(finalAmount))
+    const safeMethod = gateway.id
+
+    if (!safeAmount || safeAmount <= 0) {
+      setErrMsg('Invalid payment amount. Please go back and try again.')
+      setStep('error')
+      onResult({ success:false, error:'Invalid amount' })
+      return
     }
-    if (gateway.id === 'cash')   { payload.gateway_response = { method:'cod' }; payload.status = 'pending_cod' }
-    if (gateway.id === 'stripe') { payload.gateway_response = { last4:cardNum.slice(-4), brand:'visa' } }
-    if (['esewa','khalti','fonepay'].includes(gateway.id)) {
+    if (!safeMethod) {
+      setErrMsg('No payment method selected.')
+      setStep('error')
+      onResult({ success:false, error:'No method' })
+      return
+    }
+
+    setStep('processing')
+
+    // ── FIX: metadata spread BEFORE required fields so it can never
+    //         overwrite amount or method ──────────────────────────────────
+    const payload = {
+  ...(config.metadata || {}),
+  amount:    safeAmount,
+  method:    safeMethod,
+  currency:  config.currency || 'NPR',
+  category:  config.type     || 'generic',
+  ...(couponApplied?.code ? { coupon_code: couponApplied.code } : {}),
+}
+
+    // Gateway-specific additions
+    if (safeMethod === 'cash') {
+      payload.gateway_response = { method:'cod' }
+      payload.status = 'pending_cod'
+    }
+    if (safeMethod === 'stripe') {
+      payload.gateway_response = { last4:cardNum.slice(-4), brand:'visa' }
+    }
+    if (['esewa','khalti','fonepay'].includes(safeMethod)) {
       payload.return_url = `${window.location.origin}/payment/callback`
     }
+
+    // Debug log — remove after confirming payments work:
+    console.log('[PaymentModal] POST /payments payload:', JSON.stringify(payload, null, 2))
+
     try {
-      const res  = await fetch(`${API}/payments`, { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token()}`}, body:JSON.stringify(payload) })
+      const res  = await fetch(`${API}/payments`, {
+        method:  'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token()}` },
+        body:    JSON.stringify(payload),
+      })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.message || `Payment failed (${res.status})`)
-      // If backend returns redirect URL follow it (eSewa/Khalti/FonePay hosted flow)
-      if (['esewa','khalti','fonepay'].includes(gateway.id) && data.redirect_url) {
+
+      if (!res.ok) throw new Error(data.message || data.error || `Payment failed (${res.status})`)
+
+      // Redirect flow (eSewa/Khalti/FonePay hosted)
+      if (['esewa','khalti','fonepay'].includes(safeMethod) && data.redirect_url) {
         setProgress(100)
         setTimeout(() => { window.location.href = data.redirect_url }, 400)
         return
       }
-      // Success screen
+
+      // Success
       setProgress(100)
       setTimeout(() => {
-        setTxnId(data.payment?.transaction_id || data.id || '—')
+        const txn = data.payment?.transaction_id || data.transaction_id || data.id || ''
+        setTxnId(txn)
         setStep('success')
-        onResult({ success:true, paymentId:data.payment?.id || data.id, transactionId:data.payment?.transaction_id, method:gateway.id, amount:finalAmount, status:data.payment?.status || 'completed', raw:data })
+        onResult({
+          success:       true,
+          paymentId:     data.payment?.id     || data.id,
+          transactionId: data.payment?.transaction_id || data.transaction_id,
+          method:        safeMethod,
+          amount:        safeAmount,
+          status:        data.payment?.status || data.status || 'completed',
+          raw:           data,
+        })
       }, 400)
     } catch(e) {
+      console.error('[PaymentModal] payment error:', e)
       setProgress(100)
-      setTimeout(() => { setErrMsg(e.message); setStep('error'); onResult({ success:false, error:e.message }) }, 300)
+      setTimeout(() => {
+        setErrMsg(e.message)
+        setStep('error')
+        onResult({ success:false, error:e.message })
+      }, 300)
     }
   }
 
-  // Only card requires field validation — all QR/bank gateways are immediately ready
   const canSubmit = (() => {
     if (!gateway) return false
     if (gateway.id === 'stripe') return cardNum.length >= 15 && cardExp.length === 5 && cardCvc.length >= 3 && cardName.trim()
@@ -531,9 +577,9 @@ function PaymentModal({ config, onClose, onResult }) {
   })()
 
   const payBtnLabel = (() => {
-    if (!gateway)                                 return 'Select a payment method'
-    if (gateway.id === 'cash')                    return `💵 Review COD Order — NPR ${finalAmount.toLocaleString()}`
-    if (gateway.id === 'stripe')                  return `Pay NPR ${finalAmount.toLocaleString()}`
+    if (!gateway)                return 'Select a payment method'
+    if (gateway.id === 'cash')   return `💵 Review COD Order — NPR ${finalAmount.toLocaleString()}`
+    if (gateway.id === 'stripe') return `Pay NPR ${finalAmount.toLocaleString()}`
     return `✓ Confirm Payment — NPR ${finalAmount.toLocaleString()}`
   })()
 
@@ -542,17 +588,14 @@ function PaymentModal({ config, onClose, onResult }) {
       <div className="psm-overlay" onClick={e => { if (e.target === e.currentTarget && step !== 'processing') onClose() }}>
         <div className="psm-modal" onClick={e => e.stopPropagation()}>
 
-          {/* Auth loading */}
           {authLoading && (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'3rem' }}>
               <div className="psm-spinner" style={{ borderTopColor:'var(--psm-teal)', borderColor:'var(--psm-border)', width:28, height:28 }} />
             </div>
           )}
 
-          {/* Not logged in */}
           {!authLoading && !user && <AuthWall onClose={onClose} />}
 
-          {/* Processing */}
           {!authLoading && user && step === 'processing' && (
             <>
               <div className="psm-progress"><div className="psm-progress-bar" style={{ width:`${progress}%` }} /></div>
@@ -566,7 +609,6 @@ function PaymentModal({ config, onClose, onResult }) {
             </>
           )}
 
-          {/* Success */}
           {!authLoading && user && step === 'success' && (
             <div className="psm-result">
               <div className="psm-result-icon success">✅</div>
@@ -577,12 +619,11 @@ function PaymentModal({ config, onClose, onResult }) {
                 {config.type === 'course'      && 'Full access granted.'}
                 {(!config.type || config.type === 'generic') && 'Payment recorded successfully.'}
               </div>
-              {txnId && txnId !== '—' && <div className="psm-result-ref">Ref: {txnId}</div>}
+              {txnId && txnId !== '' && <div className="psm-result-ref">Ref: {txnId}</div>}
               <button className="psm-result-btn" onClick={() => onClose({ success:true })}>Close</button>
             </div>
           )}
 
-          {/* Error */}
           {!authLoading && user && step === 'error' && (
             <div className="psm-result">
               <div className="psm-result-icon error">❌</div>
@@ -595,7 +636,6 @@ function PaymentModal({ config, onClose, onResult }) {
             </div>
           )}
 
-          {/* Main payment UI */}
           {!authLoading && user && (step === 'select' || step === 'detail') && (
             <>
               <div className="psm-header">
@@ -625,20 +665,42 @@ function PaymentModal({ config, onClose, onResult }) {
                   {couponApplied && <div className="psm-summary-row" style={{ color:'var(--psm-green)' }}><span>🎫 Coupon ({couponApplied.code})</span><span>– NPR {discount.toLocaleString()}</span></div>}
                   <div className="psm-summary-row total"><span>Total</span><span>NPR {finalAmount.toLocaleString()}</span></div>
                   {config.couponEnabled !== false && !couponApplied && (
-                    <>
-                      <div className="psm-coupon-row">
-                        <input className="psm-coupon-inp" value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="Coupon code" onKeyDown={e => e.key === 'Enter' && applyCoupon()} />
-                        <button className="psm-coupon-btn" onClick={applyCoupon}>Apply</button>
-                      </div>
-                      {couponError && <div className="psm-coupon-error">{couponError}</div>}
-                    </>
-                  )}
-                  {couponApplied && (
-                    <div className="psm-coupon-success">
-                      🎉 "{couponApplied.code}" applied — saving NPR {discount.toLocaleString()}!
-                      <button style={{ marginLeft:'.5rem', background:'none', border:'none', cursor:'pointer', fontSize:'.7rem', color:'var(--psm-slate-lt)' }} onClick={() => { setCouponApplied(null); setCoupon('') }}>Remove</button>
-                    </div>
-                  )}
+  <>
+    {couponLocked ? (
+      <div style={{
+        marginTop: '.75rem',
+        padding: '.6rem .85rem',
+        background: '#fff8e6',
+        border: '1px solid #f5d87a',
+        borderRadius: 8,
+        fontSize: '.78rem',
+        color: '#92600a',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '.5rem',
+      }}>
+        🔒 This coupon has already been claimed by another customer.
+        <button
+          style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', fontSize:'.7rem', color:'var(--psm-slate-lt)' }}
+          onClick={() => { setCouponLocked(false); setCoupon(''); setCouponError('') }}>
+          Try another
+        </button>
+      </div>
+    ) : (
+      <div className="psm-coupon-row">
+        <input
+          className="psm-coupon-inp"
+          value={coupon}
+          onChange={e => setCoupon(e.target.value.toUpperCase())}
+          placeholder="Coupon code"
+          onKeyDown={e => e.key === 'Enter' && applyCoupon()}
+        />
+        <button className="psm-coupon-btn" onClick={applyCoupon}>Apply</button>
+      </div>
+    )}
+    {!couponLocked && couponError && <div className="psm-coupon-error">{couponError}</div>}
+  </>
+)}
                 </div>
               </div>
 

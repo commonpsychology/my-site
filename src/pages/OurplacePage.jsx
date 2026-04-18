@@ -22,6 +22,88 @@ const goldGrad = `linear-gradient(135deg,#92400e 0%,${GOLD} 60%,#fbbf24 100%)`
 
 const DEFAULT_ROOM_NAME = 'Therapy Room A'
 
+
+function MyBookingsSidebar({ apiBase }) {
+  const [bookings, setBookings] = useState([])
+  const [loading,  setLoading]  = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) { setLoading(false); return }
+    fetch(`${apiBase}/room-bookings/my`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(d => setBookings(d.bookings || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [apiBase])
+
+  const upcoming = bookings
+    .filter(b => b.booked_date >= new Date().toISOString().split('T')[0])
+    .sort((a, b) => a.booked_date.localeCompare(b.booked_date))
+    .slice(0, 5)
+
+  return (
+    <div style={{
+      position: 'sticky', top: 80, width: 260, flexShrink: 0, alignSelf: 'flex-start',
+      background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16,
+      overflow: 'hidden', boxShadow: '0 4px 20px rgba(14,165,233,0.07)'
+    }}>
+      <div style={{ padding: '0.85rem 1.1rem', background: `linear-gradient(135deg,${SKY_L},${MINT_L})`, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ fontFamily: 'inherit', fontSize: '0.68rem', fontWeight: 800, color: SLATE_L, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>Your Bookings</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: SLATE }}>Upcoming Sessions</div>
+      </div>
+
+      <div style={{ padding: '0.75rem' }}>
+        {loading ? (
+          <div style={{ padding: '1.25rem 0.5rem', textAlign: 'center', fontSize: '0.78rem', color: SLATE_L }}>Loading…</div>
+        ) : upcoming.length === 0 ? (
+          <div style={{ padding: '1.5rem 0.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>📅</div>
+            <div style={{ fontSize: '0.78rem', color: SLATE_L, lineHeight: 1.5 }}>No upcoming bookings yet.</div>
+          </div>
+        ) : upcoming.map((b, i) => {
+          const pkg = PACKAGES.find(p => p.id === b.package_id) || PACKAGES[0]
+          const isPast = b.booked_date < new Date().toISOString().split('T')[0]
+          return (
+            <div key={b.id || i} style={{
+              padding: '0.75rem 0.85rem', borderRadius: 12, marginBottom: '0.5rem',
+              background: BG, border: `1.5px solid ${isPast ? BORDER : pkg.color + '44'}`,
+              borderLeft: `4px solid ${pkg.color}`
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.9rem' }}>{pkg.emoji}</span>
+                <span style={{ fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, color: SLATE }}>{pkg.name}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.62rem', fontWeight: 700, background: pkg.faint, color: pkg.color, padding: '0.1rem 0.45rem', borderRadius: 100 }}>
+                  {b.status === 'confirmed' ? '✓ Confirmed' : b.status === 'pending' ? 'Pending' : b.status}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: SKY_D, fontWeight: 600, marginBottom: '0.2rem' }}>
+                📅 {b.booked_date}
+              </div>
+              <div style={{ fontSize: '0.73rem', color: SLATE_M }}>
+                🕐 {fmtTime(b.start_time)} – {fmtTime(b.end_time)}
+              </div>
+              {b.notes && (
+                <div style={{ marginTop: '0.35rem', fontSize: '0.68rem', color: SLATE_L, fontStyle: 'italic', borderTop: `1px solid ${BORDER}`, paddingTop: '0.3rem' }}>
+                  {b.notes.length > 60 ? b.notes.slice(0, 60) + '…' : b.notes}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {!loading && bookings.length > 5 && (
+          <div style={{ textAlign: 'center', fontSize: '0.72rem', color: SLATE_L, paddingTop: '0.25rem' }}>
+            +{bookings.length - 5} more in your portal
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Generate time slots from 07:00 to 20:00 in 30-min increments ─────────────
 function generateTimeSlots() {
   const slots = []

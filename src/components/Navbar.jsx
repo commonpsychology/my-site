@@ -1,13 +1,3 @@
-// src/components/Navbar.jsx  (AvatarDropdown section updated with notification badge)
-// Replace ONLY the AvatarDropdown function and the avatar button inside it.
-// Everything else in your Navbar.jsx stays the same.
-//
-// ── WHAT CHANGED ─────────────────────────────────────────────
-// 1. AvatarDropdown now fetches unread notification count on mount
-// 2. The avatar button shows a red "!" badge when there are unread notifications
-// 3. Badge clears when user opens the dropdown or visits Notifications tab
-// ─────────────────────────────────────────────────────────────
-
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from '../context/RouterContext'
 import { useAuth } from '../context/AuthContext'
@@ -33,13 +23,13 @@ const NAV = [
     { label: 'Blog & Articles', labelNP: 'ब्लग र लेखहरू',     path: '/blog',         icon: '✍️', desc: 'Expert-written insights',     descNP: 'विशेषज्ञ-लिखित अन्तर्दृष्टि' },
     { label: 'Research',        labelNP: 'अनुसन्धान',         path: '/research',     icon: '🔬', desc: 'Publications & studies',      descNP: 'प्रकाशन र अध्ययनहरू' },
     { label: 'Community',       labelNP: 'समुदाय',            path: '/community',    icon: '🤝', desc: 'Support groups & forums',     descNP: 'सहयोग समूह र फोरमहरू' },
+    { label: 'Animations',       labelNP: 'एनिमेशनहरू',            path: '/neuro-science',    icon: '🎬', desc: 'Educational videos',     descNP: 'शिक्षामूलक भिडियोहरू' },
   ]},
   { label: 'Our Works', labelNP: 'हाम्रा कामहरू', path: '/workshops', children: [
-    { label: 'Workshops',       labelNP: 'कार्यशालाहरू',      path: '/workshops',    icon: '🎓', desc: 'Live & recorded sessions',    descNP: 'लाइभ र रेकर्ड गरिएका सत्रहरू' },
+    { label: 'Workshops & Training', labelNP: 'कार्यशालाहरू',  path: '/workshops',    icon: '🎓', desc: 'Live & recorded sessions',    descNP: 'लाइभ र रेकर्ड गरिएका सत्रहरू' },
     { label: 'Social Work',     labelNP: 'सामाजिक कार्य',     path: '/social-work',  icon: '🤝', desc: 'Community outreach programs', descNP: 'सामुदायिक कार्यक्रमहरू' },
     { label: 'Gallery',         labelNP: 'ग्यालेरी',          path: '/gallery',      icon: '🖼️', desc: 'Photos & event memories',     descNP: 'फोटो र कार्यक्रम स्मृतिहरू' },
-        { label: 'Disaster Mangement',         labelNP: 'विपद व्यवस्थापन',          path: '/disaster-management',      icon: '🆘', desc: 'Our works and Commitment',     descNP: 'हाम्रो  काम र प्रतिवद्धता ' },
-
+    { label: 'Disaster Mangement', labelNP: 'विपद व्यवस्थापन', path: '/disaster-management', icon: '🆘', desc: 'Our works and Commitment', descNP: 'हाम्रो काम र प्रतिवद्धता' },
   ]},
   { label: 'About', labelNP: 'बारेमा', path: '/about', children: [
     { label: 'Contact',          labelNP: 'सम्पर्क',           path: '/contact',      icon: '📞', desc: 'Get in touch',               descNP: 'सम्पर्कमा आउनुहोस्' },
@@ -76,11 +66,10 @@ function UserAvatar({ user, size = 38 }) {
 function AvatarDropdown({ onNavigate }) {
   const { user, logout } = useAuth()
   const { lang, t }      = useLang()
-  const [open,         setOpen]         = useState(false)
-  const [unreadCount,  setUnreadCount]  = useState(0)
+  const [open,        setOpen]        = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const ref = useRef(null)
 
-  // ── Fetch unread notification count ──────────────────────
   const fetchUnread = useCallback(async () => {
     if (!user) return
     const token = localStorage.getItem('accessToken')
@@ -98,7 +87,6 @@ function AvatarDropdown({ onNavigate }) {
 
   useEffect(() => {
     fetchUnread()
-    // Re-poll every 2 minutes
     const interval = setInterval(fetchUnread, 2 * 60 * 1000)
     return () => clearInterval(interval)
   }, [fetchUnread])
@@ -113,7 +101,6 @@ function AvatarDropdown({ onNavigate }) {
 
   function handleOpen() {
     setOpen(o => !o)
-    // Clear badge when dropdown is opened
     if (unreadCount > 0) setUnreadCount(0)
   }
 
@@ -133,8 +120,6 @@ function AvatarDropdown({ onNavigate }) {
 
   return (
     <div ref={ref} style={{ position:'relative' }}>
-
-      {/* Avatar button with notification badge */}
       <div style={{ position:'relative', display:'inline-flex' }}>
         <button onClick={handleOpen} aria-label="Account menu"
           style={{ width:38, height:38, borderRadius:'50%',
@@ -146,8 +131,6 @@ function AvatarDropdown({ onNavigate }) {
             transition:'border-color 0.2s, box-shadow 0.2s', background:'transparent' }}>
           <UserAvatar user={user} size={36} />
         </button>
-
-        {/* Notification badge — red "!" */}
         {unreadCount > 0 && (
           <div style={{ position:'absolute', top:-3, right:-3,
             width:18, height:18, borderRadius:'50%',
@@ -160,7 +143,6 @@ function AvatarDropdown({ onNavigate }) {
         )}
       </div>
 
-      {/* Dropdown */}
       <div style={{ position:'absolute', top:'calc(100% + 12px)', right:0, width:224,
         background:'var(--white)', borderRadius:14, border:'1px solid var(--blue-pale)',
         boxShadow:'0 20px 56px rgba(15,52,96,0.14)', padding:'0.4rem', zIndex:400,
@@ -168,13 +150,11 @@ function AvatarDropdown({ onNavigate }) {
         transform: open ? 'translateY(0)' : 'translateY(-8px)',
         transition:'opacity 0.16s ease, transform 0.16s ease' }}>
 
-        {/* Caret */}
         <div style={{ position:'absolute', top:-7, right:14, width:14, height:8, overflow:'hidden' }}>
           <div style={{ width:10, height:10, background:'var(--white)',
             border:'1px solid var(--blue-pale)', transform:'rotate(45deg)', margin:'3px auto 0' }} />
         </div>
 
-        {/* User info */}
         <div style={{ padding:'0.75rem 0.85rem 0.65rem', borderBottom:'1px solid var(--blue-pale)',
           marginBottom:'0.3rem', display:'flex', alignItems:'center', gap:'0.6rem' }}>
           <UserAvatar user={user} size={32} />
@@ -190,7 +170,6 @@ function AvatarDropdown({ onNavigate }) {
           </div>
         </div>
 
-        {/* Role badge */}
         {user.role && user.role !== 'client' && (
           <div style={{ margin:'0 0.4rem 0.3rem', padding:'0.3rem 0.6rem',
             background:'var(--green-mist)', borderRadius:6, fontSize:'0.72rem',
@@ -199,10 +178,9 @@ function AvatarDropdown({ onNavigate }) {
           </div>
         )}
 
-        {/* Menu items */}
         {[
-          { icon:'👤', label:t('myAccount'), path:'/account',         bg:'var(--sky-light)'  },
-          { icon:'🔐', label:t('myPortal'),  path:'/portal',          bg:'var(--blue-mist)'  },
+          { icon:'👤', label:t('myAccount'), path:'/account',     bg:'var(--sky-light)' },
+          { icon:'🔐', label:t('myPortal'),  path:'/portal',      bg:'var(--blue-mist)' },
           ...(user.role === 'admin' || user.role === 'staff'
             ? [{ icon:'⚙️', label: lang==='EN' ? 'Admin Dashboard' : 'एडमिन ड्यासबोर्ड', path:'/staff/admin', bg:'var(--green-mist)' }]
             : []),
@@ -389,16 +367,13 @@ export default function Navbar() {
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
 
-  // Reset mobile menu when viewport grows past mobile breakpoint
-useEffect(() => {
-  function handleResize() {
-    if (window.innerWidth > 768) {   // match your CSS breakpoint
-      setMenuOpen(false)
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth > 768) setMenuOpen(false)
     }
-  }
-  window.addEventListener('resize', handleResize)
-  return () => window.removeEventListener('resize', handleResize)
-}, [])
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   if (AUTH_PAGES.includes(currentPath)) return null
 
@@ -411,11 +386,11 @@ useEffect(() => {
         <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink:0 }}>
           <div className="navbar-logo" onClick={() => go('/')} style={{ cursor:'pointer' }}>
             <div className="logo-mark" style={{ overflow:'hidden', background:'transparent', border:'none' }}>
-              <img src="/header.png" alt="Puja Samargi"
+              <img src="/header.png" alt="COMMON PSYHCOLOGY (साझा मनोविज्ञान)"
                 style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
             </div>
             <div>
-              <div className="logo-text">Puja Samargi</div>
+              <div className="logo-text">{lang==='NP' ? 'साझा मनोविज्ञान' : 'COMMON PSYCHOLOGY'}</div>
               <div className="logo-sub">{lang==='NP' ? 'मानसिक स्वास्थ्य केन्द्र' : 'Mental Wellness Center'}</div>
             </div>
           </div>
@@ -428,12 +403,12 @@ useEffect(() => {
           ))}
         </div>
 
-        {/* ── spacer between Ashram and right controls ── */}
         <div style={{ width:'3rem', flexShrink:0 }} />
-
-        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink:0 }}/>
+        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink:0 }} />
 
         <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink:0 }}>
+
+          {/* ── Desktop language toggle ── */}
           <button onClick={toggle}
             style={{ padding:'0.28rem 0.65rem', border:'1.5px solid var(--green-pale)',
               borderRadius:100, background:'transparent', fontFamily:'var(--font-body)',
@@ -442,7 +417,7 @@ useEffect(() => {
               whiteSpace:'nowrap' }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--green-mist)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            🌐 {lang}
+            🌐 {lang === 'EN' ? 'नेपाली' : 'English'}
           </button>
 
           <div className="navbar-cta">
@@ -452,7 +427,6 @@ useEffect(() => {
             <button className="btn btn-primary" onClick={() => go('/book')}>{t('bookSession')}</button>
           </div>
 
-          {/* Avatar with notification badge */}
           <AvatarDropdown onNavigate={go} />
 
           <button className="hamburger" aria-label="Toggle menu" onClick={() => setMenuOpen(o => !o)}>
@@ -516,11 +490,13 @@ useEffect(() => {
               <span style={{ fontFamily:'var(--font-body)', fontSize:'0.9rem', fontWeight:600, color:'var(--text-mid)' }}>{t('signIn')}</span>
             </button>
           )}
+
+          {/* ── Mobile language toggle ── */}
           <button onClick={toggle} style={{ display:'flex', alignItems:'center',
             gap:'0.65rem', width:'100%', padding:'0.6rem 0', background:'none', border:'none', cursor:'pointer' }}>
             <span style={{ fontSize:'1rem' }}>🌐</span>
             <span style={{ fontFamily:'var(--font-body)', fontSize:'0.9rem', fontWeight:600, color:'var(--green-deep)' }}>
-              {lang==='EN' ? 'नेपालीमा हेर्नुहोस्' : 'View in English'}
+              {lang === 'EN' ? 'नेपालीमा हेर्नुहोस्' : 'View in English'}
             </span>
           </button>
         </div>

@@ -49,6 +49,7 @@ const services = [
     link: 'Visit store',
     route: '/store',
   },
+  
 ]
 
 export default function Services() {

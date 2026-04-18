@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 const FAQS = [
-  { q: 'What is Puja Samargi Mental Wellness Center?', a: 'Puja Samargi is Nepal\'s leading digital mental health platform, connecting individuals with licensed psychologists, counselors, and psychiatrists. We offer online and in-person therapy, free assessments, educational resources, and community support — all rooted in Nepali culture.' },
+  { q: 'What is  Mental Wellness Center?', a: 'Puja Samargi is Nepal\'s leading digital mental health platform, connecting individuals with licensed psychologists, counselors, and psychiatrists. We offer online and in-person therapy, free assessments, educational resources, and community support — all rooted in Nepali culture.' },
   { q: 'Are the therapists licensed and qualified?', a: 'Yes. Every therapist on our platform is verified by the Nepal Psychologists\' Council (NPC) and adheres to the Nepal Psychological Association\'s Code of Ethics. You can view each therapist\'s credentials, experience, and specializations on their profile page.' },
   { q: 'Is everything I share completely confidential?', a: 'Absolutely. All sessions and communications are strictly confidential under Nepali professional ethics standards. Information is only disclosed in rare cases required by law — such as imminent risk of harm. We use encrypted systems to protect your data.' },
   { q: 'How do I book a session?', a: 'Click "Book Session" from any page. You\'ll choose your session type (individual, couples, family, group), preferred therapist, and a convenient time slot. We offer both online (video/audio) and in-person sessions at our Kathmandu clinic.' },

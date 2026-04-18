@@ -1,41 +1,51 @@
-
 // src/hooks/useImages.jsx
-// ─────────────────────────────────────────────────────────────
-// Central image hook for Puja Samargi.
-// Gallery data fetched from /api/gallery (Supabase-backed).
-// Other assets use Unsplash fallbacks.
-// ─────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-let _galleryCache   = null
-let _galleryPromise = null
+// ── Module-level cache ───────────────────────────────────────
+let _cache        = null   // { items, categories }
+let _promise      = null   // in-flight fetch
+let _cacheTime    = 0      // when it was last set
+const CACHE_TTL   = 5 * 60 * 1000  // 5 minutes
+
+function isCacheValid() {
+  return _cache !== null && (Date.now() - _cacheTime) < CACHE_TTL
+}
+
+export function invalidateGalleryCache() {
+  _cache   = null
+  _promise = null
+  _cacheTime = 0
+}
 
 async function fetchGallery() {
-  if (_galleryCache) return _galleryCache
-  if (_galleryPromise) return _galleryPromise
-  _galleryPromise = Promise.all([
-    fetch(`${API_BASE}/gallery`).then(r => r.json()),
-    fetch(`${API_BASE}/gallery/categories`).then(r => r.json()),
+  if (isCacheValid()) return _cache
+  if (_promise) return _promise
+
+  _promise = Promise.all([
+    fetch(`${API_BASE}/gallery`).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
+    fetch(`${API_BASE}/gallery/categories`).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
   ])
     .then(([itemsRes, catsRes]) => {
-      const result = {
-        items:      itemsRes.data || [],
-        categories: catsRes.data  || DEFAULT_CATEGORIES,
+      _cache     = {
+        items:      Array.isArray(itemsRes.data) ? itemsRes.data : [],
+        categories: Array.isArray(catsRes.data)  ? catsRes.data  : DEFAULT_CATEGORIES,
       }
-      _galleryCache   = result
-      _galleryPromise = null
-      return result
+      _cacheTime = Date.now()
+      _promise   = null
+      return _cache
     })
     .catch(err => {
-      _galleryPromise = null
-      console.warn('[useImages] /api/gallery fetch failed, using fallbacks', err)
+      _promise = null
+      console.warn('[useImages] fetch failed, using fallbacks', err)
       return null
     })
-  return _galleryPromise
+
+  return _promise
 }
+// ────────────────────────────────────────────────────────────
 
 const DEFAULT_CATEGORIES = [
   'All', 'Events', 'Community Outreach', 'Therapy Spaces',
@@ -102,24 +112,41 @@ function nameToSlug(name) {
     .replace(/[^a-z0-9-]/g, '')
 }
 
+// ── Hook ─────────────────────────────────────────────────────
 export function useImages() {
-  const [gallery, setGallery] = useState(_galleryCache)
-  const [loading, setLoading] = useState(!_galleryCache)
+  // Seed state from cache if already valid — avoids flash of empty on remount
+  const [gallery, setGallery] = useState(() => isCacheValid() ? _cache : null)
+  const [loading, setLoading] = useState(() => !isCacheValid())
 
   useEffect(() => {
-    if (_galleryCache) { setGallery(_galleryCache); setLoading(false); return }
+    // Cache still valid — no fetch needed
+    if (isCacheValid()) {
+      setGallery(_cache)
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
     setLoading(true)
-    fetchGallery().then(d => { setGallery(d); setLoading(false) })
+
+    fetchGallery().then(data => {
+      if (cancelled) return
+      setGallery(data)
+      setLoading(false)
+    })
+
+    return () => { cancelled = true }
   }, [])
 
-  const getGalleryItems = useCallback((category = 'All') => {
-    const items = gallery?.items?.length ? gallery.items : FALLBACK_GALLERY
-    return category === 'All' ? items : items.filter(i => i.category === category)
-  }, [gallery])
+  // Derive directly from raw gallery state — no callback indirection
+  const items      = gallery?.items?.length      ? gallery.items      : FALLBACK_GALLERY
+  const categories = gallery?.categories?.length ? gallery.categories : DEFAULT_CATEGORIES
 
-  const getGalleryCategories = useCallback(() => {
-    return gallery?.categories ?? DEFAULT_CATEGORIES
-  }, [gallery])
+  const getGalleryItems = useCallback((category = 'All') => {
+    return category === 'All' ? items : items.filter(i => i.category === category)
+  }, [items])
+
+  const getGalleryCategories = useCallback(() => categories, [categories])
 
   const getTherapistImage = useCallback((name) => {
     const slug = nameToSlug(name)
@@ -127,27 +154,14 @@ export function useImages() {
       || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=007BA8&color=ffffff&size=200&bold=true&font-size=0.38`
   }, [])
 
-  const getBlogImage = useCallback((slug) => {
-    return UNSPLASH_FALLBACKS.blog[slug]
-      || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&q=80'
-  }, [])
-
-  const getBlogCategories = useCallback(() => {
-    return ['All', 'Anxiety', 'Self-Care', 'Depression', 'Mindfulness', 'Relationships', 'Trauma', 'Parenting']
-  }, [])
-
-  const getCourseImage = useCallback((index) => {
-    return UNSPLASH_FALLBACKS.courses[index]
-      || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=400&q=80'
-  }, [])
-
-  const getSocialWorkImage = useCallback((id) => {
-    return UNSPLASH_FALLBACKS.socialWork[id - 1]
-      || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&q=80'
-  }, [])
+  const getBlogImage    = useCallback((slug)  => UNSPLASH_FALLBACKS.blog[slug]    || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&q=80', [])
+  const getBlogCategories = useCallback(() => ['All','Anxiety','Self-Care','Depression','Mindfulness','Relationships','Trauma','Parenting'], [])
+  const getCourseImage  = useCallback((index) => UNSPLASH_FALLBACKS.courses[index] || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=400&q=80', [])
+  const getSocialWorkImage = useCallback((id) => UNSPLASH_FALLBACKS.socialWork[id - 1] || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&q=80', [])
 
   return {
     loading,
+    gallery,
     getGalleryItems,
     getGalleryCategories,
     getTherapistImage,
@@ -158,7 +172,8 @@ export function useImages() {
   }
 }
 
-export function SmartImage({ src, alt = '', fallback, gradient, emoji, className, style = {}, imgStyle = {} }) {
+// ── SmartImage ────────────────────────────────────────────────
+export function SmartImage({ src, alt='', fallback, gradient, emoji, className, style={}, imgStyle={} }) {
   const [failed, setFailed] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -179,8 +194,12 @@ export function SmartImage({ src, alt = '', fallback, gradient, emoji, className
           {emoji && <span style={{ fontSize:'3rem', opacity:0.6 }}>{emoji}</span>}
         </div>
       )}
-      <img src={src} alt={alt} onLoad={() => setLoaded(true)} onError={() => setFailed(true)}
-        style={{ width:'100%', height:'100%', objectFit:'cover', opacity: loaded ? 1 : 0, transition:'opacity 0.4s ease', ...imgStyle }} />
+      <img
+        src={src} alt={alt}
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+        style={{ width:'100%', height:'100%', objectFit:'cover', opacity: loaded ? 1 : 0, transition:'opacity 0.4s ease', ...imgStyle }}
+      />
     </div>
   )
 }

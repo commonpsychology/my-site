@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from '../context/RouterContext'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 const C = {
   skyBright:  '#00BFFF',
   skyMid:     '#009FD4',
@@ -24,9 +26,9 @@ const btnGrad     = `linear-gradient(135deg, ${C.skyDeep} 0%, ${C.skyBright} 100
 /* ── Responsive columns hook ── */
 function useGridColumns() {
   const getColumns = (w) => {
-    if (w < 480) return 1   // mobile  → 1 card per row
-    if (w < 900) return 2   // tablet  → 2 cards per row
-    return 3                // desktop → 3 cards per row
+    if (w < 480) return 1
+    if (w < 900) return 2
+    return 3
   }
   const [cols, setCols] = useState(() => getColumns(typeof window !== 'undefined' ? window.innerWidth : 1024))
   useEffect(() => {
@@ -38,110 +40,34 @@ function useGridColumns() {
 }
 
 const IMPACT = [
-  { icon: '🏘️', val: '38',    label: 'Communities Reached' },
-  { icon: '👥', val: '6,200+', label: 'Beneficiaries' },
-  { icon: '🤝', val: '14',    label: 'NGO Partners' },
-  { icon: '📅', val: '5 yrs', label: 'Of Outreach' },
+  { icon: '🏘️', val: '6',    label: 'Communities Reached' },
+  { icon: '👥', val: '100+', label: 'Beneficiaries' },
+  { icon: '🤝', val: '7',    label: 'NGO Partners' },
+  { icon: '📅', val: '1 yrs', label: 'Of Outreach' },
 ]
 
-const PROGRAMS = [
-  {
-    id: 1,
-    title: 'Rural Mental Health Outreach',
-    region: 'Sindhupalchok & Dolakha',
-    type: 'Community Outreach',
-    status: 'Active',
-    since: '2020',
-    beneficiaries: '1,200+',
-    img: 'linear-gradient(135deg, #007BA8 0%, #00BFFF 60%, #a0e9ff 100%)',
-    emoji: '🏔️',
-    desc: 'Monthly mental health camps in earthquake-affected districts. Provides free psychosocial first aid, trauma screening, and referrals to district hospitals. Partnered with local Female Community Health Volunteers (FCHVs).',
-    tags: ['Trauma', 'Rural', 'Post-Disaster'],
-    partners: ['WHO Nepal', 'TPO Nepal', 'FCHVs'],
-    outcomes: ['1,200 screenings', '340 referred to care', '80 FCHVs trained'],
-  },
-  {
-    id: 2,
-    title: 'School Mental Health Programme',
-    region: 'Kathmandu Valley — 22 Schools',
-    type: 'Education Outreach',
-    status: 'Active',
-    since: '2021',
-    beneficiaries: '3,500+',
-    img: 'linear-gradient(135deg, #0f4c6b 0%, #009FD4 60%, #22d3ee 100%)',
-    emoji: '🏫',
-    desc: 'Embedding mental health literacy into school curricula. Trained school counsellors, teacher sensitisation workshops, and a peer support buddy system for students aged 10–18.',
-    tags: ['Youth', 'Schools', 'Prevention'],
-    partners: ['Ministry of Education', 'UNICEF Nepal'],
-    outcomes: ['22 schools covered', '150 teachers trained', '600 peer buddies'],
-  },
-  {
-    id: 3,
-    title: 'Women & Girls Resilience Project',
-    region: 'Lalitpur & Bhaktapur',
-    type: 'Gender-Based',
-    status: 'Active',
-    since: '2022',
-    beneficiaries: '850+',
-    img: 'linear-gradient(135deg, #b56a28 0%, #d4a574 60%, #f5ede0 100%)',
-    emoji: '💜',
-    desc: 'Safe circles for women survivors of domestic violence and gender-based trauma. Integrates psychological support with livelihood skills training and legal aid referrals.',
-    tags: ['GBV', 'Women', 'Empowerment'],
-    partners: ['UNFPA Nepal', 'Saathi NGO'],
-    outcomes: ['850 women supported', '200 in skills training', '60 legal referrals'],
-  },
-  {
-    id: 4,
-    title: 'Migrant Worker Re-integration Support',
-    region: 'Kathmandu, Rupandehi, Chitwan',
-    type: 'Labour Migration',
-    status: 'Active',
-    since: '2023',
-    beneficiaries: '620+',
-    img: 'linear-gradient(135deg, #1a3a4a 0%, #2e6080 60%, #5b9ab5 100%)',
-    emoji: '✈️',
-    desc: 'Psychosocial support for returning migrant workers facing re-integration challenges: depression, identity loss, financial stress, and family conflict after years abroad.',
-    tags: ['Migration', 'Reintegration', 'Men'],
-    partners: ['IOM Nepal', 'DOFE'],
-    outcomes: ['620 workers reached', '180 in therapy', '4 support groups'],
-  },
-  {
-    id: 5,
-    title: 'Elderly Mental Health & Loneliness Initiative',
-    region: 'Kathmandu — Old Age Homes',
-    type: 'Elder Care',
-    status: 'Active',
-    since: '2023',
-    beneficiaries: '280+',
-    img: 'linear-gradient(135deg, #2d4a3e 0%, #3d6b5a 60%, #6a9e88 100%)',
-    emoji: '🌸',
-    desc: 'Weekly visits to old age homes and isolated elderly individuals. Combines reminiscence therapy, art activities, and family-mediated counselling to address loneliness and late-life depression.',
-    tags: ['Elderly', 'Loneliness', 'Arts'],
-    partners: ['Hamro Budheshwor', 'HelpAge Nepal'],
-    outcomes: ['280 seniors supported', '12 homes visited', '45 family sessions'],
-  },
-  {
-    id: 6,
-    title: 'Crisis Hotline & First Responder Training',
-    region: 'Nepal-wide',
-    type: 'Crisis Intervention',
-    status: 'Active',
-    since: '2021',
-    beneficiaries: '400+ calls/mo',
-    img: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 60%, #7dd3fc 100%)',
-    emoji: '📞',
-    desc: 'Operation of a toll-free crisis support line staffed by trained counsellors. Also trains Nepal Police and hospital emergency staff in psychological first aid and safe messaging guidelines.',
-    tags: ['Crisis', 'Hotline', 'First Aid'],
-    partners: ['Nepal Police', 'MOH Nepal'],
-    outcomes: ['4,800+ calls handled', '200 first responders trained', '98% satisfaction'],
-  },
-]
+// Collect all unique partners across all programs for the partners strip
+function collectAllPartners(programs) {
+  const seen = new Set()
+  const result = []
+  for (const p of programs) {
+    for (const partner of (Array.isArray(p.partners) ? p.partners : [])) {
+      if (!seen.has(partner)) { seen.add(partner); result.push(partner) }
+    }
+  }
+  return result
+}
 
 /* ══════════════════════════════════════
-   PROGRAM CARD — floating label + bevel hover
+   PROGRAM CARD
 ══════════════════════════════════════ */
 function ProgramCard({ prog, onReadMore }) {
   const [hovered, setHovered] = useState(false)
+
+  // Normalize: API uses short_desc, legacy uses desc
+  const cardDesc = prog.short_desc || prog.desc || ''
+  const tags     = Array.isArray(prog.tags)     ? prog.tags     : []
+  const outcomes = Array.isArray(prog.outcomes) ? prog.outcomes : []
 
   return (
     <div
@@ -166,7 +92,8 @@ function ProgramCard({ prog, onReadMore }) {
       {/* Image */}
       <div style={{
         height: 160, borderRadius: '18px 18px 0 0',
-        background: prog.img, position: 'relative', overflow: 'hidden',
+        background: prog.img_gradient || prog.img || heroGrad,
+        position: 'relative', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <div style={{ position: 'absolute', inset: 0, background: hovered ? 'rgba(255,255,255,0.07)' : 'transparent', transition: 'background 0.3s' }} />
@@ -180,21 +107,25 @@ function ProgramCard({ prog, onReadMore }) {
           padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 5,
         }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00e676', display: 'inline-block', boxShadow: '0 0 6px #00e676' }} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'white', letterSpacing: '0.06em', fontFamily: 'var(--font-body)' }}>ACTIVE</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'white', letterSpacing: '0.06em', fontFamily: 'var(--font-body)' }}>
+            {(prog.status || 'ACTIVE').toUpperCase()}
+          </span>
         </div>
 
         {/* Since badge */}
-        <div style={{
-          position: 'absolute', top: 12, right: 12,
-          background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.3)',
-          borderRadius: 100, padding: '3px 10px',
-          fontSize: '0.65rem', fontWeight: 700, color: 'white',
-          fontFamily: 'var(--font-body)',
-        }}>Since {prog.since}</div>
+        {prog.since && (
+          <div style={{
+            position: 'absolute', top: 12, right: 12,
+            background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 100, padding: '3px 10px',
+            fontSize: '0.65rem', fontWeight: 700, color: 'white',
+            fontFamily: 'var(--font-body)',
+          }}>Since {prog.since}</div>
+        )}
       </div>
 
-      {/* Floating label */}
+      {/* Floating type label */}
       <div style={{
         position: 'absolute',
         bottom: 'calc(100% - 185px)',
@@ -220,32 +151,36 @@ function ProgramCard({ prog, onReadMore }) {
       <div style={{ padding: '1.4rem 1.4rem 1.3rem' }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: C.textDark, lineHeight: 1.35, marginBottom: '0.3rem' }}>{prog.title}</h3>
         <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.74rem', color: C.skyMid, fontWeight: 700, marginBottom: '0.7rem' }}>📍 {prog.region}</div>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.79rem', color: C.textLight, lineHeight: 1.62, marginBottom: '0.9rem' }}>{prog.desc}</p>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.79rem', color: C.textLight, lineHeight: 1.62, marginBottom: '0.9rem' }}>{cardDesc}</p>
 
         {/* Tags */}
-        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
-          {prog.tags.map(t => (
-            <span key={t} style={{
-              fontSize: '0.65rem', fontWeight: 700, padding: '2px 9px', borderRadius: 100,
-              background: hovered ? C.skyFaint : C.skyFainter,
-              color: C.skyMid, border: `1px solid ${C.borderFaint}`,
-              transition: 'background 0.3s',
-            }}>#{t}</span>
-          ))}
-        </div>
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
+            {tags.map(t => (
+              <span key={t} style={{
+                fontSize: '0.65rem', fontWeight: 700, padding: '2px 9px', borderRadius: 100,
+                background: hovered ? C.skyFaint : C.skyFainter,
+                color: C.skyMid, border: `1px solid ${C.borderFaint}`,
+                transition: 'background 0.3s',
+              }}>#{t}</span>
+            ))}
+          </div>
+        )}
 
         {/* Outcomes */}
-        <div style={{ background: sectionGrad, borderRadius: 10, padding: '0.7rem 0.9rem', marginBottom: '1rem', border: `1px solid ${C.borderFaint}` }}>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.68rem', fontWeight: 800, color: C.textLight, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Key Outcomes</div>
-          {prog.outcomes.map((o, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: i < prog.outcomes.length - 1 ? '0.25rem' : 0 }}>
-              <span style={{ width: 14, height: 14, borderRadius: '50%', background: btnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '0.5rem', color: 'white', fontWeight: 800 }}>✓</span>
-              </span>
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.76rem', color: C.textMid }}>{o}</span>
-            </div>
-          ))}
-        </div>
+        {outcomes.length > 0 && (
+          <div style={{ background: sectionGrad, borderRadius: 10, padding: '0.7rem 0.9rem', marginBottom: '1rem', border: `1px solid ${C.borderFaint}` }}>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.68rem', fontWeight: 800, color: C.textLight, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Key Outcomes</div>
+            {outcomes.map((o, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: i < outcomes.length - 1 ? '0.25rem' : 0 }}>
+                <span style={{ width: 14, height: 14, borderRadius: '50%', background: btnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.5rem', color: 'white', fontWeight: 800 }}>✓</span>
+                </span>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.76rem', color: C.textMid }}>{o}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
@@ -268,29 +203,71 @@ function ProgramCard({ prog, onReadMore }) {
   )
 }
 
+// ── Loading skeleton ─────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div style={{ borderRadius: 20, background: C.white, border: `1.5px solid ${C.borderFaint}`, overflow: 'hidden' }}>
+      <div style={{ height: 160, background: `linear-gradient(90deg, ${C.skyFaint} 25%, ${C.skyFainter} 50%, ${C.skyFaint} 75%)`, backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+      <div style={{ padding: '1.4rem' }}>
+        {[80, 50, 100, 100, 70].map((w, i) => (
+          <div key={i} style={{ height: 12, width: `${w}%`, background: C.skyFainter, borderRadius: 6, marginBottom: '.6rem' }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function SocialWorkPage() {
   const { navigate } = useRouter()
-  const [selected, setSelected] = useState(null)
+  const [selected,  setSelected]  = useState(null)
+  const [programs,  setPrograms]  = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [fetchErr,  setFetchErr]  = useState('')
 
-  // Responsive grid: 1 col on mobile, 2 on tablet, 3 on desktop
   const gridCols = useGridColumns()
   const gridTemplateColumns =
     gridCols === 1 ? '1fr' :
     gridCols === 2 ? 'repeat(2, 1fr)' :
     'repeat(auto-fill, minmax(320px, 1fr))'
 
-  // Track width for hero padding etc.
   const [winWidth, setWinWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
   useEffect(() => {
     const handler = () => setWinWidth(window.innerWidth)
     window.addEventListener('resize', handler)
     return () => window.removeEventListener('resize', handler)
   }, [])
+
+  // Fetch programs from backend
+  useEffect(() => {
+    ;(async () => {
+      setLoading(true); setFetchErr('')
+      try {
+        const res = await fetch(`${API_BASE}/social-work-programs`)
+        const d   = await res.json()
+        if (!res.ok) throw new Error(d.message || `HTTP ${res.status}`)
+        setPrograms(d.programs || d.items || [])
+      } catch (e) {
+        setFetchErr(e.message)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
+
   const heroPadding  = winWidth < 480 ? '3rem 1.25rem 2.5rem' : winWidth < 768 ? '4rem 2rem 3rem' : '5rem 4rem 4rem'
   const innerPadding = winWidth < 480 ? '2rem 1.25rem 4rem' : winWidth < 768 ? '2.5rem 2rem 4rem' : '3rem 4rem 5rem'
+  const allPartners  = collectAllPartners(programs)
 
   return (
     <div className="page-wrapper" style={{ background: C.skyGhost }}>
+
+      {/* ── Shimmer CSS ── */}
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -200% 0 }
+          100% { background-position: 200% 0 }
+        }
+      `}</style>
 
       {/* ── Hero ── */}
       <div style={{ background: heroGrad, padding: heroPadding, position: 'relative', overflow: 'hidden' }}>
@@ -305,7 +282,6 @@ export default function SocialWorkPage() {
           <p style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.75, maxWidth: 520, marginBottom: '2.5rem' }}>
             Beyond the clinic — reaching underserved communities, rural villages, schools, and shelters. Our social work programmes bring mental health support to those who need it most.
           </p>
-          {/* Impact stats */}
           <div style={{ display: 'flex', gap: winWidth < 480 ? '1.25rem' : '2rem', flexWrap: 'wrap' }}>
             {IMPACT.map((s, i) => (
               <div key={i} style={{ textAlign: 'center' }}>
@@ -332,27 +308,34 @@ export default function SocialWorkPage() {
           </button>
         </div>
 
-        {/* ↓ Responsive grid — 1 col mobile, 2 col tablet, 3 col desktop */}
+        {/* Error state */}
+        {fetchErr && !loading && (
+          <div style={{ padding: '2rem', textAlign: 'center', color: C.textLight, fontSize: '.85rem' }}>
+            ⚠️ Could not load programs: {fetchErr}
+          </div>
+        )}
+
+        {/* Grid */}
         <div style={{ display: 'grid', gridTemplateColumns, gap: '2rem', paddingTop: '0.5rem' }}>
-          {PROGRAMS.map(p => (
-            <ProgramCard key={p.id} prog={p} onReadMore={setSelected} />
-          ))}
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+            : programs.map(p => (
+                <ProgramCard key={p.id} prog={p} onReadMore={setSelected} />
+              ))
+          }
         </div>
 
-        {/* Partners strip */}
-        <div style={{ marginTop: '4rem', background: sectionGrad, borderRadius: 16, padding: '2rem', border: `1px solid ${C.borderFaint}` }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: C.textDark, marginBottom: '1.25rem', textAlign: 'center' }}>Our Partners & Funders</div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {['WHO Nepal', 'UNICEF Nepal', 'UNFPA Nepal', 'IOM Nepal', 'TPO Nepal', 'Saathi NGO', 'HelpAge Nepal', 'Ministry of Education', 'Nepal Police', 'DOFE'].map((p, i) => (
-              <div key={i} style={{
-                padding: '0.45rem 1.1rem', borderRadius: 100,
-                background: C.white, border: `1px solid ${C.border}`,
-                fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600,
-                color: C.textMid, boxShadow: '0 2px 8px rgba(0,191,255,0.06)',
-              }}>{p}</div>
-            ))}
+        {/* Partners strip — only shown when we have programs */}
+        {!loading && allPartners.length > 0 && (
+          <div style={{ marginTop: '4rem', background: sectionGrad, borderRadius: 16, padding: '2rem', border: `1px solid ${C.borderFaint}` }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: C.textDark, marginBottom: '1.25rem', textAlign: 'center' }}>Our Partners & Funders</div>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {allPartners.map((p, i) => (
+                <div key={i} style={{ padding: '0.45rem 1.1rem', borderRadius: 100, background: C.white, border: `1px solid ${C.border}`, fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600, color: C.textMid, boxShadow: '0 2px 8px rgba(0,191,255,0.06)' }}>{p}</div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Volunteer CTA */}
         <div style={{
@@ -373,7 +356,7 @@ export default function SocialWorkPage() {
         </div>
       </div>
 
-      {/* Detail modal */}
+      {/* ── Detail modal ── */}
       {selected && (
         <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(26,58,74,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 24, padding: winWidth < 480 ? '1.5rem' : '2.5rem', maxWidth: 520, width: '100%', boxShadow: '0 32px 80px rgba(0,0,0,0.2)', border: `1.5px solid ${C.skyBright}`, maxHeight: '90vh', overflowY: 'auto' }}>
@@ -385,24 +368,37 @@ export default function SocialWorkPage() {
                 <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: C.skyMid, fontWeight: 700, marginTop: 3 }}>📍 {selected.region}</div>
               </div>
             </div>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: C.textMid, lineHeight: 1.7, marginBottom: '1.25rem' }}>{selected.desc}</p>
-            <div style={{ background: sectionGrad, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.25rem', border: `1px solid ${C.borderFaint}` }}>
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>Outcomes</div>
-              {selected.outcomes.map((o, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-                  <span style={{ color: C.skyBright, fontWeight: 800, fontSize: '0.8rem' }}>✓</span>
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: C.textMid }}>{o}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>Partners</div>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {selected.partners.map(p => (
-                  <span key={p} style={{ padding: '3px 10px', borderRadius: 100, background: C.skyFaint, color: C.skyMid, fontSize: '0.75rem', fontWeight: 700, border: `1px solid ${C.borderFaint}` }}>{p}</span>
+
+            {/* Full description (falls back to short if not set) */}
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: C.textMid, lineHeight: 1.7, marginBottom: '1.25rem' }}>
+              {selected.full_desc || selected.short_desc || selected.desc || ''}
+            </p>
+
+            {/* Outcomes */}
+            {Array.isArray(selected.outcomes) && selected.outcomes.length > 0 && (
+              <div style={{ background: sectionGrad, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.25rem', border: `1px solid ${C.borderFaint}` }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>Outcomes</div>
+                {selected.outcomes.map((o, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                    <span style={{ color: C.skyBright, fontWeight: 800, fontSize: '0.8rem' }}>✓</span>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: C.textMid }}>{o}</span>
+                  </div>
                 ))}
               </div>
-            </div>
+            )}
+
+            {/* Partners */}
+            {Array.isArray(selected.partners) && selected.partners.length > 0 && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>Partners</div>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {selected.partners.map(p => (
+                    <span key={p} style={{ padding: '3px 10px', borderRadius: 100, background: C.skyFaint, color: C.skyMid, fontSize: '0.75rem', fontWeight: 700, border: `1px solid ${C.borderFaint}` }}>{p}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button onClick={() => setSelected(null)} style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.white, color: C.textMid, fontFamily: 'var(--font-body)', fontWeight: 600, cursor: 'pointer' }}>Close</button>
               <button onClick={() => { navigate('/contact'); setSelected(null) }} style={{ flex: 2, padding: '0.7rem', borderRadius: 10, border: 'none', background: btnGrad, color: 'white', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,191,255,0.35)' }}>Get Involved →</button>

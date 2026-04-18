@@ -13,7 +13,8 @@ import NewsSection      from '../components/Newssection'
 import Testimonials     from '../components/Testimonials'
 import PsychologicalEye from '../components/PsychologicalEye'
 import Crisis           from '../components/Crisis'
-import Balance         from '../components/Balance'
+import Balance          from '../components/Balance'
+import NoticePopup      from '../components/NoticePopup'
 import NamasteLoader    from '../components/NamasteLoader'
 import PollPopup        from '../components/Pollpopup'
 import DailyReturnHook  from '../components/DailyReturnHook'
@@ -36,6 +37,12 @@ export default function HomePage() {
 
   return (
     <>
+
+     <NoticePopup
+    title="Clinic closed on public holidays"
+    message="Our in-person sessions are unavailable next week. Online assessments and resources remain fully accessible. Please reschedule any upcoming appointments."
+    storageKey="notice_may_2025"
+  />
       {loading && (
         <NamasteLoader
           duration={2800}
@@ -46,7 +53,7 @@ export default function HomePage() {
       {/* Single FAB — replaces FloatingOrders + FloatingEye + DonateButton */}
       <FloatingActions />
 
-      {/* Poll */}
+      {/* Poll — rendered independently, does NOT affect DailyReturnHook */}
       {showPoll && <PollPopup onClose={() => setShowPoll(false)} />}
 
       {/* Page sections */}
@@ -63,7 +70,13 @@ export default function HomePage() {
       <FAQ />
       <Testimonials />
       <Crisis />
-      <DailyReturnHook visible={!showPoll} />
+
+      {/*
+        FIX: DailyReturnHook is ALWAYS rendered — never tied to showPoll.
+        Mounting/unmounting it caused hasAnimated to reset and the
+        IntersectionObserver to never re-fire, making the section invisible.
+      */}
+      <DailyReturnHook />
 
       {/* Give PsychologicalEye an id so FloatingActions can scroll to it */}
       <div id="psych-eye-section">

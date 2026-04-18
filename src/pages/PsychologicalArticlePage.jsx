@@ -1,335 +1,327 @@
-// src/pages/PsychologicalArticlePage.jsx
-// Route: /psychological-view/:slug
-// Full article detail page for Psychological View analyses
-// Navbar + Footer provided by App.jsx shell
-
+// src/pages/PsychDetailPage.jsx
 import { useState, useEffect } from 'react'
 import { useRouter } from '../context/RouterContext'
+import ReactMarkdown from 'react-markdown'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+// FIX: API_BASE now correctly includes /api — no double /api/api/ issue
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
+  .replace(/\/+$/, '')
 
-// Fallback data — matches the analyses in PsychologicalViewPage
-const FALLBACK_ANALYSES = [
-  { id:'1', slug:'populism-social-psychology',    category:'Global Politics', icon:'🌍', color_var:'var(--blue-mist)',   title:'Why Populism Keeps Rising: A Social Psychology Lens',                read_time:'6 min', published_at:'2025-06-01', concepts:['Social Identity Theory','Scapegoating','Fear Appeals','Cognitive Simplification'], excerpt:'Social identity theory, in-group favoritism, and threat perception explain the surge of populist movements across democracies.', content:'Social identity theory, first developed by Henri Tajfel and John Turner in the 1970s, proposes that people derive a significant portion of their self-concept from the groups they belong to. This psychological mechanism — powerful and largely unconscious — becomes politically explosive during periods of economic anxiety and rapid social change.\n\nWhen material conditions deteriorate, or when cultural change feels threatening to a group\'s sense of identity and status, the psychological need for in-group solidarity intensifies. Charismatic leaders who offer simple narratives of "us versus them" are not creating these tribal impulses — they are expertly channeling pre-existing psychological currents.\n\nFear appeals work by activating the amygdala — the brain\'s threat-detection centre — which reduces activity in the prefrontal cortex responsible for rational deliberation. Under conditions of perceived threat, people become more susceptible to authoritarian solutions and less critical of factual inconsistencies in messaging.\n\nCognitive simplification — the tendency to reduce complex systemic problems to single causes and single villains — is a natural response to cognitive overload. When economic systems, geopolitical forces, and cultural change converge simultaneously, the brain\'s preference for simple causal stories becomes a vulnerability.\n\nScapegoating historically targets out-groups that are visible, culturally distinct, and politically vulnerable. The psychological function it serves is to transform diffuse, structurally-caused anxiety into concrete, actionable anger — a transition that feels enormously relieving, even when destructive.\n\nUnderstanding these mechanisms is not an endorsement of populism but an essential precondition for countering it effectively. Education, economic security, and media literacy all reduce vulnerability to fear-based political messaging.' },
-  { id:'2', slug:'doom-scrolling-negativity-bias', category:'Social Media',    icon:'📱', color_var:'var(--sky-light)',   title:'Doom-Scrolling and the Negativity Bias of the Human Brain',          read_time:'5 min', published_at:'2025-05-01', concepts:['Negativity Bias','Intermittent Reinforcement','Variable Reward Schedules','FOMO'], excerpt:'Our brains evolved to prioritize threat detection. Social media algorithms exploit this to create compulsive usage patterns.', content:'The human brain did not evolve in a world of infinite information. For 99% of our evolutionary history, the most adaptive response to negative signals was immediate, sustained attention — a predator glimpsed in the bushes demanded more cognitive resources than a pleasant sunset.\n\nThis negativity bias — our tendency to weight negative information more heavily than equivalent positive information — was a survival asset for hunter-gatherers. In the digital age, it has become a liability that technology companies have learned to exploit with extraordinary precision.\n\nSocial media platforms are not passive conduits of information. They are behavioural engineering systems designed, through iterative A/B testing on billions of users, to maximise engagement. And engagement, it turns out, is most reliably triggered by content that provokes anxiety, outrage, or fear.\n\nThe variable reward schedule — the same psychological mechanism that drives slot machine addiction — is central to the design of infinite scroll feeds. The unpredictable spacing of rewarding content (a like, a funny video, an outrage-inducing headline) produces dopaminergic anticipation that is neurologically identical to other forms of behavioural addiction.\n\nFOMO (Fear of Missing Out) adds a social anxiety layer. The platform communicates, implicitly but constantly, that social consequence awaits those who disengage. Relationships, opportunities, and cultural relevance all feel contingent on continuous monitoring.\n\nThe clinical implications are significant. Excessive social media use is now robustly associated with increased rates of anxiety, depression, and sleep disruption — particularly in adolescents. Puja Samargi recommends structured "digital sunset" practices: no screens one hour before bed, app time limits, and intentional news consumption rather than passive scrolling.' },
-  { id:'3', slug:'climate-grief-eco-anxiety',      category:'Climate & Society',icon:'🌱', color_var:'var(--green-mist)', title:'Climate Grief and Eco-Anxiety: The New Existential Crisis',          read_time:'7 min', published_at:'2025-04-01', concepts:['Solastalgia','Existential Anxiety','Denial as Defense','Ecological Grief'], excerpt:'Climate psychology identifies a spectrum from eco-anxiety to ecological grief. Solastalgia is emerging as a new clinical concern.', content:'Glenn Albrecht coined the term "solastalgia" in 2003 to describe the distress caused by environmental change to one\'s home environment. Originally applied to communities living near open-cut mines in Australia, the concept has acquired global relevance as climate change transforms landscapes, weather patterns, and seasonal rhythms that communities have built cultural identities around for generations.\n\nEco-anxiety — chronic fear of environmental doom — is distinct from clinical anxiety disorders but can exacerbate them. The American Psychological Association formally recognised eco-anxiety in 2017, acknowledging that the mental health impacts of climate change extend far beyond the direct trauma of floods, fires, and displacement.\n\nThe psychological challenge is partly structural: climate change is a slow-moving, complex, globally-distributed threat that resists the brain\'s threat-detection systems, which evolved for immediate, localised dangers. This mismatch produces a characteristic affective response — oscillation between acute alarm and numbing denial.\n\nDenial as a psychological defence mechanism is not stupidity — it is the mind\'s attempt to make an overwhelming reality psychologically manageable. Understanding this does not excuse inaction, but it does explain why information campaigns alone fail to change behaviour at the scale required.\n\nEcological grief — mourning the loss of species, landscapes, seasons, and ecological relationships — is legitimate grief that deserves acknowledgement and therapeutic support. For many Indigenous communities, this grief has been ongoing for centuries.\n\nClinically, the most effective interventions combine realistic emotional processing with meaningful action. Agency — even small, local agency — is the most effective antidote to the helplessness that drives eco-anxiety into depression.' },
-  { id:'4', slug:'covid-collective-trauma',         category:'Post-Pandemic',   icon:'😷', color_var:'var(--earth-cream)', title:'Collective Trauma: How COVID-19 Rewired Social Psychology',          read_time:'8 min', published_at:'2025-03-01', concepts:['Collective Trauma','Moral Injury','Trust in Institutions','Intergenerational Trauma'], excerpt:'Collective trauma operates differently from individual PTSD. COVID exposed fundamental tensions between individualism and collectivism.', content:'Collective trauma differs from individual trauma in ways that are clinically and sociologically significant. Where individual PTSD involves a specific person\'s nervous system encoding a specific threat experience, collective trauma disrupts the shared assumptions, social trust, and meaning-making frameworks that hold communities together.\n\nCOVID-19 attacked the most fundamental social infrastructures simultaneously: physical proximity, shared ritual, economic security, institutional trust, and the generational contract between the young and the old. The psychological damage was not merely the sum of individual losses but the fracturing of collective coherence.\n\nMoral injury — a concept originally developed in combat veteran psychology — describes the damage done when a person is forced to act in ways that violate their deeply held moral beliefs, or witnesses such violations by others. Healthcare workers who were forced to choose which patients received care, teachers who watched children lose developmental years, and care workers who could not hold the hands of dying patients all experienced moral injury at scale.\n\nThe erosion of institutional trust during the pandemic — accelerated by politicisation of public health, inconsistent messaging, and genuine scientific uncertainty — has lasting consequences. Trust, once damaged, recovers slowly and asymmetrically. Misinformation fills the vacuum left by distrusted official sources.\n\nIntergenerational trauma transmission is a well-documented phenomenon: the psychological and even epigenetic effects of major collective traumas can be measurable in subsequent generations. The pandemic cohort of children — those aged 0–10 during 2020–2022 — will require longitudinal monitoring for developmental and psychological impacts that may only become apparent in adolescence.\n\nRecovery from collective trauma requires collective action: rebuilding social trust through transparent institutions, creating space for communal grief, and investing in the mental health infrastructure that the pandemic both devastated and made newly urgent.' },
-  { id:'5', slug:'gorkha-earthquake-trauma',        category:'Nepal',           icon:'🏔', color_var:'var(--blue-mist)',   title:'Earthquake Trauma and Resilience: Lessons from Gorkha',             read_time:'6 min', published_at:'2025-02-01', concepts:['Post-Traumatic Growth','Cultural Healing','Community Resilience','Survivor Guilt'], excerpt:'A decade after the 2015 earthquake, Nepal offers a unique study in post-disaster collective recovery.', content:'The April 2015 earthquake that struck Nepal with a 7.8 magnitude, followed by a 7.3 magnitude aftershock seventeen days later, killed nearly 9,000 people, injured 22,000, and displaced hundreds of thousands. The psychological aftermath — less visible than the physical destruction but equally profound — continues to shape the mental health landscape of affected communities a decade later.\n\nPost-traumatic stress disorder prevalence in heavily affected districts was estimated at 30–47% in the immediate aftermath — among the highest recorded for any natural disaster globally. Yet the story of Gorkha and surrounding districts is not only one of trauma. It is equally a story of remarkable resilience.\n\nPost-traumatic growth (PTG) — the positive psychological change that can emerge from the struggle with highly challenging life circumstances — was documented extensively in survivor communities. Survivors frequently reported strengthened relationships, enhanced appreciation for life, discovery of personal strength, spiritual development, and recognition of new possibilities.\n\nCultural healing practices played a documented role in this recovery. Buddhist and Hindu mourning rituals provided structured frameworks for grief processing. Community labour-sharing traditions (parma) facilitated both practical reconstruction and the social bonding that buffers trauma. The physical act of rebuilding together was itself therapeutic.\n\nSurvivor guilt — the complex, often irrational distress experienced by those who survived when others did not — required specific clinical attention. The randomness of survival in natural disasters is psychologically destabilising in ways distinct from other traumas, because it defies the human need for causal coherence.\n\nThe Gorkha experience offers a compelling case for culturally-integrated mental health responses — ones that work alongside existing community structures rather than imposing externally-designed protocols.' },
-  { id:'6', slug:'moral-disengagement-conflict',    category:'Conflict & War',  icon:'⚖️', color_var:'var(--blue-mist)',   title:'Moral Disengagement: How Ordinary People Commit Extraordinary Harm', read_time:'9 min', published_at:'2025-01-01', concepts:['Moral Disengagement','Dehumanization','Obedience to Authority','Bystander Effect'], excerpt:"Bandura's moral disengagement theory explains how individuals distance themselves from consequences through dehumanization.", content:'Albert Bandura\'s theory of moral disengagement, developed over decades of empirical research, addresses one of the most unsettling questions in human psychology: how do ordinary, morally functioning individuals come to participate in extraordinary cruelty?\n\nThe answer, Bandura demonstrated, is not that they abandon their moral standards — it is that they employ a range of psychological mechanisms that selectively disengage those standards from their actions. These mechanisms are not unique to exceptional circumstances; they operate in everyday organizational life, in media consumption, and in political participation.\n\nDehumanization is perhaps the most powerful of these mechanisms. When outgroups are systematically represented as subhuman — through language, imagery, and narrative — the neurological empathy circuits that normally inhibit harm towards others are suppressed. The historical record is unambiguous: dehumanizing rhetoric consistently precedes mass violence.\n\nDiffusion of responsibility in group settings means that individual moral agency evaporates into collective structures. "I was following orders," "everyone else was doing it," and "the system made this decision" are not mere excuses — they reflect genuine psychological experiences of diminished personal accountability.\n\nStanley Milgram\'s obedience studies, conducted in the aftermath of the Holocaust, demonstrated that ordinary American participants would administer what they believed were life-threatening electric shocks to strangers when instructed by an authority figure in a scientific context. Situational forces, not character defects, were the primary determinants of behaviour.\n\nThe bystander effect — the well-documented phenomenon whereby the presence of others reduces individual intervention in emergencies — operates through similar diffusion mechanisms. The antidote, research shows, is explicit assignment of individual responsibility: when a specific person is named and asked to act, the diffusion dynamic collapses.\n\nUnderstanding moral disengagement is not academic. It is essential knowledge for building institutions, organizations, and communities that are structurally resistant to the conditions under which ordinary people become capable of harm.' },
-]
+const C = {
+  bgDark:'#0c1e2b', bgDeep:'#0f2744', bgGreen:'#0a1e1a',
+  blueDeep:'#1a3a4a', blueMid:'#2e6080', blueSoft:'#5b9ab5',
+  bluePale:'#b0d4e8', blueMist:'#e6f2f8',
+  sky:'#38BDF8', skyBright:'#00BFFF', skyLight:'#E0F7FF', skyFainter:'#F0FBFF',
+  greenDeep:'#1a3320', greenMid:'#2d4a3e', greenPale:'#b8d5c8', greenMist:'#e8f3ee',
+  white:'#ffffff', offWhite:'#f6f9fb',
+  textDark:'#0f2035', textMid:'#2e5068', textLight:'#7a9aaa', borderFaint:'#daeef8',
+}
+
+const heroGrad = `linear-gradient(145deg, ${C.bgDark} 0%, ${C.blueDeep} 50%, ${C.bgGreen} 100%)`
+const sideGrad = `linear-gradient(135deg, ${C.blueDeep} 0%, ${C.sky} 100%)`
 
 function fmtDate(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
 }
 
-function SkeletonDetail() {
-  const Sk = ({ w='100%', h=16 }) => (
-    <div style={{ width:w, height:h, borderRadius:6,
-      background:'linear-gradient(90deg,#e5e7eb 0%,#f3f4f6 50%,#e5e7eb 100%)',
-      animation:'pulse 1.5s ease infinite', backgroundSize:'200% 100%', marginBottom:12 }} />
-  )
+const mdComponents = {
+  h2: ({ children }) => (
+    <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'1.45rem',
+      color:C.blueDeep, margin:'2.25rem 0 0.8rem', lineHeight:1.3,
+      borderBottom:`2px solid ${C.skyLight}`, paddingBottom:'0.5rem' }}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'1.1rem',
+      color:C.blueMid, margin:'1.75rem 0 0.5rem', lineHeight:1.35 }}>
+      {children}
+    </h3>
+  ),
+  p: ({ children }) => (
+    <p style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.97rem',
+      color:C.textMid, lineHeight:1.9, margin:'0 0 1.1rem' }}>
+      {children}
+    </p>
+  ),
+  ul: ({ children }) => <ul style={{ margin:'0.5rem 0 1.25rem 1.25rem', padding:0 }}>{children}</ul>,
+  ol: ({ children }) => <ol style={{ margin:'0.5rem 0 1.25rem 1.25rem', padding:0 }}>{children}</ol>,
+  li: ({ children }) => (
+    <li style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.95rem',
+      color:C.textMid, lineHeight:1.8, marginBottom:'0.4rem' }}>
+      {children}
+    </li>
+  ),
+  strong: ({ children }) => <strong style={{ color:C.textDark, fontWeight:700 }}>{children}</strong>,
+  blockquote: ({ children }) => (
+    <blockquote style={{ borderLeft:`4px solid ${C.sky}`, background:C.skyFainter,
+      margin:'1.75rem 0', padding:'1.1rem 1.4rem', borderRadius:'0 12px 12px 0' }}>
+      {children}
+    </blockquote>
+  ),
+  code: ({ children }) => (
+    <code style={{ background:C.skyLight, color:C.blueDeep, padding:'2px 7px',
+      borderRadius:4, fontSize:'0.88rem', fontFamily:'monospace' }}>
+      {children}
+    </code>
+  ),
+}
+
+function AnalysisVisual({ analysis, height=240 }) {
+  const colorMap = {
+    'var(--blue-mist)':   `linear-gradient(135deg,#e6f2f8,#b0d4e8)`,
+    'var(--sky-light)':   `linear-gradient(135deg,#E0F7FF,#b0d4e8)`,
+    'var(--green-mist)':  `linear-gradient(135deg,#e8f3ee,#b8d5c8)`,
+    'var(--earth-cream)': `linear-gradient(135deg,#f5ede0,#d4b896)`,
+  }
+  const bg = colorMap[analysis.color_var] || `linear-gradient(135deg,${C.skyLight},${C.blueMist})`
   return (
-    <div style={{ maxWidth:760, margin:'0 auto', padding:'3rem 2rem' }}>
-      <Sk h={32} w="60%" /><Sk h={20} w="85%" /><Sk h={20} w="70%" />
-      <Sk h={14} /><Sk h={14} /><Sk w="80%" h={14} /><Sk h={14} /><Sk w="60%" h={14} />
+    <div style={{ width:'100%', height, background:bg,
+      display:'flex', flexDirection:'column', alignItems:'center',
+      justifyContent:'center', gap:'0.75rem' }}>
+      <span style={{ fontSize:'4.5rem', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.12))' }}>
+        {analysis.icon || '🧠'}
+      </span>
+      <span style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.72rem',
+        fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase',
+        color:C.blueMid, background:'rgba(255,255,255,0.6)', padding:'4px 14px', borderRadius:100 }}>
+        {analysis.category}
+      </span>
     </div>
   )
 }
 
-export default function PsychologicalArticlePage() {
-  const { params, navigate }    = useRouter()
-  const slug                    = params?.slug
-  const [article,  setArticle]  = useState(null)
-  const [related,  setRelated]  = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState(false)
-  const [copied,   setCopied]   = useState(false)
-
-  useEffect(() => { window.scrollTo({ top:0, behavior:'smooth' }) }, [slug])
-
-  // Try API first, fall back to local data
-  useEffect(() => {
-    if (!slug) { navigate('/psychological-view'); return }
-    setLoading(true)
-    setError(false)
-
-    fetch(`${API_BASE}/api/psych/analyses/${slug}`)
-      .then(r => { if (!r.ok) throw new Error('not found'); return r.json() })
-      .then(d  => {
-        setArticle(d.analysis)
-        // related = other analyses except current
-        const others = FALLBACK_ANALYSES.filter(a => a.slug !== slug).slice(0, 3)
-        setRelated(others)
-      })
-      .catch(() => {
-        // Fall back to local data
-        const found = FALLBACK_ANALYSES.find(a => a.slug === slug)
-        if (found) {
-          setArticle(found)
-          setRelated(FALLBACK_ANALYSES.filter(a => a.slug !== slug).slice(0, 3))
-        } else {
-          setError(true)
-        }
-      })
-      .finally(() => setLoading(false))
-  }, [slug])
-
-  function handleCopy() {
-    navigator.clipboard?.writeText(window.location.href).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
-  // ── ERROR ──
-  if (!loading && error) return (
-    <div className="page-wrapper">
-      <div style={{ minHeight:'60vh', display:'flex', flexDirection:'column',
-        alignItems:'center', justifyContent:'center', padding:'4rem 2rem', textAlign:'center' }}>
-        <div style={{ fontSize:'4rem', marginBottom:'1rem' }}>🧠</div>
-        <h2 style={{ fontFamily:'var(--font-display)', fontSize:'1.8rem',
-          color:'var(--green-deep)', marginBottom:'0.75rem' }}>Article Not Found</h2>
-        <p style={{ color:'var(--text-light)', marginBottom:'2rem' }}>
-          This analysis may have been moved or removed.
+function Loader() {
+  return (
+    <div style={{ minHeight:'70vh', display:'flex', alignItems:'center',
+      justifyContent:'center', background:C.offWhite }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ width:48, height:48, border:`3px solid ${C.skyLight}`,
+          borderTop:`3px solid ${C.sky}`, borderRadius:'50%',
+          animation:'spin 0.8s linear infinite', margin:'0 auto 1rem' }} />
+        <p style={{ fontFamily:"'Nunito',sans-serif", color:C.textLight, fontSize:'0.9rem' }}>
+          Loading analysis…
         </p>
-        <button onClick={() => navigate('/psychological-view')}
-          className="btn btn-primary">← Back to Psychological View</button>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     </div>
   )
+}
+
+export default function PsychDetailPage() {
+  const { params, navigate } = useRouter()
+  const slug = params?.slug || ''
+
+  const [analysis, setAnalysis] = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(false)
+
+  useEffect(() => {
+    if (!slug) return
+    setLoading(true)
+    setError(false)
+    // FIX: API_BASE already has /api, so just /psych/${slug} — no double /api/api/
+    fetch(`${API_BASE}/psych/${slug}`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+      .then(d => { setAnalysis(d.analysis || d); setLoading(false) })
+      .catch(() => { setError(true); setLoading(false) })
+  }, [slug])
+
+  if (loading) return <Loader />
+
+  if (error || !analysis) return (
+    <div style={{ minHeight:'70vh', display:'flex', alignItems:'center',
+      justifyContent:'center', flexDirection:'column', gap:'1rem', background:C.offWhite }}>
+      <div style={{ fontSize:'3.5rem' }}>😕</div>
+      <p style={{ fontFamily:"'Nunito',sans-serif", color:C.textLight, fontSize:'1.05rem' }}>
+        Analysis not found.
+      </p>
+      <button onClick={() => navigate('/psychological-view')}
+        style={{ padding:'0.65rem 1.5rem', borderRadius:10, background:sideGrad,
+          color:'white', border:'none', cursor:'pointer',
+          fontFamily:"'Nunito',sans-serif", fontWeight:700 }}>
+        ← Back to Psychological View
+      </button>
+    </div>
+  )
 
   return (
-    <div className="page-wrapper">
+    <>
       <style>{`
-        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        .psych-article-body p { margin-bottom:1.5rem; line-height:1.85; }
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+        *{box-sizing:border-box}
         @media(max-width:900px){
-          .psych-detail-layout { grid-template-columns:1fr !important }
-          .psych-detail-sticky { position:static !important }
-          .psych-related-grid  { grid-template-columns:1fr !important }
+          .psych-detail-grid{grid-template-columns:1fr !important}
+          .psych-detail-hero{padding:5rem 1.5rem 2.25rem !important}
+          .psych-detail-body{padding:2rem 1.5rem !important}
         }
       `}</style>
 
-      {loading ? <SkeletonDetail /> : article && (
-        <>
-          {/* ── BREADCRUMB ── */}
-          <div style={{ background:'var(--white)', borderBottom:'1px solid var(--earth-cream)',
-            padding:'0.75rem 4rem' }}>
-            <div style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center',
-              gap:'0.5rem', fontFamily:'var(--font-body)', fontSize:'0.78rem' }}>
-              <span onClick={()=>navigate('/')} style={{ color:'var(--sky)', cursor:'pointer', fontWeight:600 }}>Home</span>
-              <span style={{ color:'var(--earth-cream)' }}>›</span>
-              <span onClick={()=>navigate('/psychological-view')} style={{ color:'var(--sky)', cursor:'pointer', fontWeight:600 }}>Psychological View</span>
-              <span style={{ color:'var(--earth-cream)' }}>›</span>
-              <span style={{ color:'var(--text-light)', fontWeight:600 }}>{article.category}</span>
-            </div>
-          </div>
+      <div style={{ background:C.offWhite, minHeight:'100vh', paddingTop:72 }}>
 
-          {/* ── HERO BANNER ── */}
-          <div style={{ background: article.color_var || 'var(--blue-mist)',
-            padding:'4rem 6rem 3rem', position:'relative', overflow:'hidden' }}>
-            <div style={{ maxWidth:1200, margin:'0 auto', position:'relative', zIndex:1 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1rem' }}>
-                <span style={{ fontSize:'2.5rem' }}>{article.icon}</span>
-                <div>
-                  <div style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:800,
-                    textTransform:'uppercase', letterSpacing:'0.1em', color:'var(--blue-mid)',
-                    marginBottom:'0.2rem' }}>{article.category}</div>
-                  <div style={{ fontFamily:'var(--font-body)', fontSize:'0.75rem',
-                    color:'var(--text-light)' }}>
-                    {fmtDate(article.published_at)} · {article.read_time} read
-                  </div>
-                </div>
-              </div>
-              <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(1.75rem,3vw,2.6rem)',
-                fontWeight:700, color:'var(--blue-deep)', lineHeight:1.2, marginBottom:'1.25rem',
-                maxWidth:760 }}>
-                {article.title}
-              </h1>
-              <p style={{ fontFamily:'var(--font-body)', fontSize:'1.05rem',
-                color:'var(--text-mid)', lineHeight:1.75, maxWidth:680,
-                paddingLeft:'1.25rem', borderLeft:'4px solid var(--sky)' }}>
-                {article.excerpt}
-              </p>
-            </div>
-            {/* Decorative orb */}
-            <div style={{ position:'absolute', right:-60, top:'50%', transform:'translateY(-50%)',
-              width:320, height:320, borderRadius:'50%',
-              background:'rgba(0,191,255,0.08)', pointerEvents:'none' }} />
-          </div>
-
-          {/* ── MAIN LAYOUT ── */}
-          <div className="psych-detail-layout"
-            style={{ maxWidth:1200, margin:'0 auto', display:'grid',
-              gridTemplateColumns:'1fr 300px', gap:'3rem',
-              padding:'2.5rem 2rem 4rem', alignItems:'start',
-              background:'var(--off-white)' }}>
-
-            {/* LEFT: Article body */}
-            <article style={{ animation:'fadeUp 0.5s ease both' }}>
-
-              {/* Concepts tags */}
-              {(article.concepts||[]).length > 0 && (
-                <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem', marginBottom:'2rem' }}>
-                  {article.concepts.map((c,i) => (
-                    <span key={i} className="tag" style={{ fontSize:'0.75rem' }}>{c}</span>
-                  ))}
-                </div>
+        {/* HERO */}
+        <div className="psych-detail-hero"
+          style={{ background:heroGrad, padding:'5.5rem 6rem 3rem',
+            position:'relative', overflow:'hidden', color:'white' }}>
+          {[320,220,130].map((r,i) => (
+            <div key={i} style={{ position:'absolute', right:-r/2, top:'50%',
+              transform:'translateY(-50%)', width:r*2, height:r*2, borderRadius:'50%',
+              border:`1px solid rgba(56,189,248,${0.07+i*0.03})`, pointerEvents:'none' }} />
+          ))}
+          <div style={{ maxWidth:1100, margin:'0 auto', position:'relative', zIndex:1 }}>
+            <button onClick={() => navigate('/psychological-view')}
+              style={{ background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)',
+                color:'white', borderRadius:100, padding:'0.3rem 1.1rem',
+                fontFamily:"'Nunito',sans-serif", fontSize:'0.78rem', fontWeight:600,
+                cursor:'pointer', marginBottom:'1.5rem', backdropFilter:'blur(8px)' }}>
+              ← Back to Psychological View
+            </button>
+            <div style={{ display:'flex', gap:'0.6rem', alignItems:'center',
+              marginBottom:'0.85rem', flexWrap:'wrap' }}>
+              {analysis.category && (
+                <span style={{ background:'rgba(56,189,248,0.2)', backdropFilter:'blur(8px)',
+                  color:'white', fontSize:'0.72rem', fontWeight:700, padding:'4px 13px',
+                  borderRadius:100, border:'1px solid rgba(56,189,248,0.4)' }}>
+                  {analysis.icon} {analysis.category}
+                </span>
               )}
-
-              {/* Full content */}
-              <div className="psych-article-body"
-                style={{ fontFamily:'var(--font-body)', fontSize:'1rem',
-                  color:'var(--text-mid)', lineHeight:1.85 }}>
-                {(article.content || article.excerpt || '')
-                  .split('\n\n')
-                  .filter(p => p.trim())
-                  .map((para, i) => (
-                    <p key={i}>{para.trim()}</p>
-                  ))}
-              </div>
-
-              <div style={{ height:1, background:'var(--earth-cream)', margin:'2.5rem 0' }} />
-
-              {/* Share + back row */}
-              <div style={{ display:'flex', alignItems:'center',
-                justifyContent:'space-between', flexWrap:'wrap', gap:'1rem' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                  <span style={{ fontFamily:'var(--font-body)', fontSize:'0.8rem',
-                    fontWeight:700, color:'var(--text-mid)' }}>Share:</span>
-                  {[
-                    { label:'Copy Link', icon:'🔗', action: handleCopy },
-                    { label:'Twitter',   icon:'🐦', action: ()=>window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(window.location.href)}`,'_blank') },
-                  ].map(btn => (
-                    <button key={btn.label} onClick={btn.action}
-                      className="btn btn-outline"
-                      style={{ fontSize:'0.75rem', padding:'0.4rem 0.9rem',
-                        display:'flex', alignItems:'center', gap:5 }}>
-                      {btn.icon} {btn.label === 'Copy Link' && copied ? 'Copied!' : btn.label}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={()=>navigate('/psychological-view')}
-                  className="btn btn-outline">
-                  ← Psychological View
-                </button>
-              </div>
-
-              {/* ── RELATED ANALYSES ── */}
-              {related.length > 0 && (
-                <div style={{ marginTop:'3.5rem' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1.5rem' }}>
-                    <div style={{ flex:1, height:1, background:'var(--earth-cream)' }} />
-                    <span style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:800,
-                      letterSpacing:'0.14em', textTransform:'uppercase',
-                      color:'var(--text-light)' }}>More Analyses</span>
-                    <div style={{ flex:1, height:1, background:'var(--earth-cream)' }} />
-                  </div>
-                  <div className="psych-related-grid"
-                    style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'1.25rem' }}>
-                    {related.map(a => (
-                      <div key={a.id}
-                        style={{ background:'var(--white)', borderRadius:'var(--radius-lg)',
-                          overflow:'hidden', border:'1px solid var(--blue-pale)',
-                          cursor:'pointer', transition:'all 0.25s',
-                          boxShadow:'var(--shadow-soft)' }}
-                        onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='var(--shadow-mid)' }}
-                        onMouseLeave={e=>{ e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='var(--shadow-soft)' }}
-                        onClick={()=>{ navigate('/psychological-view/'+a.slug); window.scrollTo({top:0,behavior:'smooth'}) }}>
-                        <div style={{ background:a.color_var, padding:'1rem 1.25rem',
-                          display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                          <span style={{ fontSize:'1.5rem' }}>{a.icon}</span>
-                          <div style={{ fontFamily:'var(--font-body)', fontSize:'0.65rem',
-                            fontWeight:800, textTransform:'uppercase',
-                            letterSpacing:'0.08em', color:'var(--blue-mid)' }}>
-                            {a.category}
-                          </div>
-                        </div>
-                        <div style={{ padding:'1rem 1.25rem' }}>
-                          <h4 style={{ fontFamily:'var(--font-display)', fontSize:'0.9rem',
-                            color:'var(--blue-deep)', lineHeight:1.35,
-                            marginBottom:'0.4rem' }}>{a.title}</h4>
-                          <div style={{ fontFamily:'var(--font-body)', fontSize:'0.7rem',
-                            color:'var(--text-light)' }}>{a.read_time} read</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </article>
-
-            {/* RIGHT SIDEBAR */}
-            <aside className="psych-detail-sticky" style={{ position:'sticky', top:100 }}>
-
-              {/* Book CTA */}
-              <div style={{ background:'linear-gradient(135deg,var(--green-deep) 0%,var(--blue-deep) 100%)',
-                borderRadius:16, padding:'1.75rem', color:'white', marginBottom:'1.5rem' }}>
-                <div style={{ fontSize:'2rem', marginBottom:'0.75rem' }}>🌿</div>
-                <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1.1rem',
-                  fontWeight:600, marginBottom:'0.5rem', lineHeight:1.3 }}>
-                  Speak with a Psychologist
-                </h3>
-                <p style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem',
-                  color:'rgba(255,255,255,0.65)', lineHeight:1.55, marginBottom:'1.25rem' }}>
-                  Our licensed clinical team can help you apply these insights to your own wellbeing.
-                </p>
-                <button onClick={()=>navigate('/book')}
-                  className="btn btn-primary"
-                  style={{ width:'100%', justifyContent:'center', background:'var(--sky)',
-                    border:'none', color:'white' }}>
-                  Book Free Consultation →
-                </button>
-              </div>
-
-              {/* Take assessment */}
-              <div style={{ background:'var(--white)', borderRadius:14, padding:'1.5rem',
-                border:'1px solid var(--earth-cream)', marginBottom:'1.5rem' }}>
-                <div style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:800,
-                  letterSpacing:'0.1em', textTransform:'uppercase',
-                  color:'var(--text-light)', marginBottom:'0.75rem' }}>Free Screening</div>
-                <h4 style={{ fontFamily:'var(--font-display)', fontSize:'0.95rem',
-                  color:'var(--blue-deep)', marginBottom:'0.5rem' }}>
-                  Check Your Mental Health
-                </h4>
-                <p style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem',
-                  color:'var(--text-light)', lineHeight:1.55, marginBottom:'1rem' }}>
-                  Take a validated screening — PHQ-9, GAD-7, DASS-21, or Burnout Check. Free and anonymous.
-                </p>
-                <button onClick={()=>navigate('/assessments')}
-                  className="btn btn-outline" style={{ width:'100%', justifyContent:'center' }}>
-                  Start Assessment
-                </button>
-              </div>
-
-              {/* Article info */}
-              <div style={{ background:'var(--white)', borderRadius:14, padding:'1.5rem',
-                border:'1px solid var(--earth-cream)' }}>
-                <div style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:800,
-                  letterSpacing:'0.1em', textTransform:'uppercase',
-                  color:'var(--text-light)', marginBottom:'1rem' }}>About This Analysis</div>
-                {[
-                  ['Category',  article.category],
-                  ['Published', fmtDate(article.published_at)],
-                  ['Read Time', article.read_time],
-                  ['Concepts',  (article.concepts||[]).length + ' key concepts'],
-                ].map(([k,v]) => (
-                  <div key={k} style={{ display:'flex', justifyContent:'space-between',
-                    padding:'0.5rem 0', borderBottom:'1px solid var(--off-white)' }}>
-                    <span style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem',
-                      color:'var(--text-light)' }}>{k}</span>
-                    <span style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem',
-                      fontWeight:600, color:'var(--text-dark)', textAlign:'right',
-                      maxWidth:'55%' }}>{v}</span>
-                  </div>
+              <span style={{ color:'rgba(255,255,255,0.6)', fontSize:'0.78rem' }}>
+                {fmtDate(analysis.published_at)}{analysis.read_time ? ` · ${analysis.read_time} read` : ''}
+              </span>
+            </div>
+            <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif",
+              fontSize:'clamp(1.7rem,3.5vw,2.6rem)', color:'white',
+              lineHeight:1.22, maxWidth:800, marginBottom:'1.25rem', fontWeight:400 }}>
+              {analysis.title}
+            </h1>
+            {(analysis.concepts || []).length > 0 && (
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'0.45rem', marginTop:'0.5rem' }}>
+                {analysis.concepts.map((c, i) => (
+                  <span key={i} style={{ background:'rgba(56,189,248,0.15)',
+                    border:'1px solid rgba(56,189,248,0.3)', color:'rgba(255,255,255,0.85)',
+                    fontSize:'0.7rem', fontWeight:600, padding:'3px 11px',
+                    borderRadius:100, fontFamily:"'Nunito',sans-serif" }}>
+                    {c}
+                  </span>
                 ))}
               </div>
-            </aside>
+            )}
           </div>
-        </>
-      )}
-    </div>
+        </div>
+
+        {/* MAIN CONTENT */}
+        <div className="psych-detail-body"
+          style={{ maxWidth:1100, margin:'0 auto', padding:'3rem 6rem',
+            display:'grid', gridTemplateColumns:'1fr 340px', gap:'3rem', alignItems:'start' }}>
+
+          <div>
+            {analysis.excerpt && (
+              <div style={{ background:`linear-gradient(135deg,${C.skyFainter},${C.greenMist})`,
+                border:`1px solid ${C.borderFaint}`, borderLeft:`4px solid ${C.sky}`,
+                borderRadius:'0 14px 14px 0', padding:'1.3rem 1.6rem', marginBottom:'2.25rem' }}>
+                <p style={{ fontFamily:"'Nunito',sans-serif", fontSize:'1rem',
+                  color:C.textMid, lineHeight:1.8, margin:0, fontStyle:'italic' }}>
+                  {analysis.excerpt}
+                </p>
+              </div>
+            )}
+            {analysis.content ? (
+              <ReactMarkdown components={mdComponents}>{analysis.content}</ReactMarkdown>
+            ) : (
+              <div style={{ padding:'2.5rem', textAlign:'center', background:C.white,
+                borderRadius:14, border:`1px dashed ${C.borderFaint}` }}>
+                <div style={{ fontSize:'2rem', marginBottom:'0.75rem' }}>🧠</div>
+                <p style={{ fontFamily:"'Nunito',sans-serif", color:C.textLight, fontSize:'0.9rem' }}>
+                  Full analysis coming soon.
+                </p>
+              </div>
+            )}
+            {(analysis.tags || []).length > 0 && (
+              <div style={{ marginTop:'2.5rem', paddingTop:'1.5rem', borderTop:`1px solid ${C.borderFaint}` }}>
+                <div style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.75rem',
+                  fontWeight:800, color:C.textLight, marginBottom:'0.75rem',
+                  textTransform:'uppercase', letterSpacing:'0.09em' }}>Tags</div>
+                <div style={{ display:'flex', gap:'0.4rem', flexWrap:'wrap' }}>
+                  {analysis.tags.map(tag => (
+                    <span key={tag} style={{ fontSize:'0.75rem', padding:'4px 13px',
+                      borderRadius:100, background:C.skyLight, color:C.blueMid,
+                      fontWeight:600, fontFamily:"'Nunito',sans-serif" }}>#{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ marginTop:'3rem' }}>
+              <button onClick={() => navigate('/psychological-view')}
+                style={{ padding:'0.78rem 2rem', borderRadius:10, background:sideGrad,
+                  color:'white', border:'none', cursor:'pointer',
+                  fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:'0.9rem',
+                  boxShadow:`0 4px 18px rgba(56,189,248,0.28)` }}>
+                ← Back to Psychological View
+              </button>
+            </div>
+          </div>
+
+          <aside style={{ position:'sticky', top:'6rem', display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+            <div style={{ borderRadius:16, overflow:'hidden', boxShadow:`0 8px 36px rgba(56,189,248,0.14)` }}>
+              <AnalysisVisual analysis={analysis} height={220} />
+            </div>
+            <div style={{ background:C.white, borderRadius:14, border:`1px solid ${C.borderFaint}`,
+              padding:'1.3rem', boxShadow:`0 2px 14px rgba(56,189,248,0.06)` }}>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.7rem', fontWeight:800,
+                color:C.textLight, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'1rem' }}>
+                Analysis Info
+              </div>
+              {[
+                { label:'Category',  value: analysis.category || '—' },
+                { label:'Published', value: fmtDate(analysis.published_at) || '—' },
+                { label:'Read Time', value: analysis.read_time ? `${analysis.read_time} read` : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ display:'flex', justifyContent:'space-between',
+                  alignItems:'center', padding:'0.55rem 0', borderBottom:`1px solid ${C.borderFaint}` }}>
+                  <span style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.78rem', color:C.textLight }}>{label}</span>
+                  <span style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.78rem',
+                    fontWeight:700, color:C.textDark }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            {(analysis.concepts || []).length > 0 && (
+              <div style={{ background:`linear-gradient(135deg,${C.bgDark},${C.blueDeep})`,
+                borderRadius:14, padding:'1.3rem', boxShadow:`0 4px 20px rgba(0,0,0,0.2)` }}>
+                <div style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.7rem', fontWeight:800,
+                  color:'rgba(56,189,248,0.7)', textTransform:'uppercase',
+                  letterSpacing:'0.1em', marginBottom:'1rem' }}>Key Concepts</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+                  {analysis.concepts.map((concept, i) => (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:'0.6rem' }}>
+                      <span style={{ width:6, height:6, borderRadius:'50%', background:C.sky, flexShrink:0 }} />
+                      <span style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.82rem',
+                        fontWeight:600, color:'rgba(255,255,255,0.82)' }}>{concept}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ background:heroGrad, borderRadius:14, padding:'1.6rem',
+              textAlign:'center', boxShadow:`0 8px 28px rgba(0,0,0,0.25)`,
+              border:`1px solid rgba(56,189,248,0.2)` }}>
+              <div style={{ fontSize:'1.6rem', marginBottom:'0.5rem' }}>🧠</div>
+              <div style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'1.05rem',
+                color:'white', marginBottom:'0.4rem' }}>Need Support?</div>
+              <p style={{ fontFamily:"'Nunito',sans-serif", fontSize:'0.78rem',
+                color:'rgba(255,255,255,0.7)', marginBottom:'1.1rem', lineHeight:1.6 }}>
+                Talk to one of our licensed therapists today.
+              </p>
+              <button onClick={() => navigate('/book')}
+                style={{ padding:'0.65rem 1.3rem', borderRadius:8, background:C.white,
+                  color:C.blueDeep, border:'none', fontFamily:"'Nunito',sans-serif",
+                  fontWeight:700, fontSize:'0.83rem', cursor:'pointer', width:'100%' }}>
+                Book a Session
+              </button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </>
   )
 }

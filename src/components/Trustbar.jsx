@@ -233,7 +233,7 @@ export default function TrustBar() {
               textTransform: 'uppercase',
               color: '#0369a1',
             }}>
-              Why clients trust us
+              YOUR TRUST, OUR COMMITMENT
             </span>
           </div>
           <div style={{

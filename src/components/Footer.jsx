@@ -23,8 +23,8 @@ const RESOURCE_LINKS = [
 const COMPANY_LINKS = [
   ['About Us',           '/contact'],
   ['Our Therapists',     '/therapists'],
-  ['Become a Therapist', '/register'],
-  ['Privacy Policy',     '/payment'],
+  ['Become a Therapist', '/contact'],
+  ['Policies',     '/payment-info'],
   ['Contact',            '/contact'],
 ]
 
@@ -548,7 +548,7 @@ export default function Footer() {
           textAlign: isMobile ? 'center' : 'left',
         }}>
           <span>
-            © 2025 Puja Samargi Mental Wellness. All rights reserved. Kathmandu, Nepal.
+            © 2025  Mental Wellness. All rights reserved. Kathmandu, Nepal.
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">

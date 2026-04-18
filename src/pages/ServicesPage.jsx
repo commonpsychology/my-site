@@ -43,6 +43,13 @@ const allServices = [
     features: ['CBT for insomnia', 'Mood charting', 'Sleep hygiene coaching', 'Lifestyle integration'],
     specialties: ['Insomnia', 'Sleep', 'Mood', 'Burnout'],
   },
+  {
+    icon: '💼', iconClass: 'si-blue',
+    title: 'Organizational Wellness',
+    desc: 'Support for workplace mental health and employee well-being.',
+    features: ['Workplace assessments', 'Employee assistance', 'Leadership training', 'Culture of care'],
+    specialties: ['Workplace', 'Employee', 'Leadership', 'Culture'],
+  },
 ]
 
 export default function ServicesPage() {

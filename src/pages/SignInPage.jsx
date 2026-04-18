@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from '../context/RouterContext'
 import { useAuth, useAuthGuard } from '../context/AuthContext'
 
+const STAFF_ROLES = new Set(['admin', 'staff', 'therapist'])
+
 const CSS = `
   .signin-root {
     min-height: 100vh;
@@ -73,6 +75,50 @@ const CSS = `
     font-weight: 500;
     font-family: var(--font-body);
   }
+
+  /* ── Staff redirect overlay ── */
+  .signin-staff-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: linear-gradient(160deg, #e8f5e9 0%, #c8e6c9 60%, #a5d6a7 100%);
+    animation: siOverlayIn 0.22s ease both;
+  }
+  @keyframes siOverlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .signin-staff-overlay-icon {
+    font-size: 2.5rem;
+    animation: siPop 0.3s cubic-bezier(.22,1,.36,1) 0.1s both;
+  }
+  .signin-staff-overlay-title {
+    font-family: var(--font-display, Georgia, serif);
+    font-size: 1.4rem;
+    color: var(--green-deep, #1a5c38);
+    animation: siPop 0.3s cubic-bezier(.22,1,.36,1) 0.18s both;
+  }
+  .signin-staff-overlay-sub {
+    font-family: var(--font-body, system-ui);
+    font-size: 0.88rem;
+    color: #4a7a5a;
+    animation: siPop 0.3s cubic-bezier(.22,1,.36,1) 0.24s both;
+  }
+  .signin-staff-overlay-spinner {
+    width: 22px; height: 22px;
+    border: 2.5px solid rgba(26,92,56,0.2);
+    border-top-color: var(--green-deep, #1a5c38);
+    border-radius: 50%;
+    animation: siSpin 0.7s linear infinite, siPop 0.3s cubic-bezier(.22,1,.36,1) 0.3s both;
+  }
+  @keyframes siSpin { to { transform: rotate(360deg); } }
+  @keyframes siPop  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
   @media (max-width: 900px) {
     .signin-root { grid-template-columns: 340px 1fr; }
   }
@@ -91,23 +137,32 @@ function injectCSS() {
   document.head.appendChild(s)
 }
 
+// ── Smooth staff redirect overlay ────────────────────────────────────────────
+function StaffRedirectOverlay({ role }) {
+  const label = role === 'admin' ? 'Admin Dashboard' : 'Therapist Portal'
+  return (
+    <div className="signin-staff-overlay">
+      <div className="signin-staff-overlay-icon">🔑</div>
+      <div className="signin-staff-overlay-title">Redirecting to {label}</div>
+      <div className="signin-staff-overlay-sub">Taking you to your staff portal…</div>
+      <div className="signin-staff-overlay-spinner" />
+    </div>
+  )
+}
+
 export default function SignInPage() {
   useEffect(() => { injectCSS() }, [])
-
-  // ── FIX: replaces all pushState/popstate hacks ───────────────
-  // If the user is already logged in and lands here (e.g. via the
-  // browser back button), they are immediately redirected to their
-  // dashboard. No history manipulation needed.
   useAuthGuard()
-  // ─────────────────────────────────────────────────────────────
 
   const { navigate }          = useRouter()
-  const { login }             = useAuth()
+  const { loginRaw,login, logout }  = useAuth()   // see note below
   const [form, setForm]       = useState({ email: '', password: '' })
   const [showStaffMenu, setShowStaffMenu] = useState(false)
   const [showPw, setShowPw]   = useState(false)
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
+  // When non-null, shows the full-screen transition overlay before navigating
+  const [staffRedirect, setStaffRedirect] = useState(null)
 
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -120,17 +175,40 @@ export default function SignInPage() {
     }
     setLoading(true)
     try {
-      const data = await login(form.email, form.password)
-      const role = data.user?.role
-      if (role === 'admin' || role === 'staff') navigate('/staff/admin')
-      else if (role === 'therapist')            navigate('/staff/therapist')
-      else                                      navigate('/')
+      /*
+       * KEY CHANGE: use loginRaw (or whatever your auth method is called)
+       * that returns the user data WITHOUT committing it to auth state yet.
+       * Check the role first — if it's staff, show the overlay and redirect
+       * WITHOUT ever writing to auth context, so there's no state flicker.
+       *
+       * If your AuthContext only exposes a single `login` that already sets
+       * state, the simplest fix is to add a `loginRaw` that just does the
+       * fetch and returns data without calling setUser/setToken.
+       * See the note at the bottom of this file.
+       */
+      const data = await loginRaw(form.email, form.password)
+      const role = data?.user?.role
+
+      if (STAFF_ROLES.has(role)) {
+        // Show smooth overlay immediately — no auth state written, no jitter
+        setStaffRedirect(role)
+        // Give the overlay ~900ms to render, then navigate
+        await logout().catch(() => {})   // ensure no session lingers
+        setTimeout(() => navigate('/staff'), 900)
+        return
+      }
+ await login(form.email, form.password)
+      // Regular user — commit auth state normally, then go home
+      navigate('/')
     } catch (err) {
       setError(err.message || 'Invalid email or password.')
     } finally {
       setLoading(false)
     }
   }
+
+  // Render overlay on top of everything — no layout shift
+  if (staffRedirect) return <StaffRedirectOverlay role={staffRedirect} />
 
   return (
     <div className="signin-root">
@@ -259,3 +337,34 @@ export default function SignInPage() {
     </div>
   )
 }
+
+/*
+ * ── AuthContext change needed ────────────────────────────────────────────────
+ *
+ * Add a `loginRaw` method that fetches credentials and returns the data
+ * WITHOUT writing to auth state. Example:
+ *
+ *   async function loginRaw(email, password) {
+ *     const res  = await fetch(`${API}/auth/login`, {
+ *       method: 'POST',
+ *       headers: { 'Content-Type': 'application/json' },
+ *       body: JSON.stringify({ email, password }),
+ *     })
+ *     const data = await res.json()
+ *     if (!res.ok) throw new Error(data.message || 'Login failed')
+ *     // ← do NOT call setUser / setToken here
+ *     return data
+ *   }
+ *
+ * Then your existing `login` becomes:
+ *
+ *   async function login(email, password) {
+ *     const data = await loginRaw(email, password)
+ *     setUser(data.user)
+ *     setToken(data.token)   // or however you store it
+ *     return data
+ *   }
+ *
+ * Export both: value={{ ..., login, loginRaw, logout }}
+ * ────────────────────────────────────────────────────────────────────────────
+ */

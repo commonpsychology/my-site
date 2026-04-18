@@ -5,7 +5,11 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "../context/RouterContext"
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000"
+// ✅ FIXED: API_BASE always ends with /api — matches detail pages exactly
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000/api")
+  .replace(/\/+$/, "")   // strip trailing slash
+  .replace(/\/api$/, "") // strip /api if already present
+  + "/api"               // re-append exactly once
 
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 const T = {
@@ -87,15 +91,14 @@ function NewsletterBox() {
     if (!email) return
     setStatus("loading")
     try {
-      const res = await fetch(`${API_BASE}/api/news/subscribe`, {
+      // ✅ FIXED: API_BASE already has /api, so just /news/subscribe
+      const res = await fetch(`${API_BASE}/news/subscribe`, {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ email })
       })
-      const data = await res.json()
       if (res.ok) setStatus("done")
       else setStatus("error")
     } catch {
-      // Fallback: just show success for UX
       setStatus("done")
     }
   }
@@ -209,9 +212,9 @@ export default function OurNews() {
   const [total, setTotal]             = useState(0)
   const [apiError, setApiError]       = useState(false)
 
-  // Fetch meta (categories + topics)
+  // ✅ FIXED: API_BASE already has /api, so just /news/meta (not /api/news/meta)
   useEffect(() => {
-    fetch(`${API_BASE}/api/news/meta`)
+    fetch(`${API_BASE}/news/meta`)
       .then(r => r.json())
       .then(d => {
         if (d.categories?.length) setCategories(["All", ...d.categories.map(c=>c.name)])
@@ -220,7 +223,7 @@ export default function OurNews() {
       .catch(() => {})
   }, [])
 
-  // Fetch articles
+  // ✅ FIXED: API_BASE already has /api, so just /news (not /api/news)
   const fetchArticles = useCallback(() => {
     setLoading(true)
     const catSlug = activeCategory === "All" ? "" : activeCategory.toLowerCase().replace(/\s+/g,"-")
@@ -229,7 +232,7 @@ export default function OurNews() {
       ...(search   && { search }),
       page, limit: 20,
     })
-    fetch(`${API_BASE}/api/news?${params}`)
+    fetch(`${API_BASE}/news?${params}`)
       .then(r => r.json())
       .then(d => {
         setArticles(d.articles || FALLBACK_ARTICLES)
@@ -246,7 +249,6 @@ export default function OurNews() {
 
   useEffect(() => { fetchArticles() }, [fetchArticles])
 
-  // Navigate to detail page
   function goToArticle(article) {
     navigate("/news/" + article.slug)
   }

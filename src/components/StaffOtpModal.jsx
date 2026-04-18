@@ -298,6 +298,8 @@ export default function StaffOTPModal({ email, name, user_id, role = 'staff', on
   const timer                   = useCountdown(10 * 60)
 
   // ── Send OTP ──────────────────────────────────────────────────
+  const sentRef = useRef(false)
+
   const doSend = useCallback(async () => {
     setPhase('sending')
     setOtp('')
@@ -318,8 +320,11 @@ export default function StaffOTPModal({ email, name, user_id, role = 'staff', on
     }
   }, [email, user_id, name])
 
-  useEffect(() => { doSend() }, [])
-
+  useEffect(() => {
+    if (sentRef.current) return
+    sentRef.current = true
+    doSend()
+  }, [])
   // ── Verify ────────────────────────────────────────────────────
   async function handleVerify() {
     if (otp.length < 6) { setError('Please enter all 6 digits.'); return }

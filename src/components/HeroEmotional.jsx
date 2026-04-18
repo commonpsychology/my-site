@@ -1,20 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from '../context/RouterContext'
-import { useLang } from '../context/LanguageContext'   // ← same context as Navbar
+import { useLang } from '../context/LanguageContext'
+import { useSiteStats } from '../hooks/useSiteStats'
 import MindfulClock from './MindClock'
-
-
-
-
-
- 
 
 /* ─────────────────────────────────────────────────────────────
    HERO COPY  (EN / NP)
 ───────────────────────────────────────────────────────────── */
 const HERO_COPY = {
   EN: {
-    badge:           "Nepal's Trusted Mental Wellness Platform",
+    badge:           "WORKING FOR THE PEACE OF MIND OF GLOBALLY",
     h1_our:          'Our ',
     h1_help:         'Help',
     h1_your:         ', Your ',
@@ -40,7 +35,7 @@ const HERO_COPY = {
     open_maps:       'Open in Google Maps',
   },
   NP: {
-    badge:           'नेपालको विश्वसनीय मानसिक स्वास्थ्य मञ्च',
+    badge:           'विश्व शान्तिका लागि कार्यरत',
     h1_our:          'हाम्रो ',
     h1_help:         'सहयोग',
     h1_your:         ', तपाईंको ',
@@ -133,10 +128,10 @@ const HEART_CSS = `
   }
 
   @media (min-width: 1024px) {
-  .hero-clock-wrapper {
-    display: block !important;
+    .hero-clock-wrapper {
+      display: block !important;
+    }
   }
-}
 
   .hb-visual-root {
     position: relative; width: 100%; height: 100%;
@@ -297,8 +292,6 @@ const HEART_CSS = `
     background: rgba(0,191,255,0.22); border-color: rgba(0,191,255,0.6);
     box-shadow: 0 3px 14px rgba(0,191,255,0.2);
   }
-
-  
 `
 
 function injectCSS(id, css) {
@@ -455,7 +448,7 @@ function HeartVisual({ onParentClick, onTeenClick, onAssessClick, c }) {
           className="hb-ekg-strip" style={{ animationDuration:'2.4s', strokeDasharray:520 }} />
       </svg>
 
-      {/* Stat pills — translated */}
+      {/* Stat pills */}
       <div className="hb-stat-pill" style={{ top:'6%', left:'50%', transform:'translateX(-50%)',
         background:'rgba(255,255,255,0.92)', border:'1.5px solid rgba(0,123,168,0.3)', zIndex:32 }}>
         <span style={{ fontFamily:'var(--font-body)', fontSize:'0.68rem', fontWeight:800, color:'#007BA8', letterSpacing:'0.06em' }}>
@@ -560,13 +553,13 @@ function HeartVisual({ onParentClick, onTeenClick, onAssessClick, c }) {
 export default function Hero() {
   const { navigate }                      = useRouter()
   const { lang }                          = useLang()
+  const siteStats                         = useSiteStats()
   const [mapOpen, setMapOpen]             = useState(false)
   const [labelVisible, setLabelVisible]   = useState(false)
   const [isLargeScreen, setIsLargeScreen] = useState(
     typeof window !== 'undefined' && window.innerWidth >= 1024
   )
 
-  // ✅ This was missing — listens for window resize
   useEffect(() => {
     const handler = () => setIsLargeScreen(window.innerWidth >= 1024)
     window.addEventListener('resize', handler)
@@ -582,6 +575,15 @@ export default function Hero() {
     return () => { clearTimeout(t); clearTimeout(t2) }
   }, [])
 
+  // Dynamic stat values from admin
+  const dynClients    = `${siteStats.clients}+`
+  const dynTherapists = siteStats.therapists
+  const dynRating     = `${siteStats.rating}★`
+  const dynPillFamilies = lang === 'NP'
+    ? `❤️  ${siteStats.families}+ परिवार निको भए`
+    : `❤️  ${siteStats.families}+ families healed`
+  const dynPillRating = `${siteStats.pillRating} ★ rated`
+
   return (
     <section className="hero">
 
@@ -592,8 +594,8 @@ export default function Hero() {
         </div>
 
         <h1 style={{ fontSize: lang === 'NP' ? '2rem' : undefined }}>
-  {c.h1_our}<i>{c.h1_help}</i>{c.h1_your}<i>{c.h1_choice}</i>
-</h1>
+          {c.h1_our}<i>{c.h1_help}</i>{c.h1_your}<i>{c.h1_choice}</i>
+        </h1>
 
         <p className="hero-desc">{c.desc}</p>
 
@@ -606,31 +608,34 @@ export default function Hero() {
           </button>
         </div>
 
+        {/* Dynamic stats */}
         <div className="hero-stats">
           <div>
-            <div className="hero-stat-num">500+</div>
+            <div className="hero-stat-num">{dynClients}</div>
             <div className="hero-stat-label">{c.stat_clients}</div>
           </div>
           <div>
-            <div className="hero-stat-num">12</div>
+            <div className="hero-stat-num">{dynTherapists}</div>
             <div className="hero-stat-label">{c.stat_therapists}</div>
           </div>
           <div>
-            <div className="hero-stat-num">4.9★</div>
+            <div className="hero-stat-num">{dynRating}</div>
             <div className="hero-stat-label">{c.stat_rating}</div>
           </div>
         </div>
       </div>
 
-
       {/* ══ RIGHT ══ */}
-      {/* ══ RIGHT ══  — only visible on large screens */}
-{isLargeScreen && <MindfulClock />}
+      {isLargeScreen && <MindfulClock />}
 
       <div className="hero-visual">
         <div className="hero-card-stack" style={{ position:'relative', width:'100%', height:'100%', minHeight:'500px' }}>
           <HeartVisual
-            c={c}
+            c={{
+              ...c,
+              pill_families: dynPillFamilies,
+              pill_rating:   dynPillRating,
+            }}
             onParentClick={() => navigate('/book', { intent: 'parent' })}
             onTeenClick={()   => navigate('/book', { intent: 'teen'   })}
             onAssessClick={() => navigate('/assessments')}
@@ -651,9 +656,7 @@ export default function Hero() {
 
       <div className={`map-fab-label${labelVisible ? ' visible' : ''}`}>{c.map_label}</div>
 
-      {/* ══ MAP POPUP ══ */}
       {mapOpen && <MapPopup onClose={() => setMapOpen(false)} c={c} />}
-
     </section>
   )
 }

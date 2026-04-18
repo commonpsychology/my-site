@@ -528,7 +528,8 @@ export default function MyOrdersPage() {
   const [loading,  setLoading]  = useState(true)
   const [qrOrder,  setQrOrder]  = useState(null)
   const [codOrder, setCodOrder] = useState(null)
-  const [codDone,  setCodDone]  = useState({})
+  const [codDone,        setCodDone]        = useState({})
+const [showPastOrders, setShowPastOrders] = useState(false)
 
   // Only fetch orders once auth is confirmed
   useEffect(() => {
@@ -539,7 +540,7 @@ export default function MyOrdersPage() {
     setLoading(true)
     try {
       const token = localStorage.getItem('accessToken')
-      const res   = await fetch(`${API_BASE}/orders?limit=50`, {
+const res = await fetch(`${API_BASE}/store/orders?limit=50`, {
         headers: { 'Content-Type':'application/json', ...(token ? { Authorization:`Bearer ${token}` } : {}) },
       })
       if (!res.ok) throw new Error()
@@ -641,18 +642,76 @@ export default function MyOrdersPage() {
                 <button className="mo-btn-primary" onClick={() => navigate('/shop')}>Browse Shop →</button>
               </div>
             )}
-            {!loading && orders.map(order => (
-              <OrderCard
-                key={order.id}
-                order={codDone[order.id] ? { ...order, status:'confirmed' } : order}
-                onShowQR={setQrOrder}
-                onCODConfirm={setCodOrder}
-              />
-            ))}
+            {!loading && (() => {
+  const activeStatuses = ['pending', 'confirmed', 'processing', 'shipped']
+  const activeOrders = orders.filter(o => activeStatuses.includes((o.status || '').toLowerCase()))
+  const pastOrders   = orders.filter(o => !activeStatuses.includes((o.status || '').toLowerCase()))
+  return (
+    <>
+      {activeOrders.map(order => (
+        <OrderCard
+          key={order.id}
+          order={codDone[order.id] ? { ...order, status:'confirmed' } : order}
+          onShowQR={setQrOrder}
+          onCODConfirm={setCodOrder}
+        />
+      ))}
+      {pastOrders.length > 0 && (
+        <>
+          <button onClick={() => setShowPastOrders(v => !v)} style={{
+            display:'flex', alignItems:'center', gap:'0.5rem',
+            background:'none', border:'none', cursor:'pointer',
+            fontSize:'0.78rem', fontWeight:700, color:'#64748b',
+            padding:'0.5rem 0', margin:'1rem 0 0.75rem', fontFamily:'inherit' }}>
+            <span style={{ display:'inline-flex', width:20, height:20, borderRadius:6,
+              background:'#f1f5f9', border:`1px solid ${C.border}`,
+              alignItems:'center', justifyContent:'center', fontSize:'0.65rem',
+              transition:'transform 0.2s',
+              transform: showPastOrders ? 'rotate(90deg)' : 'none' }}>▶</span>
+            Past Orders ({pastOrders.length})
+          </button>
+          {showPastOrders && pastOrders.map(order => (
+            <OrderCard
+              key={order.id}
+              order={codDone[order.id] ? { ...order, status:'confirmed' } : order}
+              onShowQR={setQrOrder}
+              onCODConfirm={setCodOrder}
+            />
+          ))}
+        </>
+      )}
+    </>
+  )
+})()}
           </>
         )}
-        {tab === 'payment' && !loading && <PaymentStatusTab orders={orders} />}
-        {tab === 'payment' && loading && (
+{tab === 'payment' && !loading && (() => {
+  const activeStatuses = ['pending', 'confirmed', 'processing', 'shipped']
+  const activeOrders = orders.filter(o => activeStatuses.includes((o.status || '').toLowerCase()))
+  const pastOrders   = orders.filter(o => !activeStatuses.includes((o.status || '').toLowerCase()))
+  return (
+    <>
+      <PaymentStatusTab orders={activeOrders} />
+      {pastOrders.length > 0 && (
+        <>
+          <button onClick={() => setShowPastOrders(v => !v)} style={{
+            display:'flex', alignItems:'center', gap:'0.5rem',
+            background:'none', border:'none', cursor:'pointer',
+            fontSize:'0.78rem', fontWeight:700, color:'#64748b',
+            padding:'0.5rem 0', margin:'1.5rem 0 0.75rem', fontFamily:'inherit' }}>
+            <span style={{ display:'inline-flex', width:20, height:20, borderRadius:6,
+              background:'#f1f5f9', border:`1px solid ${C.border}`,
+              alignItems:'center', justifyContent:'center', fontSize:'0.65rem',
+              transition:'transform 0.2s',
+              transform: showPastOrders ? 'rotate(90deg)' : 'none' }}>▶</span>
+            Past Order Payments ({pastOrders.length})
+          </button>
+          {showPastOrders && <PaymentStatusTab orders={pastOrders} />}
+        </>
+      )}
+    </>
+  )
+})()}        {tab === 'payment' && loading && (
           <div className="mo-empty">
             <div style={{ fontSize:'2rem', opacity:.3, marginBottom:'1rem' }}>💳</div>
             <p style={{ color:C.mid, fontSize:'.85rem' }}>Loading…</p>

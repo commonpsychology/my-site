@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from '../context/RouterContext'
+import AttendanceModal from './AttendanceModal'
 
 // ─────────────────────────────────────────────
 // All CSS injected once into <head>
@@ -620,6 +621,14 @@ function DonatePopup({ onClose }) {
 // ACTIONS CONFIG
 // ─────────────────────────────────────────────
 const ACTIONS = [
+   {
+    id:    'attendance',
+    label: 'Event Attendance',
+    emoji: '📋',
+    bg:    'linear-gradient(135deg,#007BA8,#00BFFF)',
+    shadow:'rgba(0,123,168,.4)',
+    popup: 'attendance',
+  },
   {
     id:     'support',
     label:  'Support Us',
@@ -686,6 +695,7 @@ export default function FloatingActions() {
       {/* Popups — fixed, full-screen, centered, dark blurred overlay */}
       {popup === 'donate'   && <DonatePopup   onClose={() => setPopup(null)} />}
       {popup === 'location' && <LocationPopup onClose={() => setPopup(null)} />}
+      {popup === 'attendance' && <AttendanceModal onClose={() => setPopup(null)} />}
 
       {/* FAB */}
       <div className="fa-root">

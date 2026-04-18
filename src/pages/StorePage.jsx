@@ -68,52 +68,52 @@ export default function StorePage() {
 
   // ── Main checkout: create order first, then open payment modal ────────────
   async function handleCheckout() {
-    if (!user) { navigate('/signin'); return }
-    setCartOpen(false)
+  if (!user) { navigate('/signin'); return }
 
-    // 1. Create order record in DB (status = 'pending_payment')
-    let orderData, orderId
-    try {
-      orderData = await storeApi.createOrder({ shippingAddress: null })
-      orderId   = orderData.order?.id || orderData.id
-    } catch (err) {
-      alert('Could not create order: ' + (err.message || 'Please try again.'))
-      return
-    }
+  // Build itemLines from current cart STATE (before any API call wipes it)
+  const itemLines = cart.map(item => {
+    const p     = item.products || {}
+    const price = item.product_variants?.price ?? p.sale_price ?? p.price ?? 0
+    return { label: `${p.name} × ${item.quantity || 1}`, amount: price * (item.quantity || 1) }
+  })
 
-    // 2. Build line items from cart for the payment summary
-    const itemLines = cart.map(item => {
-      const p     = item.products || {}
-      const price = item.product_variants?.price ?? p.sale_price ?? p.price ?? 0
-      return { label:`${p.name} × ${item.quantity || 1}`, amount: price * (item.quantity || 1) }
-    })
+  setCartOpen(false)
 
-    // 3. Open centralized payment modal — all gateway logic lives there
-    // COD is allowed for store orders (physical delivery)
-    const result = await openPayment({
-      type:         'order',
-      amount:       cartTotal,
-      title:        `Store Order #${String(orderId).slice(-8).toUpperCase()}`,
-      description:  `${cartCount} item${cartCount !== 1 ? 's' : ''} from Puja Samargi Store`,
-      itemLines,
-      couponEnabled: true,
-      allowedGateways: ['esewa','khalti','fonepay','stripe','bank_transfer','cash'],
-      // Stored in payments table — admin queries by order_id or category='order'
-      metadata: {
-        order_id:    orderId,
-        item_count:  cartCount,
-        category:    'order',
-      },
-    })
-
-    if (result.success) {
-      setCart([])
-      navigate('/portal')   // or navigate(`/orders/${orderId}/success`)
-    } else if (!result.cancelled) {
-      // Payment failed — order stays 'pending_payment', user can retry from portal
-      alert('Payment was not completed. Your order is saved — you can complete payment from your portal.')
-    }
+  // Create order — cart is NOT cleared by the server anymore
+  let orderId
+  try {
+    const orderData = await storeApi.createOrder({ shippingAddress: null })
+    orderId = orderData.order?.id || orderData.id
+  } catch (err) {
+    alert('Could not create order: ' + (err.message || 'Please try again.'))
+    return
   }
+
+  const result = await openPayment({
+    type:            'order',
+    amount:          cartTotal,
+    title:           `Store Order #${String(orderId).slice(-8).toUpperCase()}`,
+    description:     `${cartCount} item${cartCount !== 1 ? 's' : ''} from Puja Samargi Store`,
+    itemLines,
+    couponEnabled:   true,
+    allowedGateways: ['esewa', 'khalti', 'fonepay', 'stripe', 'bank_transfer', 'cash'],
+    metadata: {
+      order_id:   orderId,
+      item_count: cartCount,
+      category:   'order',
+    },
+  })
+
+  if (result.success) {
+    // Payment confirmed — now clear cart on server AND in state
+    try { await storeApi.clearCart() } catch {}
+    setCart([])
+    navigate('/portal')
+  } else if (!result.cancelled) {
+    alert('Payment was not completed. Your order is saved — you can complete payment from your portal.')
+  }
+  // If cancelled, cart stays intact so user can try again
+}
 
   const cartCount = cart.reduce((s,i) => s + (i.quantity || 1), 0)
   const cartTotal = cart.reduce((s,i) => {
@@ -170,19 +170,21 @@ export default function StorePage() {
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'1.5rem' }}>
             {products.map(p => (
-              <div key={p.id} style={{ background:'var(--white)', borderRadius:'var(--radius-lg)', overflow:'hidden', border:'1px solid var(--earth-cream)', transition:'box-shadow 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow='var(--shadow-strong)'}
+<div key={p.id} style={{ background:'var(--white)', borderRadius:'var(--radius-lg)', overflow:'hidden', border:'1px solid var(--earth-cream)', transition:'box-shadow 0.2s' }}                onMouseEnter={e => e.currentTarget.style.boxShadow='var(--shadow-strong)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
                 <div style={{ height:200, background:'var(--green-mist)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'3rem', position:'relative' }}>
                   {p.images?.[0] ? <img src={p.images[0]} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : '📚'}
                   {p.is_featured && <span style={{ position:'absolute', top:10, left:10, background:'var(--green-deep)', color:'white', fontSize:'0.68rem', fontWeight:800, padding:'0.2rem 0.6rem', borderRadius:'100px', letterSpacing:'0.08em' }}>FEATURED</span>}
                   {p.sale_price && <span style={{ position:'absolute', top:10, right:10, background:'#ef4444', color:'white', fontSize:'0.68rem', fontWeight:800, padding:'0.2rem 0.6rem', borderRadius:'100px' }}>SALE</span>}
                 </div>
-                <div style={{ padding:'1.25rem' }}>
-                  <div style={{ fontFamily:'var(--font-display)', fontSize:'1rem', color:'var(--green-deep)', fontWeight:600, marginBottom:'0.4rem' }}>{p.name}</div>
-                  {p.short_description && <p style={{ fontSize:'0.8rem', color:'var(--text-light)', lineHeight:1.5, marginBottom:'0.75rem' }}>{p.short_description}</p>}
-                  {p.tags?.slice(0,2).map((t,i) => <span key={i} style={{ fontSize:'0.7rem', fontWeight:600, background:'var(--green-mist)', color:'var(--green-deep)', padding:'0.15rem 0.5rem', borderRadius:'100px', marginRight:'0.35rem' }}>{t}</span>)}
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'0.75rem' }}>
+                <div style={{ padding:'1.25rem', display:'flex', flexDirection:'column', height:'calc(100% - 200px)' }}>
+  <div style={{ fontFamily:'var(--font-display)', fontSize:'1rem', color:'var(--green-deep)', fontWeight:600, marginBottom:'0.4rem' }}>{p.name}</div>
+  {p.short_description && <p style={{ fontSize:'0.8rem', color:'var(--text-light)', lineHeight:1.5, marginBottom:'0.75rem' }}>{p.short_description}</p>}
+  <div style={{ marginBottom:'0.5rem' }}>
+    {p.tags?.slice(0,2).map((t,i) => <span key={i} style={{ fontSize:'0.7rem', fontWeight:600, background:'var(--green-mist)', color:'var(--green-deep)', padding:'0.15rem 0.5rem', borderRadius:'100px', marginRight:'0.35rem' }}>{t}</span>)}
+  </div>
+  <div style={{ flex:1 }} />
+  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'0.75rem' }}>
                     <div>
                       {p.sale_price
                         ? <><span style={{ fontFamily:'var(--font-display)', fontSize:'1.1rem', color:'var(--green-deep)', fontWeight:700 }}>NPR {p.sale_price.toLocaleString()}</span><span style={{ fontSize:'0.8rem', color:'var(--text-light)', textDecoration:'line-through', marginLeft:'0.5rem' }}>NPR {p.price?.toLocaleString()}</span></>

@@ -498,7 +498,7 @@ export default function TherapistDashboard() {
                 <div className="th-table-wrap">
                   <table className="th-table">
                     <thead>
-                      <tr>{['Client','Phone','Date','Time','Type','Status','Action'].map(h=>(
+                      <tr>{['Client','Phone','Date','Time','Type','Status','Payment','Action'].map(h=>(
                         <th key={h}>{h}</th>
                       ))}</tr>
                     </thead>
@@ -519,6 +519,27 @@ export default function TherapistDashboard() {
                               <span style={{ fontSize:'0.75rem',background:'#f0f4f8',padding:'0.18rem 0.5rem',borderRadius:5 }}>{a.type}</span>
                             </td>
                             <td><StatusBadge status={a.status}/></td>
+                            <td>
+  {(() => {
+    const ps = a.payment_status || 'unpaid'
+    const styles = {
+      paid:    { bg: '#e8f8f0', color: '#1a7a4a', label: '✓ Paid'    },
+      pending: { bg: '#fff5e6', color: '#8a5a1a', label: '⏳ Pending' },
+      unpaid:  { bg: '#fff0f0', color: '#c0392b', label: '✗ Unpaid'  },
+      refunded:{ bg: '#f0f0ff', color: '#4a3ab0', label: '↩ Refunded'},
+    }
+    const s = styles[ps] || styles.unpaid
+    return (
+      <span style={{
+        padding: '0.2rem 0.65rem', borderRadius: 100, fontSize: '0.72rem',
+        fontWeight: 700, background: s.bg, color: s.color,
+        textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap'
+      }}>
+        {s.label}
+      </span>
+    )
+  })()}
+</td>
                             <td>
                               {/* ── The select now calls updateStatus which uses the correct route ── */}
                               <select
@@ -634,6 +655,17 @@ export default function TherapistDashboard() {
                             <div style={{ fontFamily:'var(--font-body)', fontSize:'0.75rem', color:C.textLight }}>{fmtFull(a.scheduled_at)} · {a.type}</div>
                           </div>
                           <StatusBadge status={a.status}/>
+                          {/* Payment indicator — helps therapist know if session is confirmed/paid */}
+{a.payment_status && a.payment_status !== 'paid' && (
+  <span style={{
+    fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.55rem',
+    borderRadius: 100,
+    background: a.payment_status === 'pending' ? '#fff5e6' : '#fff0f0',
+    color:      a.payment_status === 'pending' ? '#8a5a1a' : '#c0392b',
+  }}>
+    {a.payment_status === 'pending' ? '⏳ Payment pending' : '✗ Unpaid'}
+  </span>
+)}
                         </div>
                         {a.notes ? (
                           <p style={{ fontFamily:'var(--font-body)', fontSize:'0.85rem', color:C.textMid, lineHeight:1.7, margin:0, background:C.skyFainter, padding:'0.75rem', borderRadius:8 }}>

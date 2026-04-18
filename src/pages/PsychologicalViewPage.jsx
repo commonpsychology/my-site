@@ -5,15 +5,19 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from '../context/RouterContext'
 
-// Strip trailing slash so VITE_API_URL=http://localhost:5000 and
-// VITE_API_URL=http://localhost:5000/ both work correctly.
-// AFTER — strips a trailing /api so both VITE_API_URL formats work
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000')
-  .replace(/\/+$/, '')       // strip trailing slash
-  .replace(/\/api$/, '')     // strip trailing /api if present
+// ✅ FIXED: API_BASE always ends with /api — consistent with all other pages
+// Works whether VITE_API_URL is:
+//   http://localhost:5000        → becomes http://localhost:5000/api
+//   http://localhost:5000/       → becomes http://localhost:5000/api
+//   http://localhost:5000/api    → stays   http://localhost:5000/api
+//   http://localhost:5000/api/   → becomes http://localhost:5000/api
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
+  .replace(/\/+$/, '')   // strip trailing slash(es)
+  .replace(/\/api$/, '') // strip /api if present
+  + '/api'               // re-append exactly once
 
 async function fetchPsychData() {
-  const res = await fetch(`${API_BASE}/api/psych/all`)
+  const res = await fetch(`${API_BASE}/psych/all`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const json = await res.json()
   if (!json.success) throw new Error(json.message || 'API error')
