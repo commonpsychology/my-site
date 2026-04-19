@@ -25,6 +25,11 @@ function Avatar({ name, size = 88 }) {
   )
 }
 
+function cleanUrl(raw) {
+  if (!raw) return null
+  return String(raw).trim().replace(/^["']+|["']+$/g, '') || null
+}
+
 function Stars({ rating }) {
   const r = Math.round(Number(rating) * 2) / 2
   return (
@@ -123,8 +128,8 @@ function TherapistCard({ therapist: t, onNavigate }) {
       style={{ background:'#fff', borderRadius:24, overflow:'hidden', border:`1.5px solid ${hovered?'#7dd3fc':'#e2e8f0'}`, boxShadow:hovered?'0 20px 60px rgba(14,165,233,0.15)':'0 2px 16px rgba(0,0,0,0.05)', transform:hovered?'translateY(-6px)':'translateY(0)', transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)', display:'flex', flexDirection:'column' }}
     >
       <div style={{ position:'relative', height:220, background:'linear-gradient(135deg,#0c4a6e 0%,#0369a1 50%,#0ea5e9 100%)', overflow:'hidden', flexShrink:0 }}>
-        {t.avatar_url && !imgErr
-          ? <img src={t.avatar_url} alt={t.full_name} onError={() => setImgErr(true)} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block', transition:'transform 0.4s', transform:hovered?'scale(1.04)':'scale(1)' }}/>
+        {cleanUrl(t.avatar_url) && !imgErr
+  ? <img src={cleanUrl(t.avatar_url)} alt={t.full_name} onError={() => setImgErr(true)} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block', transition:'transform 0.4s', transform:hovered?'scale(1.04)':'scale(1)' }}/>
           : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><Avatar name={t.full_name} size={96}/></div>
         }
         <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'40%', background:'linear-gradient(to top,rgba(0,0,0,0.55),transparent)', pointerEvents:'none' }}/>

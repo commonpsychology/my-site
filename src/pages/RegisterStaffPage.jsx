@@ -200,7 +200,7 @@ export default function RegisterStaffPage() {
         <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
           <img src="/header.png" alt="" style={{ height:28, objectFit:'contain' }} onError={e => e.target.style.display='none'}/>
           <div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:'0.9rem', color:'white', fontWeight:700, lineHeight:1.1 }}>Puja Samargi</div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:'0.9rem', color:'white', fontWeight:700, lineHeight:1.1 }}>Common Psychology</div>
             <div style={{ fontSize:'0.6rem', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'0.1em' }}>Therapist Registration</div>
           </div>
         </div>

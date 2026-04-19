@@ -4,36 +4,13 @@ const NOTICES = [
   {
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="#0F6E56" strokeWidth="1.2"/>
-        <path d="M5 3V2M11 3V2M2 6.5h12" stroke="#0F6E56" strokeWidth="1.2" strokeLinecap="round"/>
+        <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="#007BA8" strokeWidth="1.2"/>
+        <path d="M5 3V2M11 3V2M2 6.5h12" stroke="#007BA8" strokeWidth="1.2" strokeLinecap="round"/>
       </svg>
     ),
-    iconBg: '#E1F5EE',
+    iconBg: '#E0F7FF',
     title: '2026-04-30 AWARNESS PROGRAM IN COLLABORATION WITH ABC FOUNDATION AT TRIBHUVAN UNIVERSITY',
-    // body: 'In-person sessions will not be available next week. Please reschedule any upcoming appointments.',
-//   },
-// //   {
-// //     icon: (
-// //       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-// //         <circle cx="8" cy="8" r="5.5" stroke="#0F6E56" strokeWidth="1.2"/>
-// //         <path d="M8 5v3.5l2 1" stroke="#0F6E56" strokeWidth="1.2" strokeLinecap="round"/>
-// //       </svg>
-// //     ),
-//     // iconBg: '#E1F5EE',
-//     // title: 'Online services fully available 24/7',
-//     // body: 'Assessments, resources, and therapist messaging remain uninterrupted throughout.',
-//   },
-//   {
-//     icon: (
-//       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-//         <path d="M8 2L9.5 6h4l-3.25 2.5L11.5 13 8 10.5 4.5 13l1.25-4.5L2.5 6h4z"
-//           stroke="#854F0B" strokeWidth="1.2" strokeLinejoin="round"/>
-//       </svg>
-//     ),
-//     // iconBg: '#FAEEDA',
-//     // title: 'New: crisis support now available',
-//     // body: 'Reach our on-call therapist any time via the crisis button on the home page.',
-},
+  },
 ]
 
 export default function NoticePopup({ storageKey = 'notice_v2' }) {
@@ -53,15 +30,16 @@ export default function NoticePopup({ storageKey = 'notice_v2' }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(4,52,44,0.92)',
+      background: 'rgba(0,60,90,0.85)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '1rem',
     }}>
       <div style={{
-        background: 'var(--color-background-primary, #fff)',
+        background: '#ffffff',
         borderRadius: 16, width: '100%', maxWidth: 460,
         overflow: 'hidden',
-        border: '0.5px solid var(--color-border-tertiary, #e0e0e0)',
+        border: '1px solid #b0d4e8',
+        boxShadow: '0 20px 60px rgba(0,123,168,0.25)',
         animation: 'noticeIn 0.4s cubic-bezier(0.22,1,0.36,1) forwards',
       }}>
         <style>{`
@@ -76,28 +54,35 @@ export default function NoticePopup({ storageKey = 'notice_v2' }) {
 
         {/* Header */}
         <div style={{
-          background: '#04342C', padding: '1.5rem 1.5rem 1.25rem',
+          background: 'linear-gradient(135deg, #007BA8 0%, #00BFFF 100%)',
+          padding: '1.5rem 1.5rem 1.25rem',
           position: 'relative', overflow: 'hidden',
         }}>
+          {/* Decorative circles */}
           <div style={{
-            position: 'absolute', top: -30, right: -30,
-            width: 130, height: 130, borderRadius: '50%',
-            border: '1px solid rgba(29,158,117,0.3)',
+            position: 'absolute', top: -40, right: -40,
+            width: 150, height: 150, borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.15)',
+            pointerEvents: 'none',
           }} />
           <div style={{
-            position: 'absolute', top: -10, right: -10,
-            width: 80, height: 80, borderRadius: '50%',
-            border: '1px solid rgba(29,158,117,0.2)',
+            position: 'absolute', top: -15, right: -15,
+            width: 90, height: 90, borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.12)',
+            pointerEvents: 'none',
           }} />
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{
                 width: 8, height: 8, borderRadius: '50%',
-                background: '#5DCAA5', display: 'inline-block',
+                background: '#ffffff', display: 'inline-block',
                 animation: 'noticePulse 1.8s ease-in-out infinite',
               }} />
-              <span style={{ fontSize: 11, fontWeight: 500, color: '#5DCAA5', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <span style={{
+                fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)',
+                textTransform: 'uppercase', letterSpacing: '0.12em',
+              }}>
                 Live notice
               </span>
             </div>
@@ -106,30 +91,31 @@ export default function NoticePopup({ storageKey = 'notice_v2' }) {
               aria-label="Close"
               style={{
                 width: 28, height: 28, borderRadius: '50%',
-                border: '0.5px solid rgba(93,202,165,0.35)',
-                background: 'transparent', color: '#5DCAA5',
+                border: '1px solid rgba(255,255,255,0.35)',
+                background: 'rgba(255,255,255,0.15)',
+                color: '#ffffff',
                 fontSize: 14, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: 0,
+                padding: 0, transition: 'background 0.2s',
               }}
             >✕</button>
           </div>
 
-          <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 500, color: '#E1F5EE', lineHeight: 1.25 }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 600, color: '#ffffff', lineHeight: 1.25 }}>
             Important announcement
           </h2>
-          <p style={{ margin: 0, fontSize: 13, color: '#5DCAA5' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>
             From the team — please read before continuing
           </p>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '1.5rem' }}>
+        <div style={{ padding: '1.5rem', background: '#ffffff' }}>
           {NOTICES.map((n, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'flex-start', gap: 12,
               padding: '10px 0',
-              borderBottom: i < NOTICES.length - 1 ? '0.5px solid var(--color-border-tertiary, #eee)' : 'none',
+              borderBottom: i < NOTICES.length - 1 ? '1px solid #daeef8' : 'none',
             }}>
               <div style={{
                 width: 32, height: 32, borderRadius: 8,
@@ -137,12 +123,14 @@ export default function NoticePopup({ storageKey = 'notice_v2' }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>{n.icon}</div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 600, color: '#1a3a4a' }}>
                   {n.title}
                 </p>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  {n.body}
-                </p>
+                {n.body && (
+                  <p style={{ margin: 0, fontSize: 12, color: '#7a9aaa', lineHeight: 1.5 }}>
+                    {n.body}
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -152,8 +140,11 @@ export default function NoticePopup({ storageKey = 'notice_v2' }) {
               onClick={dismiss}
               style={{
                 flex: 2, padding: '10px 0', borderRadius: 8,
-                background: '#1D9E75', border: 'none',
-                color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                background: 'linear-gradient(135deg, #007BA8, #00BFFF)',
+                border: 'none',
+                color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(0,191,255,0.3)',
+                transition: 'opacity 0.2s',
               }}
             >Understood, continue</button>
             <button
@@ -161,8 +152,8 @@ export default function NoticePopup({ storageKey = 'notice_v2' }) {
               style={{
                 flex: 1, padding: '10px 0', borderRadius: 8,
                 background: 'transparent',
-                border: '0.5px solid var(--color-border-secondary, #ccc)',
-                color: 'var(--color-text-secondary)', fontSize: 13, cursor: 'pointer',
+                border: '1.5px solid #b0d4e8',
+                color: '#2e6080', fontSize: 13, fontWeight: 500, cursor: 'pointer',
               }}
             >Dismiss</button>
           </div>

@@ -188,9 +188,9 @@ async function handleOTPSuccess() {
             <div style={{ position: 'absolute', bottom: -60, left: -60, width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', textAlign: 'center', maxWidth: 400, width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.85rem', marginBottom: '2rem' }}>
-                <img src="/header.png" alt="Puja Samargi" style={{ height: 48, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+                <img src="/header.png" alt="Common Psychology" style={{ height: 48, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: 'white', fontWeight: 700 }}>Puja Samargi</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: 'white', fontWeight: 700 }}>Common Psychology</div>
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Staff Portal</div>
                 </div>
               </div>

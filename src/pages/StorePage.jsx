@@ -93,7 +93,7 @@ export default function StorePage() {
     type:            'order',
     amount:          cartTotal,
     title:           `Store Order #${String(orderId).slice(-8).toUpperCase()}`,
-    description:     `${cartCount} item${cartCount !== 1 ? 's' : ''} from Puja Samargi Store`,
+    description:     `${cartCount} item${cartCount !== 1 ? 's' : ''} from Common Psychology Store`,
     itemLines,
     couponEnabled:   true,
     allowedGateways: ['esewa', 'khalti', 'fonepay', 'stripe', 'bank_transfer', 'cash'],

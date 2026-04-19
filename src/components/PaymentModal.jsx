@@ -154,7 +154,7 @@ const GATEWAYS = [
   { id:'cash',          name:'Cash / COD',    sub:'Pay on delivery',   icon:'💵' },
 ]
 
-const BANK = { name:'Nabil Bank', acct:'Puja Samargi Pvt. Ltd.', number:'0600012345678901', swift:'NARBNPKA', branch:'Thamel, Kathmandu' }
+const BANK = { name:'Nabil Bank', acct:'Common Psychology Pvt. Ltd.', number:'0600012345678901', swift:'NARBNPKA', branch:'Thamel, Kathmandu' }
 const ESEWA_ID   = import.meta.env?.VITE_ESEWA_MERCHANT_ID || 'EPAYTEST'
 const FONEPAY_ID = 'PSEPAY001'
 
@@ -162,7 +162,7 @@ const FONEPAY_ID = 'PSEPAY001'
 function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, cardNum, setCardNum, cardExp, setCardExp, cardCvc, setCardCvc, copied, copyText }) {
   if (!gateway) return null
   const orderId = config?.metadata?.order_id || config?.metadata?.appointment_id || ('ORD-' + Date.now())
-  const remarks = config?.title || 'Payment to Puja Samargi'
+  const remarks = config?.title || 'Payment to Common Psychology'
 
   const AmountBanner = () => (
     <div className="psm-amount-banner">
@@ -205,7 +205,7 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
       <QRHint text={`Open eSewa → Scan QR → Pay NPR ${finalAmount.toLocaleString()}`} />
       <DetailTable rows={[
         ['Merchant ID',   ESEWA_ID,       ESEWA_ID],
-        ['Merchant Name', 'Puja Samargi', null],
+        ['Merchant Name', 'Common Psychology', null],
       ]} />
     </div>
   )
@@ -219,7 +219,7 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
       </div>
       <QRHint text={`Open Khalti → Scan → Pay NPR ${finalAmount.toLocaleString()}`} />
       <DetailTable rows={[
-        ['Merchant Name', 'Puja Samargi', null],
+        ['Merchant Name', 'Common Psychology', null],
       ]} />
     </div>
   )
@@ -233,7 +233,7 @@ function GatewayPanel({ gateway, finalAmount, config, cardName, setCardName, car
       </div>
       <QRHint text={`Open your bank / FonePay app → Scan QR → Pay NPR ${finalAmount.toLocaleString()}`} />
       <DetailTable rows={[
-        ['Merchant Name', 'Puja Samargi',                        null],
+        ['Merchant Name', 'Common Psychology',                        null],
         ['FonePay ID',    FONEPAY_ID,                            FONEPAY_ID],
         ['Amount',        `NPR ${finalAmount.toLocaleString()}`,  String(finalAmount)],
         ['Remarks',       remarks,                                null],
@@ -342,7 +342,7 @@ function AuthWall({ onClose }) {
             <div className="psm-brand-icon">💳</div>
             <div>
               <div className="psm-brand-text">Secure Checkout</div>
-              <div className="psm-brand-sub">Puja Samargi</div>
+              <div className="psm-brand-sub">Common Psychology</div>
             </div>
           </div>
           <button className="psm-close" onClick={onClose}>✕</button>
@@ -644,7 +644,7 @@ function PaymentModal({ config, onClose, onResult }) {
                     <div className="psm-brand-icon">💳</div>
                     <div>
                       <div className="psm-brand-text">Secure Checkout</div>
-                      <div className="psm-brand-sub">Puja Samargi · {user.fullName || user.name || user.email}</div>
+                      <div className="psm-brand-sub">Common Psychology · {user.fullName || user.name || user.email}</div>
                     </div>
                   </div>
                   <button className="psm-close" onClick={() => onClose()}>✕</button>
@@ -733,7 +733,7 @@ function PaymentModal({ config, onClose, onResult }) {
                 <button className="psm-pay-btn" disabled={!canSubmit} onClick={handlePayClick}>
                   {payBtnLabel}
                 </button>
-                <div className="psm-secure">🔒 256-bit SSL · Secure · Puja Samargi</div>
+                <div className="psm-secure">🔒 256-bit SSL · Secure · Common Psychology</div>
               </div>
             </>
           )}

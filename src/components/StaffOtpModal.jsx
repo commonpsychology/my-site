@@ -382,7 +382,7 @@ export default function StaffOTPModal({ email, name, user_id, role = 'staff', on
               </div>
               <div>
                 <div style={{ fontFamily: '"Syne", sans-serif', fontSize: '0.82rem', fontWeight: 700, color: C.text }}>{name || email}</div>
-                <div style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.72rem', color: C.muted }}>{roleLabel} · Puja Samargi</div>
+                <div style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.72rem', color: C.muted }}>{roleLabel} · Common Psychology</div>
               </div>
             </div>
             <div style={{ background: C.faint, border: `1px solid ${C.borderFaint}`, borderRadius: 100, padding: '0.2rem 0.65rem', fontFamily: '"DM Sans", sans-serif', fontSize: '0.65rem', fontWeight: 700, color: C.deep, textTransform: 'uppercase', letterSpacing: '0.08em' }}>

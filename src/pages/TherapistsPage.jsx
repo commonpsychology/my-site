@@ -38,8 +38,8 @@ function TherapistCard({ t, onBook, onView }) {
   return (
     <div className="therapist-card" onClick={onView} style={{ cursor:'pointer' }}>
       <div className="therapist-img" style={{ padding:0, overflow:'hidden', position:'relative', height:220 }}>
-        {t.avatar_url && !imgErr
-          ? <img src={t.avatar_url} alt={t.full_name} onError={() => setImgErr(true)} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }}/>
+        {cleanUrl(t.avatar_url) && !imgErr
+  ? <img src={cleanUrl(t.avatar_url)} alt={t.full_name} onError={() => setImgErr(true)} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }}/>
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#007BA8,#00BFFF)' }}><InitialsAvatar name={t.full_name}/></div>
         }
         {t.is_available

@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from 'react'
 
 // ── Daily affirmations rotate every visit ────────────────────
 const AFFIRMATIONS = [
-  { text: "You are not your worst day.", author: "— Puja Samargi" },
+  { text: "You are not your worst day.", author: "— Common Psychology" },
   { text: "Healing isn't linear. Every step counts.", author: "— Our therapists" },
   { text: "Asking for help is the bravest thing.", author: "— Always" },
-  { text: "Your mind deserves the same care as your body.", author: "— Puja Samargi" },
+  { text: "Your mind deserves the same care as your body.", author: "— Common Psychology" },
   { text: "Small progress is still progress.", author: "— Remember this" },
   { text: "You've survived every hard day so far.", author: "— That matters" },
-  { text: "Rest is not laziness. It is medicine.", author: "— Puja Samargi" },
+  { text: "Rest is not laziness. It is medicine.", author: "— Common Psychology" },
 ]
 
 // ── Micro-habits — tiny wins that feel achievable ────────────

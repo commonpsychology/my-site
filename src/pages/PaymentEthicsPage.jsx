@@ -44,7 +44,7 @@ const ETHICS = [
   { icon: '⚖️', title: 'Professional Standards', body: 'All our therapists are licensed under the Nepal Medical Council or the Nepal Psychological Society. We follow the ethical guidelines set by the Nepal Health Professional Council.' },
   { icon: '🌐', title: 'Data Privacy', body: "Client data is stored on encrypted servers compliant with Nepal's privacy legislation. We follow the principles of data minimisation, purpose limitation, and storage limitation." },
   { icon: '🚫', title: 'No Discrimination', body: 'We provide services without discrimination on the basis of gender, sexuality, caste, religion, ethnicity, disability, or socioeconomic status. Inclusive care is fundamental to our mission.' },
-  { icon: '📣', title: 'Complaints & Redress', body: 'If you have a complaint, you may contact our Ethics Officer at ethics@pujasamargi.com.np. All complaints are investigated within 10 business days.' },
+  { icon: '📣', title: 'Complaints & Redress', body: 'If you have a complaint, you may contact our Ethics Officer at noreplypsychology@gmail.com. All complaints are investigated within 10 business days.' },
 ]
 
 const BILLING_FAQS = [
@@ -394,7 +394,7 @@ export default function PaymentEthicsPage() {
               <p style={{ fontFamily:'var(--font-body)', fontSize:'0.86rem', color:C.textDark,
                 lineHeight:1.65, margin:0 }}>
                 💬 <strong>Still have questions?</strong> Our billing team is available Mon–Fri 9 AM–5 PM.
-                Email <strong>billing@pujasamargi.com.np</strong> or call our reception.
+                Email <strong>noreplypsychology@gmail.com</strong> or call our reception.
               </p>
             </div>
           </div>
@@ -410,7 +410,7 @@ export default function PaymentEthicsPage() {
               <p style={{ fontFamily:'var(--font-body)', fontSize:'0.88rem', color:C.textMid,
                 margin:0, maxWidth:600 }}>
                 We hold ourselves to the highest professional and ethical standards. Below are the core
-                principles that guide every interaction at Puja Samargi.
+                principles that guide every interaction at Common Psychology.
               </p>
             </div>
 
@@ -495,9 +495,9 @@ export default function PaymentEthicsPage() {
 
             <p style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', color:C.textLight,
               lineHeight:1.6, marginTop:'2rem' }}>
-              Puja Samargi Mental Wellness Center is registered under the Companies Act 2006 of Nepal.
+              Common Psychology Mental Wellness Center is registered under the Companies Act 2006 of Nepal.
               All therapists are licensed and regulated by the Nepal Health Professional Council.
-              For regulatory queries, contact <strong>ethics@pujasamargi.com.np</strong>.
+              For regulatory queries, contact <strong>noreplypsychology@gmail.com.np</strong>.
             </p>
           </div>
         )}

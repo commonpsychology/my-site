@@ -2222,7 +2222,7 @@ await REFRESH_MAP[modal.type]?.()
         <div className="brand">
           <img src="/header.png" className="brand-logo" alt="" onError={e => e.target.style.display='none'} />
           <div>
-            <div className="brand-name">Puja Samargi</div>
+            <div className="brand-name">Common Psychology</div>
             <div className="brand-sub">Admin Panel</div>
           </div>
         </div>

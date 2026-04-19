@@ -389,7 +389,7 @@ export default function VolunteerPage() {
 
               <Divider label="Motivation"/>
               <div style={{ marginBottom:'1.75rem' }}>
-                <Label required>Why do you want to volunteer with Puja Samargi?</Label>
+                <Label required>Why do you want to volunteer with Common Psychology?</Label>
                 <Textarea placeholder="Share what motivates you…" value={form.motivation} onChange={e => up('motivation', e.target.value)} style={{ minHeight:130 }}/>
               </div>
 
@@ -421,7 +421,7 @@ export default function VolunteerPage() {
                     {form.consent && <span style={{ color:'white', fontSize:'0.65rem', fontWeight:800, lineHeight:1 }}>✓</span>}
                   </div>
                   <span style={{ fontFamily:'var(--font-body)', fontSize:'0.82rem', color:C.textMid, lineHeight:1.65 }}>
-                    I confirm that the information provided is accurate. I understand that volunteering is subject to a brief interview and background check. I consent to Puja Samargi storing my data for volunteer coordination purposes.
+                    I confirm that the information provided is accurate. I understand that volunteering is subject to a brief interview and background check. I consent to Common Psychology storing my data for volunteer coordination purposes.
                   </span>
                 </label>
               </div>

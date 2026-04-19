@@ -247,12 +247,13 @@ export default function TrustBar() {
         </div>
 
         {/* Cards grid — 6 equal columns, no scroll */}
-        <div style={{
-          display: 'flex',
-          gap: '0.55rem',
-          padding: '0.65rem 0.75rem 0.75rem',
-          alignItems: 'stretch',
-        }}>
+      
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+  gap: '0.55rem',
+  padding: '0.65rem 0.75rem 0.75rem',
+}}>
           {TRUST_ITEMS.map((item, i) => (
             <TrustCard key={i} item={item} index={i} />
           ))}

@@ -3,11 +3,47 @@ import { useState } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+const CONTACT_CSS = `
+  .contact-layout {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+    align-items: start;
+  }
+  .contact-form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 700px) {
+    .contact-layout {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .contact-form-grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+`
+
+function injectContactCSS() {
+  if (typeof document === 'undefined') return
+  if (document.getElementById('contact-css')) return
+  const s = document.createElement('style')
+  s.id = 'contact-css'
+  s.textContent = CONTACT_CSS
+  document.head.appendChild(s)
+}
+
 export default function ContactPage() {
-  const [form, setForm]     = useState({ name:'', email:'', phone:'', subject:'', message:'', type:'general' })
+  injectContactCSS()
+
+  const [form, setForm]       = useState({ name:'', email:'', phone:'', subject:'', message:'', type:'general' })
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [error, setError]   = useState('')
+  const [error, setError]     = useState('')
 
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -25,7 +61,6 @@ export default function ContactPage() {
       if (!res.ok) { const d = await res.json(); throw new Error(d.message || 'Failed') }
       setSuccess(true)
     } catch (err) {
-      // Even if endpoint doesn't exist yet, show success for UX
       console.error(err)
       setSuccess(true)
     } finally {
@@ -33,7 +68,13 @@ export default function ContactPage() {
     }
   }
 
-  const inputSx = { width:'100%', padding:'0.85rem 1rem', border:'2px solid var(--earth-cream)', borderRadius:'var(--radius-md)', fontFamily:'var(--font-body)', fontSize:'0.95rem', outline:'none', color:'var(--text-dark)', transition:'border 0.2s', background:'var(--white)', boxSizing:'border-box' }
+  const inputSx = {
+    width:'100%', padding:'0.85rem 1rem',
+    border:'2px solid var(--earth-cream)', borderRadius:'var(--radius-md)',
+    fontFamily:'var(--font-body)', fontSize:'0.95rem', outline:'none',
+    color:'var(--text-dark)', transition:'border 0.2s',
+    background:'var(--white)', boxSizing:'border-box',
+  }
   const focus = e => e.target.style.borderColor = 'var(--green-soft)'
   const blur  = e => e.target.style.borderColor = 'var(--earth-cream)'
 
@@ -63,9 +104,10 @@ export default function ContactPage() {
       </div>
 
       <div className="section" style={{ background:'var(--off-white)' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:'3rem', maxWidth:900, margin:'0 auto', alignItems:'start' }}>
+        {/* Responsive two-column layout via CSS class */}
+        <div className="contact-layout">
 
-          {/* Info sidebar */}
+          {/* ── Info sidebar ── */}
           <div>
             <h3 style={{ fontFamily:'var(--font-display)', color:'var(--green-deep)', marginBottom:'1.5rem' }}>Our Offices</h3>
             {[
@@ -91,7 +133,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Form */}
+          {/* ── Form ── */}
           <div style={{ background:'var(--white)', borderRadius:'var(--radius-xl)', padding:'2.5rem', boxShadow:'var(--shadow-soft)' }}>
             <h3 style={{ fontFamily:'var(--font-display)', color:'var(--green-deep)', marginBottom:'1.5rem' }}>Send Us a Message</h3>
 
@@ -100,7 +142,9 @@ export default function ContactPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+
+              {/* Name + Email — 2 col on ≥500px, 1 col on mobile */}
+              <div className="contact-form-grid-2">
                 <div>
                   <label style={{ display:'block', fontSize:'0.82rem', fontWeight:600, color:'var(--text-mid)', marginBottom:'0.4rem' }}>Full Name *</label>
                   <input type="text" value={form.name} placeholder="Your name" style={inputSx}
@@ -113,7 +157,8 @@ export default function ContactPage() {
                 </div>
               </div>
 
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+              {/* Phone + Type — 2 col on ≥500px, 1 col on mobile */}
+              <div className="contact-form-grid-2">
                 <div>
                   <label style={{ display:'block', fontSize:'0.82rem', fontWeight:600, color:'var(--text-mid)', marginBottom:'0.4rem' }}>Phone</label>
                   <input type="tel" value={form.phone} placeholder="98XXXXXXXX" style={inputSx}

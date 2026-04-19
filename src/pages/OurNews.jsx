@@ -169,7 +169,7 @@ function BreakingTicker() {
   const items = [
     "New mindfulness app reaches 1 million downloads in Nepal",
     "WHO releases updated mental health guidelines for 2026",
-    "Puja Samargi opens 3 new telehealth clinics this quarter",
+    "xyxyx Psychology opens  new telehealth clinics this quarter",
     "Research: 1 in 5 adults experience anxiety disorder annually",
     "Free depression screening available — see assessments",
   ]
@@ -267,12 +267,17 @@ export default function OurNews() {
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         ::-webkit-scrollbar{width:6px}
         ::-webkit-scrollbar-thumb{background:${T.bluePale};border-radius:3px}
-        @media(max-width:900px){
-          .news-layout{grid-template-columns:1fr !important}
-          .news-filter{padding:1rem 1rem !important}
-          .news-hero-header{padding:2.5rem 1.5rem 2rem !important}
-          .secondary-grid{grid-template-columns:1fr !important}
-        }
+       @media(max-width:900px){
+  .news-layout{grid-template-columns:1fr !important}
+  .news-filter{padding:1rem 1rem !important; top:60px !important}
+  .news-hero-header{padding:2.5rem 1.5rem 2rem !important}
+  .secondary-grid{grid-template-columns:1fr !important}
+  .news-sidebar{display:none !important}
+}
+@media(max-width:600px){
+  .news-filter-pills{flex-wrap:nowrap !important; overflow-x:auto !important; padding-bottom:0.5rem !important}
+  .news-filter-pills::-webkit-scrollbar{display:none}
+}
       `}</style>
 
       <div style={{ paddingTop:72, background:T.offWhite, minHeight:"100vh" }}>

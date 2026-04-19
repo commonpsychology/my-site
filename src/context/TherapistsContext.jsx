@@ -41,9 +41,6 @@ export function useTherapists() {
 }
 
 // ── Normalise the backend shape into one flat object ─────────────────────────
-// Backend returns: { id, license_type, specializations, consultation_fee,
-//   is_available, rating, total_reviews, experience_years, avatar_url,
-//   profiles: { full_name, display_name, avatar_url, bio, city, country } }
 function normalise(t) {
   const pr = t.profiles || {}
 
@@ -51,6 +48,12 @@ function normalise(t) {
 
   const rawAvatar = t.avatar_url || pr.avatar_url || null
   const avatar_url = resolveUrl(rawAvatar)
+
+  // ── FIX: parse available_hours — Supabase may return it as a JSON string ──
+  let available_hours = t.available_hours || null
+  if (typeof available_hours === 'string') {
+    try { available_hours = JSON.parse(available_hours) } catch { available_hours = [] }
+  }
 
   return {
     id:               t.id,
@@ -67,7 +70,8 @@ function normalise(t) {
     rating:           t.rating           || null,
     total_reviews:    t.total_reviews    || 0,
     is_available:     t.is_available     ?? true,
-    _raw: t, // keep raw for booking API calls
+    available_hours,   // ← was missing entirely before
+    _raw: t,
   }
 }
 

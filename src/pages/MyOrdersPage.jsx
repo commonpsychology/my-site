@@ -236,7 +236,7 @@ function QRModal({ order, onClose }) {
           <div className="qr-order-summary">
             <div style={{ fontSize:'.62rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'.08em', color:'#7a9aaa', marginBottom:'.4rem' }}>Order Details</div>
             {[
-              ['Merchant', 'Puja Samargi'],
+              ['Merchant', 'Common Psychology'],
               ['Order',    orderRef],
               ['Amount',   `NPR ${amount.toLocaleString()}`],
             ].map(([k, v]) => (
@@ -493,12 +493,12 @@ function OrderCard({ order, onShowQR, onCODConfirm }) {
 }
 
 /* ── Demo data ── */
-const DEMO_ORDERS = [
-  { id:'ord-abc12345', order_number:'ORD-2024-0042', created_at:new Date(Date.now()-86400000*2).toISOString(), status:'shipped',   payment_status:'paid',     payment_method:'eSewa',  payment_admin_note:'Payment verified by admin on Apr 1.', total_amount:4850, subtotal:4350, shipping_amount:500, order_items:[{id:'i1',product_name:'Himalayan Herb Oil',unit_price:2200,quantity:1,total_price:2200},{id:'i2',product_name:'Wellness Tea Pack',unit_price:2150,quantity:1,total_price:2150}], coupon_code:'SAVE10', discount_amount:430 },
-  { id:'ord-def67890', order_number:'ORD-2024-0038', created_at:new Date(Date.now()-86400000*7).toISOString(), status:'pending',   payment_status:'pending',  payment_method:'COD',    payment_admin_note:'', total_amount:1200, order_items:[{id:'i3',product_name:'Aromatherapy Candle',unit_price:1200,quantity:1,total_price:1200}] },
-  { id:'ord-ghi11111', order_number:'ORD-2024-0031', created_at:new Date(Date.now()-86400000*14).toISOString(), status:'delivered', payment_status:'paid',    payment_method:'Khalti', payment_admin_note:'Confirmed & delivered. Thank you!', total_amount:7500, subtotal:7500, order_items:[{id:'i4',product_name:'Puja Kit Premium',unit_price:5000,quantity:1,total_price:5000},{id:'i5',product_name:'Incense Set',unit_price:2500,quantity:1,total_price:2500}] },
-  { id:'ord-jkl22222', order_number:'ORD-2024-0019', created_at:new Date(Date.now()-86400000*30).toISOString(), status:'cancelled', payment_status:'refunded', payment_method:'eSewa',  payment_admin_note:'Refund issued — item out of stock.', total_amount:2800, order_items:[{id:'i6',product_name:'Ritual Copper Pot',unit_price:2800,quantity:1,total_price:2800}] },
-]
+// const DEMO_ORDERS = [
+//   { id:'ord-abc12345', order_number:'ORD-2024-0042', created_at:new Date(Date.now()-86400000*2).toISOString(), status:'shipped',   payment_status:'paid',     payment_method:'eSewa',  payment_admin_note:'Payment verified by admin on Apr 1.', total_amount:4850, subtotal:4350, shipping_amount:500, order_items:[{id:'i1',product_name:'Himalayan Herb Oil',unit_price:2200,quantity:1,total_price:2200},{id:'i2',product_name:'Wellness Tea Pack',unit_price:2150,quantity:1,total_price:2150}], coupon_code:'SAVE10', discount_amount:430 },
+//   { id:'ord-def67890', order_number:'ORD-2024-0038', created_at:new Date(Date.now()-86400000*7).toISOString(), status:'pending',   payment_status:'pending',  payment_method:'COD',    payment_admin_note:'', total_amount:1200, order_items:[{id:'i3',product_name:'Aromatherapy Candle',unit_price:1200,quantity:1,total_price:1200}] },
+//   { id:'ord-ghi11111', order_number:'ORD-2024-0031', created_at:new Date(Date.now()-86400000*14).toISOString(), status:'delivered', payment_status:'paid',    payment_method:'Khalti', payment_admin_note:'Confirmed & delivered. Thank you!', total_amount:7500, subtotal:7500, order_items:[{id:'i4',product_name:'Puja Kit Premium',unit_price:5000,quantity:1,total_price:5000},{id:'i5',product_name:'Incense Set',unit_price:2500,quantity:1,total_price:2500}] },
+//   { id:'ord-jkl22222', order_number:'ORD-2024-0019', created_at:new Date(Date.now()-86400000*30).toISOString(), status:'cancelled', payment_status:'refunded', payment_method:'eSewa',  payment_admin_note:'Refund issued — item out of stock.', total_amount:2800, order_items:[{id:'i6',product_name:'Ritual Copper Pot',unit_price:2800,quantity:1,total_price:2800}] },
+// ]
 
 /* ═══════════════════════════════════════════════════════════
    MAIN PAGE

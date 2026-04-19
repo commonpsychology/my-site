@@ -152,7 +152,7 @@ export default function PaymentPage() {
         <div style={{ width:30, height:30, borderRadius:'50%', background:btnGrad, display:'flex', alignItems:'center', justifyContent:'center' }}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.3 2 .5 4 2 5.5L12 22l5-8.5c1.5-1.5 2.3-3.5 2-5.5C18.5 4.5 15.5 2 12 2zm0 9a3 3 0 110-6 3 3 0 010 6z"/></svg>
         </div>
-        <span style={{ fontFamily:'var(--font-display)', fontSize:'0.9rem', color:C.green }}>Puja Samargi</span>
+        <span style={{ fontFamily:'var(--font-display)', fontSize:'0.9rem', color:C.green }}>Common Psychology</span>
       </div>
 
       <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
@@ -219,7 +219,7 @@ export default function PaymentPage() {
           <div style={{ width:30, height:30, borderRadius:'50%', background:btnGrad, display:'flex', alignItems:'center', justifyContent:'center' }}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.3 2 .5 4 2 5.5L12 22l5-8.5c1.5-1.5 2.3-3.5 2-5.5C18.5 4.5 15.5 2 12 2zm0 9a3 3 0 110-6 3 3 0 010 6z"/></svg>
           </div>
-          <span style={{ fontFamily:'var(--font-display)', fontSize:'0.9rem', color:C.green }}>Puja Samargi</span>
+          <span style={{ fontFamily:'var(--font-display)', fontSize:'0.9rem', color:C.green }}>Common Psychology</span>
           <span style={{ fontFamily:'var(--font-body)', fontSize:'0.65rem', color:C.textLight, fontWeight:700 }}>· Secure Checkout</span>
         </div>
         <button onClick={()=>navigate('/book')} style={{ padding:'0.32rem 0.85rem', borderRadius:8, border:`1px solid ${C.border}`, background:C.white, color:C.textMid, fontFamily:'var(--font-body)', fontSize:'0.76rem', fontWeight:600, cursor:'pointer' }}>← Back to booking</button>

@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const FALLBACK = [
-  { text:"I was skeptical at first, but Puja Samargi changed my life. My therapist helped me understand my anxiety in a way no one had before.", name:'Sita M.', detail:'Anxiety Management · 3 months', stars:5 },
-  { text:"Finding a therapist who understood the cultural pressures I faced as a Nepali woman was so difficult — until I found Puja Samargi.", name:'Bikram T.', detail:'Depression & Stress · 6 months', stars:5 },
+  { text:"I was skeptical at first, but Common Psychology changed my life. My therapist helped me understand my anxiety in a way no one had before.", name:'Sita M.', detail:'Anxiety Management · 3 months', stars:5 },
+  { text:"Finding a therapist who understood the cultural pressures I faced as a Nepali woman was so difficult — until I found Common Psychology.", name:'Bikram T.', detail:'Depression & Stress · 6 months', stars:5 },
   { text:"The online sessions made it so easy to get help without anyone knowing. I feel stronger and more confident than I have in years.", name:'Kamala R.', detail:'Relationship Counseling · 4 months', stars:5 },
   { text:"I never thought I'd be able to talk about my trauma. The compassionate approach here made it possible.", name:'Arjun K.', detail:'Trauma Recovery · 8 months', stars:5 },
-  { text:"As a working mother, I struggled to find time for myself. Puja Samargi's flexible scheduling made mental health care finally accessible.", name:'Nisha G.', detail:'Grief Counseling · 5 months', stars:5 },
+  { text:"As a working mother, I struggled to find time for myself. Common Psychology's flexible scheduling made mental health care finally accessible.", name:'Nisha G.', detail:'Grief Counseling · 5 months', stars:5 },
 ]
 
 export default function Testimonials() {

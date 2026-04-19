@@ -334,12 +334,12 @@ export default function TherapistDashboard() {
       {/* ── Top bar ── */}
       <div className="th-topbar">
         <div style={{ display:'flex', alignItems:'center', gap:'0.85rem' }}>
-          <img src="/header.png" alt="Puja Samargi"
+          <img src="/header.png" alt="Common Psychology"
             style={{ height:32, objectFit:'contain' }}
             onError={e => e.target.style.display='none'}/>
           <div>
             <div style={{ fontFamily:'var(--font-display)', fontSize:'0.95rem', color:'white' }}>Therapist Portal</div>
-            <div style={{ fontFamily:'var(--font-body)', fontSize:'0.65rem', color:'rgba(255,255,255,0.65)' }}>Puja Samargi</div>
+            <div style={{ fontFamily:'var(--font-body)', fontSize:'0.65rem', color:'rgba(255,255,255,0.65)' }}>Common Psychology</div>
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
@@ -498,7 +498,7 @@ export default function TherapistDashboard() {
                 <div className="th-table-wrap">
                   <table className="th-table">
                     <thead>
-                      <tr>{['Client','Phone','Date','Time','Type','Status','Payment','Action'].map(h=>(
+                      <tr>{['Client','Phone','Date','Time','Type','Status'].map(h=>(
                         <th key={h}>{h}</th>
                       ))}</tr>
                     </thead>
@@ -520,7 +520,7 @@ export default function TherapistDashboard() {
                             </td>
                             <td><StatusBadge status={a.status}/></td>
                             <td>
-  {(() => {
+  {/* {(() => {
     const ps = a.payment_status || 'unpaid'
     const styles = {
       paid:    { bg: '#e8f8f0', color: '#1a7a4a', label: '✓ Paid'    },
@@ -538,7 +538,7 @@ export default function TherapistDashboard() {
         {s.label}
       </span>
     )
-  })()}
+  })()} */}
 </td>
                             <td>
                               {/* ── The select now calls updateStatus which uses the correct route ── */}
@@ -554,7 +554,7 @@ export default function TherapistDashboard() {
                                   borderRadius:6, fontSize:'0.78rem', cursor: isUpdating ? 'not-allowed' : 'pointer',
                                   outline:'none', fontFamily:'var(--font-body)', color:C.textMid,
                                   opacity: isUpdating ? 0.5 : 1 }}>
-                                {['pending','confirmed','completed','cancelled','no_show'].map(s=>(
+                                {['confirmed','completed','no_show'].map(s=>(
                                   <option key={s} value={s}>{s.replace(/_/g,' ')}</option>
                                 ))}
                               </select>

@@ -9,7 +9,7 @@ import MindfulClock from './MindClock'
 ───────────────────────────────────────────────────────────── */
 const HERO_COPY = {
   EN: {
-    badge:           "WORKING FOR THE PEACE OF MIND OF GLOBALLY",
+    badge:           "WORKING FOR THE PEACE OF MIND GLOBALLY",
     h1_our:          'Our ',
     h1_help:         'Help',
     h1_your:         ', Your ',
@@ -643,16 +643,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* ══ FLOATING MAP BUTTON ══ */}
-      <div className="map-fab-ping" style={{ animationDelay:'0.3s' }} aria-hidden="true" />
-
-      <button className="map-fab" onClick={() => setMapOpen(true)} aria-label={c.map_label}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-          stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
-      </button>
+      
 
       <div className={`map-fab-label${labelVisible ? ' visible' : ''}`}>{c.map_label}</div>
 

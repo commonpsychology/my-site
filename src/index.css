@@ -96,11 +96,43 @@ html {
   overflow-y: scroll; /* ALWAYS show scrollbar — prevents width shift */
 }
 
+@media (max-width: 480px) {
+  .navbar-logo {
+    gap: 0.35rem;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+  .logo-text {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  .logo-mark {
+    width: 44px !important;
+    height: 36px !important;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  /* hide desktop language pill — it's already in mobile menu */
+  .navbar > div:last-of-type > button:first-child { display: none !important; }
+}
+
+@media (max-width: 1280px) {
+  .navbar-lang-btn { display: none !important; }
+}
+
 /* ============================================================
    NAVBAR — single definition, always fixed
    ============================================================ */
 .navbar {
   position: fixed;
+  flex-wrap: nowrap;
+  min-width: 0;
   top: 0; left: 0; right: 0;
   z-index: 200;
   height: var(--navbar-h);
@@ -398,7 +430,7 @@ body                  { top: 0 !important; position: static !important; }
 .fc-sub        { font-family: var(--font-body); color: var(--text-light); font-size: 0.72rem; }
 
 /* ============================================================
-   SECTION COMMONS
+   SECTION CommmonS
    ============================================================ */
 .section {
   padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 6rem);
@@ -930,13 +962,15 @@ input, textarea, select { max-width: 100%; box-sizing: border-box; }
   .therapist-grid,
   .therapists-grid     { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
   .services-grid-full  { grid-template-columns: repeat(2, 1fr); padding: 1.5rem 1rem 3rem; }
-  .avatar-pill         { display: none; }
 }
 
+@media (max-width: 1280px) {
+  .avatar-pill         { display: none; }
+}
 /* ============================================================
    RESPONSIVE — HIDE DESKTOP NAV  (≤ 900px)
    ============================================================ */
-@media (max-width: 900px) {
+@media (max-width: 1280px) {
   .navbar-links  { display: none !important; }
   .navbar-cta    { display: none !important; }
   .hamburger     { display: flex; }
@@ -987,11 +1021,114 @@ input, textarea, select { max-width: 100%; box-sizing: border-box; }
   .services-grid-full    { grid-template-columns: 1fr; padding: 1.25rem 0.75rem 2.5rem; }
 }
 
+/* ────────────────────────────────────────────────────────────────
+   1. THERAPIST DASHBOARD — My Schedule table
+   Make the table horizontally scrollable instead of overflowing.
+   The .th-table-wrap already has overflow:auto so the table itself
+   is fine; what breaks on mobile is the tab bar (it's already
+   overflow-x:auto in the original CSS) and the stats grid
+   (already has @media breakpoints). No extra CSS needed there.
+ 
+   Only new rule: tighten the action column on narrow screens.
+   ──────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* The tabbar already scrolls; just make each tab a bit narrower */
+  .th-tab-btn {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.78rem;
+  }
+ 
+  /* My Schedule table: hide less-important columns */
+  table.th-table th:nth-child(2),   /* Phone */
+  table.th-table td:nth-child(2) {
+    display: none;
+  }
+}
+ 
+ 
+/* ────────────────────────────────────────────────────────────────
+   2. CLIENT PORTAL — Notification filter buttons: 3 per row
+   ──────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+ 
+  /* Wrap the filter group into a 3-column grid */
+  .notif-filters-group {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    width: 100%;
+  }
+ 
+  .notif-filter-btn {
+    text-align: center;
+    width: 100%;
+    padding: 5px 4px;
+    font-size: 0.71rem;
+  }
+ 
+  /* Stack toolbar vertically on mobile */
+  .notif-toolbar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.6rem !important;
+  }
+}
+ 
+ 
+/* ────────────────────────────────────────────────────────────────
+   3. MY ACCOUNT — Mobile tab bar: 3 per row instead of scrolling
+   ──────────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .acc-tabs-mobile {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    overflow-x: visible;
+    padding: 0;
+    border-bottom: 1px solid var(--earth-cream);
+  }
+ 
+  .acc-tab-btn {
+    padding: 0.7rem 0.3rem;
+    font-size: 0.73rem;
+    text-align: center;
+    border-bottom: none;
+    border-right: 1px solid var(--earth-cream);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    line-height: 1.3;
+  }
+ 
+  /* Remove right border from every 3rd item */
+  .acc-tab-btn:nth-child(3n) {
+    border-right: none;
+  }
+ 
+  /* Bottom border only for active */
+  .acc-tab-btn.active {
+    background: #e0f7ff;
+    border-bottom: 2.5px solid #007BA8;
+    color: #007BA8;
+    font-weight: 700;
+  }
+ 
+  /* Row 2 items get a top border */
+  .acc-tab-btn:nth-child(n+4) {
+    border-top: 1px solid var(--earth-cream);
+  }
+}
+ 
+
 /* ============================================================
    RESPONSIVE — SMALL MOBILE  (≤ 480px)
    ============================================================ */
 @media (max-width: 480px) {
-  :root { --navbar-h: 64px; } /* navbar shrinks → all offsets update automatically */
+  :root { --navbar-h: 60px; }
+
+  .logo-mark { width: 48px !important; height: 40px !important; }
+  .logo-text { font-size: 0.5rem !important; }
+  .logo-sub  { display: none; }/* navbar shrinks → all offsets update automatically */
 
   .hero-stats            { flex-direction: column; gap: 1rem; }
   .hero-actions          { flex-direction: column; }

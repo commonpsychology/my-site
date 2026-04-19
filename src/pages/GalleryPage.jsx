@@ -121,8 +121,8 @@ function GalleryCard({ item, onOpen }) {
       onMouseLeave={() => setHovered(false)}
       onClick={() => onOpen(item)}
       style={{
-        gridColumn:`span ${colSpan}`, gridRow:`span ${rowSpan}`,
-        borderRadius:20, background:C.white, position:'relative',
+gridColumn: window.innerWidth <= 900 ? 'span 1' : `span ${colSpan}`,
+gridRow: window.innerWidth <= 900 ? 'span 1' : `span ${rowSpan}`,        borderRadius:20, background:C.white, position:'relative',
         overflow:'visible', cursor:'pointer',
         boxShadow: hovered
           ? `0 2px 0 0 ${C.skyDeep},0 5px 0 0 ${C.skyMid}bb,0 9px 0 0 ${C.skyBright}55,0 24px 56px rgba(0,191,255,0.22)`
@@ -264,8 +264,13 @@ const filtered   = useMemo(
         </div>
 
         {/* Grid */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gridAutoRows:'220px', gap:'1.75rem', paddingTop:'0.5rem' }}>
-          {loading
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: window.innerWidth <= 600 ? '1fr' : window.innerWidth <= 900 ? 'repeat(2,1fr)' : 'repeat(3,1fr)',
+  gridAutoRows: 'auto',
+  gap: '1.75rem',
+  paddingTop: '0.5rem',
+}}>          {loading
             ? [1,2,3,4,5,6].map((_, i) => <SkeletonCard key={i} colSpan={i===0?2:1} rowSpan={i===0?2:1} />)
             : filtered.map((item) => (
                 <GalleryCard key={item.id} item={item} onOpen={openLightbox} />

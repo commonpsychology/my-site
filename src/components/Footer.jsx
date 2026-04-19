@@ -404,7 +404,7 @@ export default function Footer() {
               </div>
               <div>
                 <div className="logo-text" style={{ color: 'var(--text-dark)' }}>
-                  Puja Samargi
+                  Common Psyhcology
                 </div>
                 <div className="logo-sub" style={{ color: 'var(--text-light)' }}>
                   Mental Wellness Center

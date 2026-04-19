@@ -607,7 +607,7 @@ export default function VerifyAccountPage() {
         {/* Security note */}
         <div style={{ marginTop: '1.75rem', padding: '0.85rem 1rem', background: G.faint, borderRadius: 10, border: `1px solid ${G.border}` }}>
           <p style={{ margin: 0, fontFamily: '"DM Sans", sans-serif', fontSize: '0.75rem', color: G.muted, lineHeight: 1.6 }}>
-            🔒 <strong>Never share this code.</strong> Puja Samargi staff will never ask for your OTP by phone or email.
+            🔒 <strong>Never share this code.</strong> Common Psychology staff will never ask for your OTP by phone or email.
           </p>
         </div>
 

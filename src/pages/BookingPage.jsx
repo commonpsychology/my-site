@@ -17,9 +17,6 @@ const C = {
 const btnGrad = `linear-gradient(135deg,${C.skyDeep} 0%,${C.skyBright} 100%)`
 const STEPS   = ['Therapist','Session Type','Date & Time','Confirm']
 
-// ── DO NOT call getAvailableSlots here at module level — selected doesn't exist here ──
-// The call belongs INSIDE the component render, after state is initialised.
-
 const SESSION_TYPES = [
   { label:'Online Video', icon:'💻', value:'online'    },
   { label:'In-Person',    icon:'🏢', value:'in_person' },
@@ -34,22 +31,19 @@ const ALL_TIME_SLOTS = [
   { label:'5:00 PM',  hour:17 },
 ]
 
-// ── Pure helper — safe to define at module level (takes args, no closure over state) ──
 function getAvailableSlots(therapist, dateStr) {
   if (!therapist || !dateStr) return ALL_TIME_SLOTS
-  const hours = therapist.available_hours
+  let hours = therapist.available_hours
+  if (typeof hours === 'string') {
+    try { hours = JSON.parse(hours) } catch { hours = [] }
+  }
   if (!hours || !Array.isArray(hours) || hours.length === 0) return ALL_TIME_SLOTS
-
-  // new Date('2025-04-18') parses as UTC midnight → getDay() returns wrong weekday in
-  // negative-UTC-offset zones.  Append T00:00 to force local-time parsing.
   const d = new Date(dateStr + 'T00:00')
   const dayName = d.toLocaleDateString('en-US', { weekday: 'long' })
   const rule = hours.find(h => h.day === dayName)
-  if (!rule) return []   // therapist doesn't work this day
-
+  if (!rule) return []
   const [startH] = rule.start.split(':').map(Number)
   const [endH]   = rule.end.split(':').map(Number)
-
   return ALL_TIME_SLOTS.filter(s => s.hour >= startH && s.hour < endH)
 }
 
@@ -61,21 +55,97 @@ function slotToISO(dateStr, timeLabel) {
   return d.toISOString()
 }
 
+// ── StepBar: desktop = horizontal row, mobile = 2-per-row grid ──────────────
+const STEP_BAR_CSS = `
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  .stepbar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 1.25rem;
+    flex-wrap: nowrap;
+  }
+
+  /* ── Mobile: 2-column grid ── */
+  @media (max-width: 600px) {
+    .stepbar-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+      margin-top: 1rem;
+    }
+    .stepbar-connector { display: none !important; }
+  }
+
+  .stepbar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 600px) {
+    .stepbar-item {
+      background: rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 0.5rem 0.65rem;
+    }
+  }
+
+  .stepbar-connector {
+    flex: 1;
+    height: 1.5px;
+    margin: 0 0.4rem;
+    background: rgba(255,255,255,0.2);
+  }
+  .stepbar-connector.done {
+    background: rgba(255,255,255,0.6);
+  }
+`
+
 function StepBar({ step }) {
+  useEffect(() => {
+    if (!document.getElementById('stepbar-css')) {
+      const s = document.createElement('style')
+      s.id = 'stepbar-css'
+      s.textContent = STEP_BAR_CSS
+      document.head.appendChild(s)
+    }
+  }, [])
+
   return (
-    <div style={{ display:'flex', alignItems:'center', marginTop:'1.25rem' }}>
+    <div className="stepbar-wrap">
       {STEPS.map((label, i) => {
-        const num = i+1; const done = step > num; const active = step === num
+        const num    = i + 1
+        const done   = step > num
+        const active = step === num
         return (
-          <div key={i} style={{ display:'flex', alignItems:'center', flex:i < STEPS.length-1 ? 1 : 'none' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink:0 }}>
-              <div style={{ width:30, height:30, borderRadius:'50%', background:done||active?btnGrad:'rgba(255,255,255,0.2)', border:done||active?'none':'1.5px solid rgba(255,255,255,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.72rem', fontWeight:800, color:done||active?'white':'rgba(255,255,255,0.7)', transition:'all 0.25s' }}>
+          <>
+            <div key={i} className="stepbar-item">
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background:  done || active ? btnGrad : 'rgba(255,255,255,0.18)',
+                border:      done || active ? 'none'  : '1.5px solid rgba(255,255,255,0.35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.68rem', fontWeight: 800,
+                color: done || active ? 'white' : 'rgba(255,255,255,0.6)',
+                transition: 'all 0.25s',
+              }}>
                 {done ? '✓' : num}
               </div>
-              <span style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', fontWeight:active?700:500, color:active?'white':done?'rgba(255,255,255,0.85)':'rgba(255,255,255,0.55)', whiteSpace:'nowrap' }}>{label}</span>
+              <span style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.76rem',
+                fontWeight: active ? 700 : 500,
+                color: active ? 'white' : done ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.5)',
+                whiteSpace: 'nowrap',
+              }}>{label}</span>
             </div>
-            {i < STEPS.length-1 && <div style={{ flex:1, height:1.5, background:done?'rgba(255,255,255,0.6)':'rgba(255,255,255,0.2)', margin:'0 0.6rem' }}/>}
-          </div>
+            {i < STEPS.length - 1 && (
+              <div key={`c${i}`} className={`stepbar-connector${done ? ' done' : ''}`} />
+            )}
+          </>
         )
       })}
     </div>
@@ -178,9 +248,6 @@ export default function BookingPage() {
   }
 
   const minDate = new Date().toISOString().split('T')[0]
-
-  // ── Derived: available slots for the selected therapist + date ──
-  // Computed INSIDE the component so selected state is in scope.
   const availableSlotsForDay = getAvailableSlots(selected.therapist, selected.date)
 
   return (
@@ -196,7 +263,7 @@ export default function BookingPage() {
       <div style={{ background:'var(--off-white)', padding:'3rem 2rem', minHeight:'60vh' }}>
         <div style={{ maxWidth:800, margin:'0 auto' }}>
 
-          {/* ── STEP 1: Choose Therapist ── */}
+          {/* ── STEP 1 ── */}
           {step === 1 && (
             <div>
               <h2 style={{ fontFamily:'var(--font-display)', color:C.textDark, marginBottom:'0.35rem' }}>Choose a Therapist</h2>
@@ -204,7 +271,6 @@ export default function BookingPage() {
                 {therapists.length} therapist{therapists.length !== 1 ? 's' : ''} available
               </p>
 
-              {/* Filter chips */}
               {!loadingTherapists && allSpecializations.length > 1 && (
                 <div style={{ marginBottom:'1.5rem' }}>
                   <div style={{ fontSize:'0.7rem', fontWeight:800, letterSpacing:'0.1em', textTransform:'uppercase', color:C.textLight, marginBottom:'0.6rem' }}>Filter by Specialization</div>
@@ -223,10 +289,8 @@ export default function BookingPage() {
                 </div>
               )}
 
-              {/* Therapist list */}
               {loadingTherapists ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
-                  <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
                   {[1,2,3].map(i => <div key={i} style={{ height:90, borderRadius:16, background:'linear-gradient(90deg,#f0f4f8 25%,#e8eef4 50%,#f0f4f8 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.4s infinite' }}/>)}
                 </div>
               ) : filteredTherapists.length === 0 ? (
@@ -242,17 +306,10 @@ export default function BookingPage() {
                     return (
                       <div key={t.id} onClick={() => setSelected(s => ({ ...s, therapist:t }))}
                         style={{ background:isActive?C.skyFaint:C.white, border:`1.5px solid ${isActive?C.skyBright:C.borderFaint}`, borderRadius:16, padding:'1.25rem', cursor:'pointer', boxShadow:isActive?'0 0 0 3px rgba(0,191,255,0.1)':'0 1px 4px rgba(0,0,0,0.04)', transition:'all 0.2s', display:'flex', alignItems:'center', gap:'1rem' }}>
-
-                        {/* Avatar */}
                         <div style={{ width:52, height:52, borderRadius:'50%', flexShrink:0, overflow:'hidden', background:isActive?btnGrad:'#e8f4fb', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                          {t.avatar_url
-                            ? <img src={t.avatar_url} alt={t.full_name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.style.display='none'; e.currentTarget.nextElementSibling.style.display='flex' }}/>
-                            : null
-                          }
+                          {t.avatar_url ? <img src={t.avatar_url} alt={t.full_name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.style.display='none'; e.currentTarget.nextElementSibling.style.display='flex' }}/> : null}
                           <span style={{ display:t.avatar_url?'none':'flex', fontSize:'1.4rem', alignItems:'center', justifyContent:'center', width:'100%', height:'100%' }}>👩‍⚕️</span>
                         </div>
-
-                        {/* Info */}
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontFamily:'var(--font-display)', fontWeight:600, color:isActive?C.skyDeep:C.textDark, fontSize:'1rem' }}>{t.full_name}</div>
                           <div style={{ fontSize:'0.78rem', color:C.textLight, marginTop:'0.15rem' }}>
@@ -271,8 +328,6 @@ export default function BookingPage() {
                             </div>
                           )}
                         </div>
-
-                        {/* Badges */}
                         <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.4rem', flexShrink:0 }}>
                           <span style={{ fontSize:'0.7rem', fontWeight:700, padding:'0.25rem 0.65rem', borderRadius:100, background:t.is_available?'#e8f8f0':'#f8f0e8', color:t.is_available?'#1a7a4a':'#8a5a1a' }}>
                             {t.is_available ? '● Available' : '○ Busy'}
@@ -291,7 +346,7 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* ── STEP 2: Session Type ── */}
+          {/* ── STEP 2 ── */}
           {step === 2 && (
             <div>
               <h2 style={{ fontFamily:'var(--font-display)', color:C.textDark, marginBottom:'1.5rem' }}>Choose Session Type</h2>
@@ -314,15 +369,27 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* ── STEP 3: Date & Time ── */}
+          {/* ── STEP 3 ── */}
           {step === 3 && (
             <div>
               <h2 style={{ fontFamily:'var(--font-display)', color:C.textDark, marginBottom:'1.5rem' }}>Pick a Date &amp; Time</h2>
               <div style={{ marginBottom:'1.5rem' }}>
                 <label style={{ display:'block', fontSize:'0.82rem', fontWeight:700, color:C.textLight, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.5rem' }}>Date</label>
-                <input type="date" min={minDate} value={selected.date}
-                  onChange={e => setSelected(s => ({ ...s, date:e.target.value, time:'' }))}
-                  style={{ padding:'0.75rem 1rem', border:`1.5px solid ${C.borderFaint}`, borderRadius:10, fontSize:'0.9rem', color:C.textDark, outline:'none', width:'100%', boxSizing:'border-box' }}/>
+                <input
+                  type="date" min={minDate} value={selected.date}
+                  onChange={e => {
+                    const val = e.target.value
+                    if (val) {
+                      const day = new Date(val + 'T00:00').getDay()
+                      if (day === 6) return
+                    }
+                    setSelected(s => ({ ...s, date: val, time: '' }))
+                  }}
+                  style={{ padding:'0.75rem 1rem', border:`1.5px solid ${C.borderFaint}`, borderRadius:10, fontSize:'0.9rem', color:C.textDark, outline:'none', width:'100%', boxSizing:'border-box' }}
+                />
+                <div style={{ fontSize:'0.75rem', color:C.textLight, marginTop:'0.35rem' }}>
+                  📅 Saturdays are unavailable — please select any other day.
+                </div>
               </div>
 
               {selected.date && (
@@ -332,7 +399,6 @@ export default function BookingPage() {
                     {loadingSlots && <span style={{ fontSize:'0.75rem', color:C.skyDeep }}>Checking…</span>}
                   </div>
 
-                  {/* ── availableSlotsForDay is already computed above the return ── */}
                   {availableSlotsForDay.length === 0 ? (
                     <div style={{ padding:'1rem 1.25rem', background:C.amberFaint, borderRadius:10, color:C.amber, fontSize:'0.85rem', border:`1px solid #f5d87a` }}>
                       This therapist is not available on {new Date(selected.date + 'T00:00').toLocaleDateString('en-US', { weekday:'long' })}s. Please choose a different date.
@@ -376,7 +442,7 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* ── STEP 4: Confirm ── */}
+          {/* ── STEP 4 ── */}
           {step === 4 && (
             <div>
               <h2 style={{ fontFamily:'var(--font-display)', color:C.textDark, marginBottom:'1.5rem' }}>Confirm Booking</h2>
