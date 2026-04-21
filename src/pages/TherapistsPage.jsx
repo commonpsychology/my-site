@@ -18,12 +18,20 @@ function InitialsAvatar({ name }) {
   )
 }
 
+function cleanUrl(url) {
+  if (!url) return null
+  // If it's already a full URL (Supabase, http, https) return as-is
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  // Strip any leading slashes and prefix with nothing (no local server in prod)
+  return null
+}
+
 function SkeletonCard() {
   return (
     <div className="therapist-card" style={{ pointerEvents:'none' }}>
       <div className="therapist-img" style={{ background:'linear-gradient(90deg,#f0f4f8 25%,#e2e8f0 50%,#f0f4f8 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.4s infinite', height:220 }}/>
       <div className="therapist-body">
-        {[['60%','1.1rem'],['45%','0.8rem'],['100%','1.8rem'],['80%','0.8rem']].map(([w,h],i) => (
+{[['60%','1.1rem'],['45%','0.8rem'],['100%','1.8rem'],['80%','0.8rem']].map(([w,h],i) => (
           <div key={i} style={{ height:h, width:w, background:'#f0f4f8', borderRadius:8, marginBottom:'0.6rem', animation:'shimmer 1.4s infinite' }}/>
         ))}
       </div>
