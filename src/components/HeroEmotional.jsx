@@ -306,7 +306,7 @@ function injectCSS(id, css) {
    MAP POPUP
 ══════════════════════════════════════════════════════════════ */
 const OFFICE = {
-  label:    'Mindful Wellness Nepal',
+  label:    'Common Psychology',
   address:  'Thimi, Bhaktapur, Nepal',
   embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3532.0!2d85.3240!3d27.7172!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjfCsDQzJzAyLjAiTiA4NcKwMTknMjYuNCJF!5e0!3m2!1sen!2snp!4v1700000000000!5m2!1sen!2snp',
   gmapsUrl: 'https://www.google.com/maps/search/?api=1&query=27.7172,85.3240',
