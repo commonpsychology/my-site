@@ -29,7 +29,6 @@ const LIMIT    = 20
 const PLIMIT   = 200
 
 const getToken = () => localStorage.getItem('accessToken')
-
 const apiFetch = async (path, opts = {}) => {
   const res = await fetch(`${API_BASE}${path}`, {
     ...opts,
@@ -39,11 +38,21 @@ const apiFetch = async (path, opts = {}) => {
       ...(opts.headers || {}),
     },
   })
-  const data = await res.json().catch(() => ({}))
+
+  // ── Show raw response if not JSON ──
+  const text = await res.text()
+  console.log(`[API] ${opts.method || 'GET'} ${API_BASE}${path}`)
+  console.log(`[API] Status: ${res.status}`)
+  console.log(`[API] Raw response:`, text.slice(0, 500))
+
+  let data = {}
+  try { data = JSON.parse(text) } catch {
+    throw new Error(`Server returned non-JSON (${res.status}): ${text.slice(0, 200)}`)
+  }
+
   if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`)
   return data
 }
-
 function statusVariant(s) {
   const map = {
     published: 'badge-green', draft: 'badge-gray', active: 'badge-green',
