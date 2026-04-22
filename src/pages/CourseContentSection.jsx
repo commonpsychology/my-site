@@ -24,7 +24,7 @@
 import { useState, useEffect, useCallback } from 'react'
 
 // ─── Local copies of shared helpers (mirror AdminDashboardPage exactly) ───────
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const LIMIT    = 20
 const PLIMIT   = 200
 
