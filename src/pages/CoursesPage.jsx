@@ -351,7 +351,6 @@ export default function CoursesPage() {
   const [loading,        setLoading]        = useState(true)
   const [freeToast,      setFreeToast]      = useState(null)
   const [confirmedToast, setConfirmedToast] = useState(null)
-  const [pinTarget,      setPinTarget]      = useState(null) // course object awaiting PIN
   const pollRef = useRef(null)
 
   // ── Load courses ────────────────────────────────────────────────────────────
@@ -486,19 +485,10 @@ export default function CoursesPage() {
     }
   }
 
-  // ── Go to course — check PIN first ─────────────────────────────────────────
-  function handleGoToCourse(course) {
-    if (isPinUnlocked()) {
-      navigate('/courses-videos', { courseId: String(course.id), courseTitle: course.title })
-      return
-    }
-    setPinTarget(course)
-  }
 
-  function handlePinSuccess() {
-    setPinTarget(null)
-    navigate('/courses-videos', { courseId: String(pinTarget.id), courseTitle: pinTarget.title })
-  }
+function handleGoToCourse(course) {
+  navigate('/courses-videos', { courseId: String(course.id), courseTitle: course.title })
+}
 
   // ── Render ──────────────────────────────────────────────────────────────────
   if (loading) return (
@@ -515,14 +505,7 @@ export default function CoursesPage() {
 
   return (
     <div className="page-wrapper">
-      {/* PIN modal */}
-      {pinTarget && (
-        <PinModal
-          courseTitle={pinTarget.title}
-          onSuccess={handlePinSuccess}
-          onCancel={() => setPinTarget(null)}
-        />
-      )}
+      
 
       {/* Hero */}
       <div className="page-hero" style={{ background:'var(--earth-cream,#f5ede0)' }}>
