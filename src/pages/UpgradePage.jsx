@@ -1,4 +1,3 @@
-/* eslint-disable no-dupe-keys */
 import { useState, useRef } from 'react'
 import { useRouter } from '../context/RouterContext'
 
@@ -296,16 +295,16 @@ export default function UpgradePage() {
                   ) : (
                     <button
                       onClick={() => goToPay(p.id)}
-                      style={{
-                        width: '100%', padding: '0.8rem', borderRadius: 12, border: 'none',
-                        background: isSelected ? p.grad : p.popular ? btnGrad : `linear-gradient(135deg,${C.skyFainter},${C.skyFaint})`,
-                        color: isSelected || p.popular ? 'white' : C.skyDeep,
-                        fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        boxShadow: isSelected || p.popular ? `0 4px 18px ${p.color}44` : 'none',
-                        border: isSelected || p.popular ? 'none' : `1.5px solid ${C.border}`,
-                        transition: 'all 0.2s',
-                      }}
+                     style={{
+  width: '100%', padding: '0.8rem', borderRadius: 12,
+  background: isSelected ? p.grad : p.popular ? btnGrad : `linear-gradient(135deg,${C.skyFainter},${C.skyFaint})`,
+  color: isSelected || p.popular ? 'white' : C.skyDeep,
+  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9rem',
+  cursor: 'pointer',
+  boxShadow: isSelected || p.popular ? `0 4px 18px ${p.color}44` : 'none',
+  border: isSelected || p.popular ? 'none' : `1.5px solid ${C.border}`,
+  transition: 'all 0.2s',
+}}
                     >
                       {isSelected ? '✓ Selected — Pay Now' : `Upgrade to ${p.name} →`}
                     </button>
