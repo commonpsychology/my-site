@@ -143,8 +143,8 @@ export default function TherapistsPage() {
                 <TherapistCard
                   key={t.id}
                   t={t}
-                  onBook={() => navigate('/book', { therapist: t._raw || t })}
-                  onView={() => setSelectedTherapist(t._raw || t)}
+onBook={() => navigate('/book', { therapist: t })}
+onView={() => setSelectedTherapist(t)}
                 />
               ))
           }
