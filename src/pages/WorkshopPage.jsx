@@ -1,11 +1,5 @@
 // src/pages/WorkshopsPage.jsx
-// Changes:
-//  - MyEnrollments: Active/Upcoming unchanged. Past/Cancelled collapsed by default
-//    with count badge, click to expand.
-//  - EnrollmentCard: unchanged
-//  - WorkshopCard: unchanged (seats/countdown logic intact)
-
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter }  from '../context/RouterContext'
 import { useAuth }    from '../context/AuthContext'
 import { usePayment } from '../components/PaymentModal'
@@ -179,7 +173,6 @@ function MyEnrollments({ userEmail }) {
   const [inputVal,    setInputVal]    = useState(userEmail || '')
   const [error,       setError]       = useState('')
   const [expanded,    setExpanded]    = useState(null)
-  // NEW: controls whether the past/cancelled drawer is open
   const [pastOpen,    setPastOpen]    = useState(false)
 
   useEffect(() => {
@@ -308,7 +301,6 @@ function MyEnrollments({ userEmail }) {
               </div>
             ) : (
               <>
-                {/* ACTIVE / UPCOMING — unchanged */}
                 {active.length > 0 && (
                   <div style={{ marginBottom:'2rem' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'0.6rem', marginBottom:'1rem' }}>
@@ -325,10 +317,8 @@ function MyEnrollments({ userEmail }) {
                   </div>
                 )}
 
-                {/* PAST / CANCELLED — collapsible dropdown */}
                 {inactive.length > 0 && (
                   <div>
-                    {/* Dropdown toggle header */}
                     <button
                       onClick={() => setPastOpen(o => !o)}
                       style={{
@@ -345,7 +335,6 @@ function MyEnrollments({ userEmail }) {
                         <span style={{ fontFamily:'var(--font-display)', color:C.textLight, fontSize:'0.92rem', fontWeight:600 }}>
                           Past &amp; Cancelled
                         </span>
-                        {/* Count badge */}
                         <span style={{
                           display:'inline-flex', alignItems:'center', justifyContent:'center',
                           minWidth:22, height:22, borderRadius:100,
@@ -366,7 +355,6 @@ function MyEnrollments({ userEmail }) {
                       </span>
                     </button>
 
-                    {/* Dropdown body — only rendered when open */}
                     {pastOpen && (
                       <div style={{ display:'flex', flexDirection:'column', gap:'0.7rem', opacity:0.72 }}>
                         {inactive.map(reg => (
@@ -396,6 +384,142 @@ function FInput({ label, required, type = 'text', placeholder, value, onChange }
       <input type={type} placeholder={placeholder} value={value} onChange={onChange}
         onFocus={() => setF(true)} onBlur={() => setF(false)}
         style={{ width:'100%', padding:'0.75rem 1rem', border:'1.5px solid ' + (f ? C.skyBright : C.borderFaint), borderRadius:10, fontFamily:'var(--font-body)', fontSize:'0.9rem', color:C.textDark, background: f ? C.skyGhost : C.white, outline:'none', boxSizing:'border-box', boxShadow: f ? '0 0 0 3px rgba(0,191,255,0.1)' : 'none', transition:'all 0.2s' }} />
+    </div>
+  )
+}
+
+// ── Workshop Card Component ────────────────────────────────────────────────
+// image_url comes from your Supabase Storage bucket public URL stored in the workshops table
+function WorkshopCard({ ws, isReg, full, free, left, p, urgent, cardBg, onRegister, onNavigate }) {
+  const [imgErr, setImgErr] = useState(false)
+
+  return (
+    <div
+      style={{
+        background: isReg ? C.skyFainter : 'var(--off-white)',
+        borderRadius: 'var(--radius-lg)', overflow: 'hidden',
+        border: '1.5px solid ' + (isReg ? C.skyBright : full ? '#f97316' : 'var(--earth-cream)'),
+        boxShadow: isReg ? '0 4px 20px rgba(0,191,255,0.12)' : 'var(--shadow-soft)',
+        transition: 'all 0.25s',
+        opacity: full && !isReg ? 0.75 : 1,
+      }}
+      onMouseEnter={e => !full && (e.currentTarget.style.transform = 'translateY(-4px)')}
+      onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+    >
+      {/* ── Image / Emoji Header — mirrors TherapistCard pattern ── */}
+      <div style={{ position: 'relative', height: 200, overflow: 'hidden' }}>
+        {ws.image_url && !imgErr
+          ? (
+            <img
+              src={ws.image_url}
+              alt={ws.title}
+              onError={() => setImgErr(true)}
+              style={{
+                width: '100%', height: '100%',
+                objectFit: 'cover', objectPosition: 'center',
+                display: 'block',
+              }}
+            />
+          ) : (
+            /* Fallback: gradient tile with large emoji, same as therapist initials fallback */
+            <div style={{
+              width: '100%', height: '100%',
+              background: isReg
+                ? 'linear-gradient(135deg,' + C.skyFaint + ',' + C.skyFainter + ')'
+                : cardBg,
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: '3.5rem',
+            }}>
+              {ws.emoji || '📅'}
+            </div>
+          )
+        }
+
+        {/* Status badges — top-right, same position as therapist availability badge */}
+        {isReg && (
+          <div style={{
+            position: 'absolute', top: 10, right: 10,
+            background: btnGrad, borderRadius: 100,
+            padding: '3px 10px', fontFamily: 'var(--font-body)',
+            fontSize: '0.62rem', fontWeight: 800, color: 'white',
+          }}>
+            ✓ REGISTERED
+          </div>
+        )}
+        {full && !isReg && (
+          <div style={{
+            position: 'absolute', top: 10, right: 10,
+            background: '#f97316', borderRadius: 100,
+            padding: '3px 10px', fontFamily: 'var(--font-body)',
+            fontSize: '0.62rem', fontWeight: 800, color: 'white',
+          }}>
+            FULL
+          </div>
+        )}
+
+        {/* Emoji pill overlay shown only when an actual image is displayed */}
+        {ws.image_url && !imgErr && (
+          <div style={{
+            position: 'absolute', bottom: 10, left: 12,
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(6px)',
+            borderRadius: 100, padding: '3px 10px',
+            fontSize: '1rem', lineHeight: 1.4,
+          }}>
+            {ws.emoji || '📅'}
+          </div>
+        )}
+      </div>
+
+      {/* ── Card Body ── */}
+      <div style={{ padding: '1.4rem' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem', flexWrap:'wrap', gap:'0.3rem' }}>
+          <span style={{ fontSize:'0.68rem', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--blue-mid)' }}>{ws.mode}</span>
+          <span style={{ fontFamily:'var(--font-display)', fontSize:'0.95rem', color:'var(--green-deep)' }}>
+            {free ? 'FREE' : 'NPR ' + ws.price.toLocaleString()}
+          </span>
+        </div>
+        <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1rem', color:'var(--blue-deep)', marginBottom:'0.4rem', lineHeight:1.3 }}>
+          {ws.title}
+        </h3>
+        <p style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'var(--text-light)', marginBottom:'0.6rem' }}>
+          👤 {ws.facilitator}
+        </p>
+        <div style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'var(--text-mid)', marginBottom:'0.6rem' }}>
+          📅 {ws.date} · {ws.time}
+        </div>
+        <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:'0.85rem' }}>
+          {(ws.tags || []).map((t, j) => (
+            <span key={j} className="tag" style={{ fontSize:'0.65rem' }}>{t}</span>
+          ))}
+        </div>
+
+        {/* Seats progress bar */}
+        <div style={{ marginBottom:'1rem' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'var(--font-body)', fontSize:'0.7rem', color: urgent ? '#e53e3e' : 'var(--text-light)', marginBottom:'0.3rem', fontWeight: urgent ? 700 : 400 }}>
+            <span>{full ? '🔴 Workshop Full' : urgent ? '⚠ Almost full!' : '🟢 Seats available'}</span>
+            <span>{left} of {ws.seats} left</span>
+          </div>
+          <div style={{ height:5, background:'var(--earth-cream)', borderRadius:100, overflow:'hidden' }}>
+            <div style={{ height:'100%', width: p + '%', background: p >= 100 ? '#e53e3e' : p >= 90 ? 'linear-gradient(90deg,#e53e3e,#f97316)' : p >= 70 ? 'linear-gradient(90deg,#f97316,#ffd54f)' : btnGrad, borderRadius:100, transition:'width 0.3s' }} />
+          </div>
+        </div>
+
+        {/* CTA button */}
+        {isReg ? (
+          <button className="btn btn-outline" style={{ width:'100%', justifyContent:'center' }} onClick={() => onNavigate('/portal')}>
+            ✓ Registered — View Details
+          </button>
+        ) : full ? (
+          <button disabled style={{ width:'100%', padding:'0.6rem', borderRadius:12, border:'1.5px solid var(--earth-cream)', background:'var(--earth-cream)', color:'var(--text-light)', fontFamily:'var(--font-body)', fontWeight:600, fontSize:'0.82rem', cursor:'not-allowed' }}>
+            Workshop Full
+          </button>
+        ) : (
+          <button className="btn btn-primary" style={{ width:'100%', justifyContent:'center' }} onClick={onRegister}>
+            {free ? 'Register Free →' : 'Register Now →'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -643,7 +767,11 @@ export default function WorkshopsPage() {
       </div>
 
       <div className="section" style={{ background:'var(--white)' }}>
-        {loading && <div style={{ textAlign:'center', padding:'4rem', fontFamily:'var(--font-body)', color:C.textLight }}>Loading workshops…</div>}
+        {loading && (
+          <div style={{ textAlign:'center', padding:'4rem', fontFamily:'var(--font-body)', color:C.textLight }}>
+            Loading workshops…
+          </div>
+        )}
         {error && (
           <div style={{ textAlign:'center', padding:'4rem' }}>
             <p style={{ color:'#b91c1c', fontFamily:'var(--font-body)', marginBottom:'1rem' }}>⚠️ {error}</p>
@@ -651,7 +779,9 @@ export default function WorkshopsPage() {
           </div>
         )}
         {!loading && !error && workshops.length === 0 && (
-          <div style={{ textAlign:'center', padding:'4rem', fontFamily:'var(--font-body)', color:C.textLight }}>No upcoming workshops right now. Check back soon!</div>
+          <div style={{ textAlign:'center', padding:'4rem', fontFamily:'var(--font-body)', color:C.textLight }}>
+            No upcoming workshops right now. Check back soon!
+          </div>
         )}
         {!loading && !error && workshops.length > 0 && (
           <div className="workshops-grid">
@@ -664,46 +794,19 @@ export default function WorkshopsPage() {
               const urgent = p >= 80
               const cardBg = safeCardColor(ws.color)
               return (
-                <div key={ws.id}
-                  style={{ background: isReg ? C.skyFainter : 'var(--off-white)', borderRadius:'var(--radius-lg)', overflow:'hidden', border:'1.5px solid ' + (isReg ? C.skyBright : full ? '#f97316' : 'var(--earth-cream)'), boxShadow: isReg ? '0 4px 20px rgba(0,191,255,0.12)' : 'var(--shadow-soft)', transition:'all 0.25s', opacity: full && !isReg ? 0.75 : 1 }}
-                  onMouseEnter={e => !full && (e.currentTarget.style.transform = 'translateY(-4px)')}
-                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}>
-                  <div style={{ background: isReg ? 'linear-gradient(135deg,' + C.skyFaint + ',' + C.skyFainter + ')' : cardBg, padding:'1.75rem', fontSize:'2.5rem', textAlign:'center', position:'relative' }}>
-                    {ws.emoji}
-                    {isReg && <div style={{ position:'absolute', top:10, right:10, background:btnGrad, borderRadius:100, padding:'3px 10px', fontFamily:'var(--font-body)', fontSize:'0.62rem', fontWeight:800, color:'white' }}>✓ REGISTERED</div>}
-                    {full && !isReg && <div style={{ position:'absolute', top:10, right:10, background:'#f97316', borderRadius:100, padding:'3px 10px', fontFamily:'var(--font-body)', fontSize:'0.62rem', fontWeight:800, color:'white' }}>FULL</div>}
-                  </div>
-                  <div style={{ padding:'1.4rem' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem', flexWrap:'wrap', gap:'0.3rem' }}>
-                      <span style={{ fontSize:'0.68rem', fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--blue-mid)' }}>{ws.mode}</span>
-                      <span style={{ fontFamily:'var(--font-display)', fontSize:'0.95rem', color:'var(--green-deep)' }}>{free ? 'FREE' : 'NPR ' + ws.price.toLocaleString()}</span>
-                    </div>
-                    <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1rem', color:'var(--blue-deep)', marginBottom:'0.4rem', lineHeight:1.3 }}>{ws.title}</h3>
-                    <p style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'var(--text-light)', marginBottom:'0.6rem' }}>👤 {ws.facilitator}</p>
-                    <div style={{ fontFamily:'var(--font-body)', fontSize:'0.78rem', color:'var(--text-mid)', marginBottom:'0.6rem' }}>📅 {ws.date} · {ws.time}</div>
-                    <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:'0.85rem' }}>
-                      {(ws.tags || []).map((t, j) => <span key={j} className="tag" style={{ fontSize:'0.65rem' }}>{t}</span>)}
-                    </div>
-                    <div style={{ marginBottom:'1rem' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'var(--font-body)', fontSize:'0.7rem', color: urgent ? '#e53e3e' : 'var(--text-light)', marginBottom:'0.3rem', fontWeight: urgent ? 700 : 400 }}>
-                        <span>{full ? '🔴 Workshop Full' : urgent ? '⚠ Almost full!' : '🟢 Seats available'}</span>
-                        <span>{left} of {ws.seats} left</span>
-                      </div>
-                      <div style={{ height:5, background:'var(--earth-cream)', borderRadius:100, overflow:'hidden' }}>
-                        <div style={{ height:'100%', width: p + '%', background: p >= 100 ? '#e53e3e' : p >= 90 ? 'linear-gradient(90deg,#e53e3e,#f97316)' : p >= 70 ? 'linear-gradient(90deg,#f97316,#ffd54f)' : btnGrad, borderRadius:100, transition:'width 0.3s' }} />
-                      </div>
-                    </div>
-                    {isReg ? (
-                      <button className="btn btn-outline" style={{ width:'100%', justifyContent:'center' }} onClick={() => navigate('/portal')}>✓ Registered — View Details</button>
-                    ) : full ? (
-                      <button disabled style={{ width:'100%', padding:'0.6rem', borderRadius:12, border:'1.5px solid var(--earth-cream)', background:'var(--earth-cream)', color:'var(--text-light)', fontFamily:'var(--font-body)', fontWeight:600, fontSize:'0.82rem', cursor:'not-allowed' }}>Workshop Full</button>
-                    ) : (
-                      <button className="btn btn-primary" style={{ width:'100%', justifyContent:'center' }} onClick={() => openRegister(ws)}>
-                        {free ? 'Register Free →' : 'Register Now →'}
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <WorkshopCard
+                  key={ws.id}
+                  ws={ws}
+                  isReg={isReg}
+                  full={full}
+                  free={free}
+                  left={left}
+                  p={p}
+                  urgent={urgent}
+                  cardBg={cardBg}
+                  onRegister={() => openRegister(ws)}
+                  onNavigate={navigate}
+                />
               )
             })}
           </div>

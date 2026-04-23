@@ -109,7 +109,7 @@ export default function Therapists() {
               style={{ padding:'0.95rem 3rem', borderRadius:14, border:'none', background:'linear-gradient(135deg,#0369a1 0%,#0ea5e9 100%)', color:'white', fontFamily:'var(--font-body)', fontWeight:800, fontSize:'1rem', cursor:'pointer', boxShadow:'0 8px 28px rgba(14,165,233,0.35)', transition:'all 0.2s' }}
               onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)' }}
               onMouseLeave={e => { e.currentTarget.style.transform='none' }}>
-              📅 Book a Session Now
+              📅 See Other Therapists
             </button>
           </div>
         )}
