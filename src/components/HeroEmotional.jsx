@@ -66,6 +66,8 @@ const HERO_COPY = {
    CSS
 ───────────────────────────────────────────────────────────── */
 const HEART_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+
   @keyframes hb-beat {
     0%,100% { transform: scale(1); }
     15%      { transform: scale(1.13); }
@@ -127,12 +129,97 @@ const HEART_CSS = `
     to   { opacity: 1; }
   }
 
+  /* ── H1 underline shimmer ── */
+  @keyframes h1-shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+
+  /* ── H1 fade-up on mount ── */
+  @keyframes h1-fade-up {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   @media (min-width: 1024px) {
     .hero-clock-wrapper {
       display: block !important;
     }
   }
 
+  /* ══════════════════════════════════════
+     H1 HEADING STYLES
+  ══════════════════════════════════════ */
+  .hero-heading {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-size: clamp(2.4rem, 5vw, 3.6rem) !important;
+    font-weight: 400 !important;
+    line-height: 1.13 !important;
+    letter-spacing: -0.015em !important;
+    color: #ddeef8 !important;
+    margin: 0 0 24px !important;
+    animation: h1-fade-up 0.7s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  /* Plain words — soft white */
+  .hero-heading .h1-plain {
+    color: #c8e0f0;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  /* "Help" — italic, cyan gradient */
+  .hero-heading .h1-accent-help {
+    font-style: italic;
+    font-weight: 600;
+    background: linear-gradient(100deg, #00BFFF 0%, #5dd8ff 45%, #00BFFF 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: h1-shimmer 3.5s linear infinite;
+    display: inline-block;
+  }
+
+  /* "Choice" — italic, slightly warmer cyan, with a fine underline */
+  .hero-heading .h1-accent-choice {
+    font-style: italic;
+    font-weight: 600;
+    background: linear-gradient(100deg, #38c8ff 0%, #7de8ff 45%, #38c8ff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: h1-shimmer 3.5s 0.6s linear infinite;
+    display: inline-block;
+    position: relative;
+  }
+
+  /* Thin decorative underline only under "Choice" */
+  .hero-heading .h1-accent-choice::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgba(0,191,255,0.0) 0%, rgba(0,191,255,0.55) 35%, rgba(120,225,255,0.7) 60%, rgba(0,191,255,0.0) 100%);
+  }
+
+  /* Nepali: same styles but no underline since script is different */
+  .hero-heading.lang-np {
+    font-family: var(--font-display), 'Noto Sans Devanagari', serif !important;
+    font-size: clamp(1.8rem, 4vw, 2.6rem) !important;
+    letter-spacing: 0 !important;
+  }
+  .hero-heading.lang-np .h1-accent-choice::after {
+    display: none;
+  }
+
+  /* ══════════════════════════════════════
+     REST OF ORIGINAL STYLES (unchanged)
+  ══════════════════════════════════════ */
   .hb-visual-root {
     position: relative; width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
@@ -367,7 +454,7 @@ function MapPopup({ onClose, c }) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   HEART VISUAL
+   HEART VISUAL  (unchanged)
 ══════════════════════════════════════════════════════════════ */
 function HeartVisual({ onParentClick, onTeenClick, onAssessClick, c }) {
   const [hovered, setHovered] = useState(null)
@@ -593,8 +680,17 @@ export default function Hero() {
           <span>🌿</span> {c.badge}
         </div>
 
-        <h1 style={{ fontSize: lang === 'NP' ? '2rem' : undefined }}>
-          {c.h1_our}<i>{c.h1_help}</i>{c.h1_your}<i>{c.h1_choice}</i>
+        {/*
+          ── REDESIGNED H1 ──
+          Plain words use a soft white.
+          Key words ("Help", "Choice") use Playfair italic + cyan shimmer gradient.
+          "Choice" also gets a fine glowing underline via ::after.
+        */}
+        <h1 className={`hero-heading${lang === 'NP' ? ' lang-np' : ''}`}>
+          <span className="h1-plain">{c.h1_our}</span>
+          <span className="h1-accent-help">{c.h1_help}</span>
+          <span className="h1-plain">{c.h1_your}</span>
+          <span className="h1-accent-choice">{c.h1_choice}</span>
         </h1>
 
         <p className="hero-desc">{c.desc}</p>
@@ -642,8 +738,6 @@ export default function Hero() {
           />
         </div>
       </div>
-
-      
 
       <div className={`map-fab-label${labelVisible ? ' visible' : ''}`}>{c.map_label}</div>
 
