@@ -392,6 +392,7 @@ function FInput({ label, required, type = 'text', placeholder, value, onChange }
 // image_url comes from your Supabase Storage bucket public URL stored in the workshops table
 function WorkshopCard({ ws, isReg, full, free, left, p, urgent, cardBg, onRegister, onNavigate }) {
   const [imgErr, setImgErr] = useState(false)
+  console.log('ws.image_url:', ws.image_url)
 
   return (
     <div
