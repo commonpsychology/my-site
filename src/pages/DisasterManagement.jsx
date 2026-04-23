@@ -19,7 +19,7 @@ export default function DisasterManagementPage() {
       <section
   style={{
     height: "70vh",
-    backgroundImage: "url('/images/crisis.png')",
+    backgroundImage: "url('/images/crisis.jpg')",
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundRepeat: "no-repeat",
