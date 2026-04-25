@@ -456,24 +456,24 @@ Our center exists to change that. Every session we hold, every family we walk al
     sign: 'Sanjeev Neupane, Executive Director',
   },
   {
-    name:  'Pramila Shrestha',
+    name:  'Dr. Upesh Raj Pokhrel',
     role:  'Lead Clinical Psychologist',
     photo: '/images/staff/therapist.png',
     emoji: '👩‍⚕️',
     message: `In fifteen years of practice, the question I am asked most is: "Will I ever feel better?" And every time, my answer is the same — yes. Not because healing is easy, but because the human mind is staggeringly resilient when it is held in the right environment.
 
 Therapy is not about fixing what is broken. It is about revealing what was never truly lost. I have the privilege every day of sitting with people at their most honest, and watching them discover that the version of themselves they were searching for was already inside them, waiting.`,
-    sign: 'Pramila Shrestha, Lead Clinical Psychologist',
+    sign: 'Dr. Upesh Raj Pokhrel, Lead Clinical Psychologist',
   },
   {
-    name:  'Dipak Pokhrel',
+    name:  'Sudip Shrestha',
     role:  'Operations & Outreach Manager',
     photo: '/images/staff/manager.jpeg',
     emoji: '🧑‍💼',
     message: `Behind every therapy room is a system of people who believe that access to mental healthcare should never depend on your postcode or your bank balance. My team works every day to make Common Psychology reachable — to the parent in Butwal, the student in Pokhara, the young professional in Kathmandu who finally decided today was the day.
 
 We are building partnerships with schools, clinics, and community organisations across Nepal. Because mental wellness does not happen in isolation — it happens in communities that care.`,
-    sign: 'Dipak Pokhrel, Operations & Outreach Manager',
+    sign: 'Sudip Shrestha, Operations & Outreach Manager',
   },
 ]
 
