@@ -19,115 +19,35 @@ const C = {
 }
 const heroGrad = `linear-gradient(135deg, #0f2c3f 0%, ${C.skyDeep} 40%, ${C.skyMid} 80%, ${C.skyBright} 100%)`
 const btnGrad  = `linear-gradient(135deg, ${C.skyDeep} 0%, ${C.skyBright} 100%)`
-const API_BASE = import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL}/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
-// Inject responsive styles once
 const RESPONSIVE_CSS = `
   @keyframes spin { to { transform: rotate(360deg) } }
-
-  .rdp-hero {
-    background: ${heroGrad};
-    padding: 5rem 4rem 2.5rem;
-  }
-  .rdp-hero-inner {
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-
-  .rdp-main {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 3rem 4rem;
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 2.5rem;
-    align-items: start;
-  }
-
-  .rdp-sidebar {
-    position: sticky;
-    top: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .rdp-pdf-iframe {
-    width: 100%;
-    height: 75vh;
-    border: none;
-    display: block;
-  }
-
-  /* ── Tablet (≤ 900px) ── */
+  .rdp-hero { background: ${heroGrad}; padding: 5rem 4rem 2.5rem; }
+  .rdp-hero-inner { max-width: 1100px; margin: 0 auto; }
+  .rdp-main { max-width: 1100px; margin: 0 auto; padding: 3rem 4rem; display: grid; grid-template-columns: 1fr 300px; gap: 2.5rem; align-items: start; }
+  .rdp-sidebar { position: sticky; top: 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+  .rdp-pdf-iframe { width: 100%; height: 75vh; border: none; display: block; }
   @media (max-width: 900px) {
-    .rdp-hero {
-      padding: 4rem 2rem 2rem;
-    }
-    .rdp-main {
-      grid-template-columns: 1fr;
-      padding: 2rem 2rem;
-      gap: 2rem;
-    }
-    .rdp-sidebar {
-      position: static;
-      /* Move sidebar above content on tablet/mobile is optional;
-         here we keep it below but unstick it */
-    }
-    .rdp-pdf-iframe {
-      height: 60vh;
-    }
+    .rdp-hero { padding: 4rem 2rem 2rem; }
+    .rdp-main { grid-template-columns: 1fr; padding: 2rem 2rem; gap: 2rem; }
+    .rdp-sidebar { position: static; }
+    .rdp-pdf-iframe { height: 60vh; }
   }
-
-  /* ── Mobile (≤ 600px) ── */
   @media (max-width: 600px) {
-    .rdp-hero {
-      padding: 3.5rem 1.25rem 1.75rem;
-    }
-    .rdp-hero h1 {
-      font-size: 1.25rem !important;
-    }
-    .rdp-main {
-      padding: 1.5rem 1.25rem;
-      gap: 1.5rem;
-    }
-    .rdp-pdf-iframe {
-      height: 50vh;
-    }
-    .rdp-pdf-toolbar {
-      flex-direction: column;
-      align-items: flex-start !important;
-      gap: 0.5rem;
-    }
-    .rdp-pdf-toolbar-title {
-      max-width: 100%;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .rdp-pdf-toolbar-actions {
-      width: 100%;
-      display: flex;
-      gap: 0.5rem;
-    }
-    .rdp-pdf-toolbar-actions a,
-    .rdp-pdf-toolbar-actions button {
-      flex: 1;
-      text-align: center;
-    }
-    .rdp-detail-row {
-      padding: 0.45rem 0 !important;
-    }
+    .rdp-hero { padding: 3.5rem 1.25rem 1.75rem; }
+    .rdp-hero h1 { font-size: 1.25rem !important; }
+    .rdp-main { padding: 1.5rem 1.25rem; gap: 1.5rem; }
+    .rdp-pdf-iframe { height: 50vh; }
+    .rdp-pdf-toolbar { flex-direction: column; align-items: flex-start !important; gap: 0.5rem; }
+    .rdp-pdf-toolbar-title { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rdp-pdf-toolbar-actions { width: 100%; display: flex; gap: 0.5rem; }
+    .rdp-pdf-toolbar-actions a, .rdp-pdf-toolbar-actions button { flex: 1; text-align: center; }
+    .rdp-detail-row { padding: 0.45rem 0 !important; }
   }
-
-  /* ── Very small (≤ 380px) ── */
   @media (max-width: 380px) {
-    .rdp-hero {
-      padding: 3rem 1rem 1.5rem;
-    }
-    .rdp-main {
-      padding: 1.25rem 1rem;
-    }
+    .rdp-hero { padding: 3rem 1rem 1.5rem; }
+    .rdp-main { padding: 1.25rem 1rem; }
   }
 `
 
@@ -140,9 +60,6 @@ function InjectStyles() {
       el.textContent = RESPONSIVE_CSS
       document.head.appendChild(el)
     }
-    return () => {
-      // leave styles in DOM — avoids flicker on re-mount
-    }
   }, [])
   return null
 }
@@ -151,32 +68,32 @@ export default function ResearchDetailPage() {
   const { params, navigate } = useRouter()
   const id = params.id || ''
   const { data: paper, loading, error } = useFetch(`/research/${id}`, {}, [id])
-  const [pdfError,   setPdfError]   = useState(false)
-  const [dlCount,    setDlCount]    = useState(null)
+  const [dlCount, setDlCount] = useState(null)
+  const [dlState, setDlState] = useState('idle') // 'idle' | 'loading' | 'done'
+  const [iframeError, setIframeError] = useState(false)
 
   useEffect(() => { window.scrollTo(0, 0) }, [id])
+  useEffect(() => { if (paper) setDlCount(paper.downloads ?? 0) }, [paper])
 
-  useEffect(() => {
-    if (paper) setDlCount(paper.downloads ?? 0)
-  }, [paper])
-
-  const [dlState, setDlState] = useState('idle') // 'idle' | 'loading' | 'done' | 'error'
+  // The proxy URL — browser talks to YOUR backend, no CORS or CSP issues
+  const proxyPdfUrl = `${API_BASE}/api/research/${id}/pdf`
 
   async function handleDownload() {
     if (!paper?.pdf_url || dlState === 'loading') return
     setDlState('loading')
-    // Tell backend (fire-and-forget)
-    fetch(`${API_BASE}/research/${id}/download`, { method: 'POST' }).catch(() => {})
+
+    // Fire-and-forget download counter
+    fetch(`${API_BASE}/api/research/${id}/download`, { method: 'POST' }).catch(() => {})
+
     try {
-      // Fetch the PDF as a blob to force a real download (bypasses CSP frame-src)
-      const res = await fetch(paper.pdf_url)
-      if (!res.ok) throw new Error('fetch failed')
+      // Fetch via proxy — same origin so no CORS block
+      const res = await fetch(proxyPdfUrl)
+      if (!res.ok) throw new Error('proxy fetch failed')
       const blob = await res.blob()
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a')
-      a.href     = url
-      // Derive a filename from the URL or fall back to paper title
-      const urlParts = paper.pdf_url.split('/')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const urlParts = (paper.pdf_url || '').split('/')
       a.download = urlParts[urlParts.length - 1] || `${paper.title ?? 'paper'}.pdf`
       document.body.appendChild(a)
       a.click()
@@ -186,8 +103,8 @@ export default function ResearchDetailPage() {
       setDlState('done')
       setTimeout(() => setDlState('idle'), 2500)
     } catch {
-      // If blob fetch fails (e.g. CORS), fall back to opening in new tab
-      window.open(paper.pdf_url, '_blank')
+      // Fallback: open proxy URL in new tab
+      window.open(proxyPdfUrl, '_blank')
       setDlCount(c => (c ?? 0) + 1)
       setDlState('done')
       setTimeout(() => setDlState('idle'), 2500)
@@ -214,6 +131,7 @@ export default function ResearchDetailPage() {
   )
 
   const downloads = dlCount ?? paper.downloads ?? 0
+  const hasPdf = !!paper.pdf_url
 
   return (
     <div style={{ background: C.skyGhost, minHeight: '100vh' }}>
@@ -236,7 +154,7 @@ export default function ResearchDetailPage() {
             <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.75rem' }}>{paper.year}</span>
           </div>
 
-          <h1 className="rdp-hero-h1" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.2rem,3vw,2.1rem)', color: 'white', lineHeight: 1.3, maxWidth: 820, marginBottom: '1rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.2rem,3vw,2.1rem)', color: 'white', lineHeight: 1.3, maxWidth: 820, marginBottom: '1rem' }}>
             {paper.title}
           </h1>
           <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.35rem', wordBreak: 'break-word' }}>
@@ -251,14 +169,13 @@ export default function ResearchDetailPage() {
       {/* ── Main layout ── */}
       <div className="rdp-main">
 
-        {/* LEFT — PDF + abstract + keywords */}
+        {/* LEFT — PDF viewer + abstract + keywords */}
         <div>
           <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>
             📄 Full Paper
           </div>
 
-          {paper.pdf_url ? (
-            /* PDF card — iframe is blocked by CSP frame-src, so we show action buttons */
+          {hasPdf ? (
             <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid ${C.borderFaint}`, boxShadow: '0 8px 32px rgba(0,191,255,0.1)', background: C.white }}>
               {/* Toolbar */}
               <div
@@ -268,7 +185,7 @@ export default function ResearchDetailPage() {
                   📄 {paper.title?.slice(0, 50)}{paper.title?.length > 50 ? '…' : ''}
                 </span>
                 <div className="rdp-pdf-toolbar-actions" style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                  <a href={paper.pdf_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                  <a href={proxyPdfUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                     <button style={{ padding: '0.3rem 0.85rem', borderRadius: 8, background: btnGrad, color: 'white', border: 'none', fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       Open ↗
                     </button>
@@ -282,29 +199,39 @@ export default function ResearchDetailPage() {
                 </div>
               </div>
 
-              {/* Preview body */}
-              <div style={{ padding: '3rem 2rem', textAlign: 'center', background: `linear-gradient(180deg, ${C.skyFainter} 0%, ${C.white} 100%)` }}>
-                <div style={{ fontSize: '4rem', marginBottom: '1rem', lineHeight: 1 }}>📄</div>
-                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, color: C.textDark, marginBottom: '0.4rem' }}>
-                  In-page preview unavailable
-                </p>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: C.textLight, maxWidth: 360, margin: '0 auto 1.75rem', lineHeight: 1.6 }}>
-                  This site's security policy prevents embedding external PDFs. Use the buttons below to read or save the full paper.
-                </p>
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <a href={paper.pdf_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                    <button style={{ padding: '0.65rem 1.5rem', borderRadius: 10, background: btnGrad, color: 'white', border: 'none', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,191,255,0.25)' }}>
-                      Open in New Tab ↗
+              {/* ── Inline PDF iframe via proxy ── */}
+              {!iframeError ? (
+                <iframe
+                  className="rdp-pdf-iframe"
+                  src={proxyPdfUrl}
+                  title={paper.title}
+                  onError={() => setIframeError(true)}
+                />
+              ) : (
+                /* Fallback if iframe somehow still fails */
+                <div style={{ padding: '3rem 2rem', textAlign: 'center', background: `linear-gradient(180deg, ${C.skyFainter} 0%, ${C.white} 100%)` }}>
+                  <div style={{ fontSize: '4rem', marginBottom: '1rem', lineHeight: 1 }}>📄</div>
+                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, color: C.textDark, marginBottom: '0.4rem' }}>
+                    Preview unavailable
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: C.textLight, maxWidth: 360, margin: '0 auto 1.75rem', lineHeight: 1.6 }}>
+                    Use the buttons below to read or save the full paper.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <a href={proxyPdfUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                      <button style={{ padding: '0.65rem 1.5rem', borderRadius: 10, background: btnGrad, color: 'white', border: 'none', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,191,255,0.25)' }}>
+                        Open in New Tab ↗
+                      </button>
+                    </a>
+                    <button
+                      onClick={handleDownload}
+                      disabled={dlState === 'loading'}
+                      style={{ padding: '0.65rem 1.5rem', borderRadius: 10, background: 'transparent', color: C.skyMid, border: `1.5px solid ${C.skyBright}`, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+                      {dlState === 'loading' ? '⏳ Downloading…' : '⬇ Download PDF'}
                     </button>
-                  </a>
-                  <button
-                    onClick={handleDownload}
-                    disabled={dlState === 'loading'}
-                    style={{ padding: '0.65rem 1.5rem', borderRadius: 10, background: dlState === 'done' ? '#e8f3ee' : 'transparent', color: dlState === 'done' ? '#2d7a4a' : C.skyMid, border: `1.5px solid ${dlState === 'done' ? '#2d7a4a' : C.skyBright}`, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.88rem', cursor: dlState === 'loading' ? 'wait' : 'pointer', transition: 'all 0.2s' }}>
-                    {dlState === 'loading' ? '⏳ Downloading…' : dlState === 'done' ? '✓ Saved to device' : '⬇ Download PDF'}
-                  </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             <div style={{ background: C.white, borderRadius: 16, border: `1px dashed ${C.borderFaint}`, padding: '3rem 2rem', textAlign: 'center' }}>
@@ -348,8 +275,6 @@ export default function ResearchDetailPage() {
 
         {/* RIGHT sidebar */}
         <div className="rdp-sidebar">
-
-          {/* Paper details */}
           <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.borderFaint}`, padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,191,255,0.06)' }}>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>Paper Details</div>
             {[
@@ -359,17 +284,13 @@ export default function ResearchDetailPage() {
               { label: 'Downloads', value: downloads.toLocaleString() },
               { label: 'Access',    value: paper.open_access ? '🔓 Open' : '🔒 Subscription' },
             ].filter(r => r.value).map(({ label, value }) => (
-              <div
-                key={label}
-                className="rdp-detail-row"
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: `1px solid ${C.borderFaint}`, gap: '0.5rem' }}>
+              <div key={label} className="rdp-detail-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: `1px solid ${C.borderFaint}`, gap: '0.5rem' }}>
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: C.textLight, flexShrink: 0 }}>{label}</span>
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', fontWeight: 700, color: C.textDark, textAlign: 'right', wordBreak: 'break-word', minWidth: 0 }}>{value}</span>
               </div>
             ))}
           </div>
 
-          {/* Authors */}
           {(paper.authors || []).length > 0 && (
             <div style={{ background: `linear-gradient(135deg,${C.skyFainter},${C.mint})`, borderRadius: 14, border: `1px solid ${C.borderFaint}`, padding: '1.25rem' }}>
               <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>Authors</div>
@@ -384,7 +305,6 @@ export default function ResearchDetailPage() {
             </div>
           )}
 
-          {/* DOI */}
           {paper.doi && (
             <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
               <div style={{ background: C.white, borderRadius: 14, border: `1.5px solid ${C.skyBright}`, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: '0.5rem' }}>
@@ -397,8 +317,7 @@ export default function ResearchDetailPage() {
             </a>
           )}
 
-          {/* Download CTA */}
-          {paper.pdf_url && (
+          {hasPdf && (
             <button
               onClick={handleDownload}
               style={{ width: '100%', padding: '0.85rem', borderRadius: 12, background: btnGrad, color: 'white', border: 'none', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,191,255,0.3)' }}>
@@ -406,7 +325,6 @@ export default function ResearchDetailPage() {
             </button>
           )}
 
-          {/* Back */}
           <button
             onClick={() => navigate('/research')}
             style={{ width: '100%', padding: '0.7rem', borderRadius: 12, background: 'transparent', color: C.skyMid, border: `1.5px solid ${C.borderFaint}`, fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
