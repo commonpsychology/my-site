@@ -450,7 +450,7 @@ const MESSAGES = [
     role:  'Executive Director',
     photo: '/images/staff/director.png',
     emoji: '🧑‍💼',
-    message: `When I founded Co, I carried a single conviction: that mental health is not a luxury, but a birthright. In Nepal, too many families suffer in silence — not because they lack strength, but because no one told them that asking for help is the bravest thing a person can do.
+    message: `When I founded this Company, I carried a single conviction: that mental health is not a luxury, but a birthright. In Nepal, too many families suffer in silence — not because they lack strength, but because no one told them that asking for help is the bravest thing a person can do.
 
 Our center exists to change that. Every session we hold, every family we walk alongside, is a quiet act of revolution. We are building a Nepal where the mind is treated with the same urgency as the body — with compassion, skill, and unwavering dignity. Saying all this, one value we keep close to our heart is, 'It's Your Choice'. If you feel we can help and can connect with you then only seek our help and follow. Our Common Goal: "Changing others by changing ownself, We are noone, We know nothing.".`,
     sign: 'Sanjeev Neupane, Executive Director',
@@ -470,7 +470,7 @@ Therapy is not about fixing what is broken. It is about revealing what was never
     role:  'Operations & Outreach Manager',
     photo: '/images/staff/manager.jpeg',
     emoji: '🧑‍💼',
-    message: `Behind every therapy room is a system of people who believe that access to mental healthcare should never depend on your postcode or your bank balance. My team works every day to make Common Psyhcologyrgi reachable — to the parent in Butwal, the student in Pokhara, the young professional in Kathmandu who finally decided today was the day.
+    message: `Behind every therapy room is a system of people who believe that access to mental healthcare should never depend on your postcode or your bank balance. My team works every day to make Common Psychology reachable — to the parent in Butwal, the student in Pokhara, the young professional in Kathmandu who finally decided today was the day.
 
 We are building partnerships with schools, clinics, and community organisations across Nepal. Because mental wellness does not happen in isolation — it happens in communities that care.`,
     sign: 'Dipak Pokhrel, Operations & Outreach Manager',
@@ -480,7 +480,7 @@ We are building partnerships with schools, clinics, and community organisations 
 const VALUES = [
   { icon:'🌱', name:'Dignity First',          color:'linear-gradient(135deg,#007BA8,#00BFFF)', accent:'linear-gradient(90deg,#007BA8,#00BFFF)', desc:'Every person who walks through our door is treated as whole, worthy, and deserving of the best care. We refuse to pathologise or diminish.', quote:'"We see the person before we see the diagnosis."' },
   { icon:'🤝', name:'Radical Compassion',     color:'linear-gradient(135deg,#2d6a4f,#74c69d)', accent:'linear-gradient(90deg,#2d6a4f,#74c69d)', desc:'Compassion is not passive sympathy. It is the active choice to enter someone\'s pain, to resist judgment, and to stay present with them.', quote:'"The antidote to shame is empathy — always."' },
-  { icon:'🔬', name:'Evidence-Based Practice',color:'linear-gradient(135deg,#944f2c,#e07040)', accent:'linear-gradient(90deg,#944f2c,#e07040)', desc:'Every therapeutic approach at Common Psyhcologyrgi is grounded in peer-reviewed research, clinical evidence, and continuous professional development.', quote:'"Science and soul are not opposites — they are partners."' },
+  { icon:'🔬', name:'Evidence-Based Practice',color:'linear-gradient(135deg,#944f2c,#e07040)', accent:'linear-gradient(90deg,#944f2c,#e07040)', desc:'Every therapeutic approach at Common Psychology is grounded in peer-reviewed research, clinical evidence, and continuous professional development.', quote:'"Science and soul are not opposites — they are partners."' },
   { icon:'🌏', name:'Cultural Rootedness',    color:'linear-gradient(135deg,#c9a227,#f5c842)', accent:'linear-gradient(90deg,#c9a227,#f5c842)', desc:'We are Nepali. Our practice honours the cultural fabric of our communities — the weight of collective identity and intergenerational complexity.', quote:'"Healing must speak the language of the healed."' },
   { icon:'🔓', name:'Accessibility for All',  color:'linear-gradient(135deg,#7b2d8b,#c77dff)', accent:'linear-gradient(90deg,#7b2d8b,#c77dff)', desc:'We offer sliding-scale fees, online sessions, community outreach — because geography and income must not determine whether someone gets help.', quote:'"A locked door is not a waiting room."' },
   { icon:'♾️', name:'Lifelong Growth',        color:'linear-gradient(135deg,#b5546a,#e88fa0)', accent:'linear-gradient(90deg,#b5546a,#e88fa0)', desc:'We nurture a culture of ongoing learning — for our therapists, our clients, and ourselves. We regularly review, adapt, and evolve our practices.', quote:'"We are perpetual students of the human story."' },
