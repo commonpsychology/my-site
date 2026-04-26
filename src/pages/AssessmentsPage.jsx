@@ -4,15 +4,6 @@ import { useRouter } from '../context/RouterContext'
 import { wellness } from '../services/api'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
-// Primary bg gradient: sky-blue → white (used on every section)
-// --sky-deep:    #0d2d4f   (dark navy, headings / button bg)
-// --sky-mid:     #2b8fd0   (vivid sky blue, accents / CTAs)
-// --sky-pale:    #bfe0f7   (light sky, gradient midpoint)
-// --sky-faint:   #e8f4fd   (near-white sky, gradient start)
-// --sky-border:  #c8e4f5   (card borders, dividers)
-// --sky-text:    #3a5a7a   (body text on light bg)
-// --sky-muted:   #6a8fa8   (muted / secondary text)
-
 const S = {
   pageBg:       'linear-gradient(160deg, #e8f4fd 0%, #bfe0f7 40%, #ffffff 100%)',
   cardBg:       '#ffffff',
@@ -224,7 +215,17 @@ function DomainRadar({ domains, scores, maxScores }) {
   const gridStr = (s) => pts.map(p => `${cx + (p.x - cx) * s},${cy + (p.y - cy) * s}`).join(' ')
 
   return (
-    <svg width="260" height="260" viewBox="0 0 260 260" style={{ overflow: 'visible' }}>
+    // width/height set to 100%/auto so it scales inside its container on mobile
+    <svg
+      viewBox="0 0 260 260"
+      style={{
+        overflow: 'visible',
+        width: '100%',
+        height: 'auto',
+        maxWidth: 260,
+        display: 'block',
+      }}
+    >
       {[0.25, 0.5, 0.75, 1].map(s => (
         <polygon key={s} points={gridStr(s)} fill="none" stroke="#c8e4f5" strokeWidth="1" />
       ))}
@@ -296,7 +297,7 @@ function ResultView({ assessmentId, answers, onRetake, onBook }) {
       <div style={{ position: 'absolute', top: -100, right: -100, width: 380, height: 380, borderRadius: '50%', background: 'rgba(43,143,208,0.07)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: -80, left: -60, width: 280, height: 280, borderRadius: '50%', background: 'rgba(43,143,208,0.05)', pointerEvents: 'none' }} />
 
-      <div style={{ flex: 1, padding: '5.5rem 2rem 4rem', position: 'relative', zIndex: 1, maxWidth: 760, margin: '0 auto', width: '100%' }}>
+      <div style={{ flex: 1, padding: '5.5rem 2rem 4rem', position: 'relative', zIndex: 1, maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
 
         {/* header */}
         <div style={{ marginBottom: '2rem' }}>
@@ -364,23 +365,46 @@ function ResultView({ assessmentId, answers, onRetake, onBook }) {
           padding: '1.5rem 1.75rem',
           marginBottom: '1.5rem',
           boxShadow: '0 2px 16px rgba(43,143,208,0.07)',
+          // Prevent card itself from overflowing on mobile
+          overflow: 'hidden',
         }}>
           <h4 style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: S.textMuted, marginBottom: '1.25rem' }}>
             Domain Breakdown
           </h4>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: config.domains.length >= 3 ? '1fr auto' : '1fr',
-            gap: '1.5rem',
-            alignItems: 'center',
-          }}>
-            <div>
+
+          {/*
+            KEY FIX: className="domain-breakdown-grid"
+            On desktop  → side-by-side: bars | radar
+            On mobile   → stacked: bars on top, radar below (centred)
+          */}
+          <div
+            className="domain-breakdown-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: config.domains.length >= 3 ? '1fr auto' : '1fr',
+              gap: '1.5rem',
+              alignItems: 'center',
+            }}
+          >
+            {/* bars column */}
+            <div style={{ minWidth: 0 }}>
               {domainData.map(({ domain, score, maxPossible }, i) => (
                 <DomainBar key={i} domain={domain} score={score} maxPossible={maxPossible} animate={animateBars} />
               ))}
             </div>
+
+            {/* radar column — only rendered when there are enough domains */}
             {config.domains.length >= 3 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                className="radar-wrapper"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  // Fixed width on desktop so the grid column doesn't collapse
+                  width: 260,
+                }}
+              >
                 <DomainRadar
                   domains={config.domains}
                   scores={domainData.map(d => d.score)}
@@ -450,6 +474,30 @@ function ResultView({ assessmentId, answers, onRetake, onBook }) {
           </button>
         </div>
       </div>
+
+      {/*
+        ─── MOBILE RESPONSIVE STYLES ──────────────────────────────────────────
+        Breakpoint 600 px:
+          • .domain-breakdown-grid  → collapse to single column
+          • .radar-wrapper          → full width, centred, separated by top border
+          • SVG inside              → constrained to ≤240 px so labels don't clip
+      */}
+      <style>{`
+        @media (max-width: 600px) {
+          .domain-breakdown-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .radar-wrapper {
+            width: 100% !important;
+            border-top: 1px solid #c8e4f5;
+            padding-top: 1.25rem;
+            justify-content: center;
+          }
+          .radar-wrapper svg {
+            max-width: 220px !important;
+          }
+        }
+      `}</style>
     </section>
   )
 }
@@ -502,7 +550,7 @@ function QuestionnaireView({ assessmentId, onComplete, onBack }) {
       <div style={{ position: 'absolute', top: -80, right: -80, width: 320, height: 320, borderRadius: '50%', background: 'rgba(43,143,208,0.06)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: -60, left: -50, width: 240, height: 240, borderRadius: '50%', background: 'rgba(43,143,208,0.05)', pointerEvents: 'none' }} />
 
-      <div style={{ flex: 1, padding: '5.5rem 2rem 4rem', position: 'relative', zIndex: 1, maxWidth: 700, margin: '0 auto', width: '100%' }}>
+      <div style={{ flex: 1, padding: '5.5rem 2rem 4rem', position: 'relative', zIndex: 1, maxWidth: 700, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
 
         {/* back + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.75rem' }}>
@@ -701,6 +749,7 @@ function LandingView({ assessments, loading, onStart, onBook }) {
           alignItems: 'center',
           position: 'relative',
           zIndex: 1,
+          boxSizing: 'border-box',
         }}
         className="assessment-grid"
       >
@@ -871,6 +920,7 @@ function LandingView({ assessments, loading, onStart, onBook }) {
         flexWrap: 'wrap',
         position: 'relative',
         zIndex: 1,
+        boxSizing: 'border-box',
       }}>
         <p style={{
           fontSize: '0.8rem',
