@@ -94,9 +94,17 @@ function NotificationBell({ onNavigate }) {
     return () => clearInterval(id)
   }, [fetchUnread])
 
+  // Clear badge immediately when portal marks notifications as read
+  useEffect(() => {
+    function onCleared() { setUnread(0) }
+    window.addEventListener('cp-notifs-cleared', onCleared)
+    return () => window.removeEventListener('cp-notifs-cleared', onCleared)
+  }, [])
+
   if (!user) return null
 
   function handleClick() {
+    setUnread(0)                                    // clear badge instantly
     sessionStorage.setItem('portalTab', 'Notifications')
     onNavigate('/portal')
   }
