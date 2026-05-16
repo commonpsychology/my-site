@@ -161,10 +161,15 @@ const HEART_CSS = `
     animation: h1-fade-up 0.7s 0.15s cubic-bezier(0.22,1,0.36,1) both;
   }
 
+  /* ── MODIFIED: "Our" and "Your" — white but with shadow so they
+        pop cleanly against the dark hero background              ── */
   .hero-heading .h1-plain {
     color: #ffffff;
-    font-weight: 400;
+    font-weight: 500;
     font-style: normal;
+    text-shadow:
+      0 1px 14px rgba(0, 80, 130, 0.6),
+      0 0px 4px  rgba(0, 0,   0,  0.4);
   }
 
   .hero-heading .h1-accent-help {
@@ -245,19 +250,12 @@ const HEART_CSS = `
     animation: hb-drop ease-in-out infinite;
   }
 
-  /* ══════════════════════════════════════════════════════════
-     CARD WRAPPER — anchored hit-area (never moves)
-     This is the KEY fix: the wrapper stays in place so the
-     cursor never accidentally leaves it when the inner card
-     floats/lifts, eliminating the flicker loop.
-  ══════════════════════════════════════════════════════════ */
   .hb-card-wrapper-parent {
     position: absolute;
     top: 50%;
     left: 0%;
     transform: translateY(-50%);
     z-index: 35;
-    /* entrance animation only — NO float here */
     animation: hb-card-in-l 0.7s 0.5s ease both;
   }
 
@@ -267,15 +265,9 @@ const HEART_CSS = `
     right: 0%;
     transform: translateY(-50%);
     z-index: 35;
-    /* entrance animation only — NO float here */
     animation: hb-card-in-r 0.7s 0.8s ease both;
   }
 
-  /* ══════════════════════════════════════════════════════════
-     INNER CARD — floats and lifts on hover
-     Hover is tracked on the WRAPPER above, so moving this
-     element away from the cursor won't trigger mouseleave.
-  ══════════════════════════════════════════════════════════ */
   .hb-persona-card {
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border-radius: 18px; padding: 16px 20px; cursor: pointer;
@@ -285,7 +277,6 @@ const HEART_CSS = `
                 transform 0.32s cubic-bezier(0.34,1.56,0.64,1);
   }
 
-  /* Float lives on the inner card — not the wrapper */
   .hb-persona-card-inner-parent {
     animation: hb-float 4.2s 0.5s ease-in-out infinite;
   }
@@ -293,8 +284,6 @@ const HEART_CSS = `
     animation: hb-float-r 3.7s 1s ease-in-out infinite;
   }
 
-  /* Hover only scales — no translateY, so the card never
-     escapes the wrapper's bounding box */
   .hb-card-wrapper-parent:hover .hb-persona-card,
   .hb-card-wrapper-teen:hover .hb-persona-card {
     transform: scale(1.04);
@@ -581,20 +570,6 @@ function HeartVisual({ onParentClick, onTeenClick, onAssessClick, c }) {
         </span>
       </div>
 
-      {/*
-        ══════════════════════════════════════════════════════════
-        PARENT CARD — HOVER FLICKER FIX
-        ══════════════════════════════════════════════════════════
-        Structure:
-          [.hb-card-wrapper-parent]   ← anchored, handles hover events
-            [.hb-persona-card
-             .hb-persona-card-inner-parent]  ← floats + scales on hover
-
-        The wrapper's top/left/transform stay fixed, so the cursor
-        never accidentally leaves while the inner card animates.
-        Hover is detected on the WRAPPER via onMouseEnter/Leave,
-        so lifting the inner card cannot trigger a mouseleave.
-      */}
       <div
         className="hb-card-wrapper-parent"
         onMouseEnter={() => setHovered('parent')}
@@ -640,11 +615,6 @@ function HeartVisual({ onParentClick, onTeenClick, onAssessClick, c }) {
         </div>
       </div>
 
-      {/*
-        ══════════════════════════════════════════════════════════
-        TEEN CARD — same fix applied
-        ══════════════════════════════════════════════════════════
-      */}
       <div
         className="hb-card-wrapper-teen"
         onMouseEnter={() => setHovered('teen')}
