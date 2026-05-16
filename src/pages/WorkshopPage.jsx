@@ -876,6 +876,11 @@ export default function WorkshopsPage() {
   }
 
   function openRegister(ws) {
+    // Guard: prevent opening register form if already registered
+    if (registered.includes(ws.id) || ws.user_registered) {
+      scrollToEnrollments()
+      return
+    }
     setWorkshop(ws)
     setForm({
       name:  user?.fullName || user?.full_name || '',
@@ -902,14 +907,17 @@ export default function WorkshopsPage() {
     })
     const j = await r.json()
     if (r.status === 409) {
-      if (j.registration?.payment_status === 'paid') {
+      const existingReg = j.registration
+      // Already fully paid — just mark done and return
+      if (existingReg?.payment_status === 'paid' || existingReg?.payment_status === 'confirmed' || existingReg?.status === 'confirmed') {
         setRegistered(prev => [...prev, workshop.id])
         await fetchWorkshops()
         setScreen('done')
         return null
       }
-      const existingId = j.registration?.id
-      if (!existingId) throw new Error('Already registered. Contact us if you need help.')
+      // Existing pending/free registration — reuse its ID to continue
+      const existingId = existingReg?.id
+      if (!existingId) throw new Error('You are already registered for this workshop. Check your enrollment status below.')
       setRegId(existingId)
       return existingId
     }
@@ -1513,7 +1521,8 @@ export default function WorkshopsPage() {
         {!loading && !error && workshops.length > 0 && (
           <div className="workshops-grid">
             {workshops.map(ws => {
-              const isReg  = registered.includes(ws.id)
+              // isReg: true if registered this session OR backend flagged it
+              const isReg  = registered.includes(ws.id) || !!ws.user_registered
               const full   = isFull(ws)
               const free   = isFree(ws)
               const left   = seatsLeft(ws)
