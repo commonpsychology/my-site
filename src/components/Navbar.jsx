@@ -17,7 +17,6 @@ const NAV = [
   ]},
   { label: 'Tools', labelNP: 'उपकरणहरू', path: '/assessments', children: [
     { label: 'Assessments',     labelNP: 'मूल्यांकनहरू',      path: '/assessments',  icon: '📝', desc: 'PHQ-9, GAD-7, DASS-21',      descNP: 'PHQ-9, GAD-7, DASS-21' },
-    { label: 'AI Mental Tools', labelNP: 'AI उपकरणहरू',       path: '/ai-tools',     icon: '🧠', desc: 'CBT, check-ins, stress',      descNP: 'CBT, चेक-इन, तनाव' },
     { label: 'Free Resources',  labelNP: 'निःशुल्क स्रोतहरू',  path: '/resources',   icon: '📄', desc: 'Worksheets & guides',         descNP: 'वर्कशीट र गाइडहरू' },
     { label: 'My Portal',       labelNP: 'मेरो पोर्टल',       path: '/portal',       icon: '🔐', desc: 'Your therapy dashboard',      descNP: 'तपाईंको थेरापी ड्यासबोर्ड' },
   ]},
