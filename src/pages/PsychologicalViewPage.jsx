@@ -282,7 +282,7 @@ function VideoSlider({ videos, loading }) {
         {/* ✅ FIXED: <a> tag instead of <button> + window.open — never blocked by browsers */}
         <div style={{ textAlign:'center', marginTop:'1.75rem' }}>
           <a
-            href="https://www.youtube.com/@PujaSamargi"
+            href="https://www.youtube.com/commonpsychology"
             target="_blank"
             rel="noopener noreferrer"
             style={{
